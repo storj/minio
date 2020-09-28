@@ -30,6 +30,7 @@ import (
 	"github.com/minio/minio/cmd/config/cache"
 	"github.com/minio/minio/cmd/config/etcd"
 	xldap "github.com/minio/minio/cmd/config/identity/ldap"
+	"github.com/minio/minio/cmd/config/identity/noauth"
 	"github.com/minio/minio/cmd/config/identity/openid"
 	"github.com/minio/minio/cmd/config/policy/opa"
 	"github.com/minio/minio/cmd/config/storageclass"
@@ -453,6 +454,8 @@ func (a adminAPIHandlers) GetConfigHandler(w http.ResponseWriter, r *http.Reques
 				off = !openid.Enabled(kv)
 			case config.IdentityLDAPSubSys:
 				off = !xldap.Enabled(kv)
+			case config.IdentityNoAuthSubSys:
+				off = !noauth.Enabled(kv)
 			}
 			if off {
 				s.WriteString(config.KvComment)

@@ -138,7 +138,7 @@ func webTokenAuthenticate(token string) (*xjwt.MapClaims, bool, error) {
 	if err := xjwt.ParseWithClaims(token, claims, webTokenCallback); err != nil {
 		return claims, false, errAuthentication
 	}
-	owner := claims.AccessKey == globalActiveCred.AccessKey
+	owner := claims.AccessKey == globalActiveCred.AccessKey || globalIAMSys.usersSysType == NoAuthSysType
 	return claims, owner, nil
 }
 
@@ -157,7 +157,7 @@ func webRequestAuthenticate(req *http.Request) (*xjwt.MapClaims, bool, error) {
 	if err := xjwt.ParseWithClaims(token, claims, webTokenCallback); err != nil {
 		return claims, false, errAuthentication
 	}
-	owner := claims.AccessKey == globalActiveCred.AccessKey
+	owner := claims.AccessKey == globalActiveCred.AccessKey || globalIAMSys.usersSysType == NoAuthSysType
 	return claims, owner, nil
 }
 
