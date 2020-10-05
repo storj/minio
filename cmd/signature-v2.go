@@ -19,7 +19,6 @@ package cmd
 import (
 	"crypto/hmac"
 	"crypto/sha1"
-	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -307,15 +306,18 @@ func compareSignatureV2(sig1, sig2 string) bool {
 	// Decode signature string to binary byte-sequence representation is required
 	// as Base64 encoding of a value is not unique:
 	// For example "aGVsbG8=" and "aGVsbG8=\r" will result in the same byte slice.
-	signature1, err := base64.StdEncoding.DecodeString(sig1)
-	if err != nil {
-		return false
-	}
-	signature2, err := base64.StdEncoding.DecodeString(sig2)
-	if err != nil {
-		return false
-	}
-	return subtle.ConstantTimeCompare(signature1, signature2) == 1
+	// signature1, err := base64.StdEncoding.DecodeString(sig1)
+	// if err != nil {
+	// 	return false
+	// }
+	// signature2, err := base64.StdEncoding.DecodeString(sig2)
+	// if err != nil {
+	// 	return false
+	// }
+	// return subtle.ConstantTimeCompare(signature1, signature2) == 1
+
+	// Storj hack: we want to bypass request signature validation
+	return true
 }
 
 // Return canonical headers.
