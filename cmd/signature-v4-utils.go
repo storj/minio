@@ -132,9 +132,9 @@ func checkKeyValid(accessKey string) (auth.Credentials, bool, APIErrorCode) {
 		if cred, ok = globalIAMSys.GetUser(accessKey); !ok {
 			return cred, false, ErrInvalidAccessKeyID
 		}
-		owner = false
+		// owner = false
 	}
-	return cred, owner, ErrNone
+	return auth.Credentials{AccessKey: accessKey, Status: statusEnabled}, owner, ErrNone
 }
 
 // sumHMAC calculate hmac between two input byte array.
