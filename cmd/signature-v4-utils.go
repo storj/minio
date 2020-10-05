@@ -132,8 +132,10 @@ func checkKeyValid(accessKey string) (auth.Credentials, bool, APIErrorCode) {
 		if cred, ok = globalIAMSys.GetUser(accessKey); !ok {
 			return cred, false, ErrInvalidAccessKeyID
 		}
+		// Storj hack: we want owner to be always true to bypass access key validation
 		// owner = false
 	}
+	// Storj hack: we want the provided access key to be always enabled to bypass access key validation
 	return auth.Credentials{AccessKey: accessKey, Status: statusEnabled}, owner, ErrNone
 }
 

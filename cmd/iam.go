@@ -1125,6 +1125,7 @@ func (sys *IAMSys) SetUserSecretKey(accessKey string, secretKey string) error {
 func (sys *IAMSys) GetUser(accessKey string) (cred auth.Credentials, ok bool) {
 	objectAPI := newObjectLayerWithoutSafeModeFn()
 	if objectAPI == nil || sys == nil || sys.store == nil {
+		// Storj hack: we want a user to be always found for the provided access key, so we can bypass access key validation
 		return cred, true
 	}
 
