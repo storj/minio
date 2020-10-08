@@ -14,7 +14,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-
 CONTAINER_ID=$(grep -o -e '[0-f]\{12,\}' /proc/1/cpuset | awk '{print substr($1, 1, 12)}')
 MINT_DATA_DIR=${MINT_DATA_DIR:-/mint/data}
 MINT_MODE=${MINT_MODE:-core}
@@ -22,14 +21,12 @@ SERVER_REGION=${SERVER_REGION:-us-east-1}
 ENABLE_HTTPS=${ENABLE_HTTPS:-0}
 ENABLE_VIRTUAL_STYLE=${ENABLE_VIRTUAL_STYLE:-0}
 GO111MODULE=on
-
 if [ -z "$SERVER_ENDPOINT" ]; then
     SERVER_ENDPOINT="play.minio.io:9000"
     ACCESS_KEY="Q3AM3UQ867SPQQA43P2F"
     SECRET_KEY="zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
     ENABLE_HTTPS=1
 fi
-
 if [ "$ENABLE_VIRTUAL_STYLE" -eq 1 ]; then
         SERVER_IP="${SERVER_ENDPOINT%%:*}"
         SERVER_PORT="${SERVER_ENDPOINT/*:/}"
@@ -46,15 +43,12 @@ if [ "$ENABLE_VIRTUAL_STYLE" -eq 1 ]; then
 	    fi
         done
 fi
-
 ROOT_DIR="$PWD"
 TESTS_DIR="$ROOT_DIR/run/core"
-
 BASE_LOG_DIR="$ROOT_DIR/log"
 LOG_FILE="log.json"
 ERROR_FILE="error.log"
 mkdir -p "$BASE_LOG_DIR"
-
 function humanize_time()
 {
     time="$1"
@@ -62,29 +56,23 @@ function humanize_time()
     hours=$(( time / 60 / 60 % 24 ))
     minutes=$(( time / 60 % 60 ))
     seconds=$(( time % 60 ))
-
     (( days > 0 )) && echo -n "$days days "
     (( hours > 0 )) && echo -n "$hours hours "
     (( minutes > 0 )) && echo -n "$minutes minutes "
     (( days > 0 || hours > 0 || minutes > 0 )) && echo -n "and "
     echo "$seconds seconds"
 }
-
 function run_test()
 {
     if [ ! -d "$1" ]; then
         return 1
     fi
-
     start=$(date +%s)
-
     mkdir -p "$BASE_LOG_DIR/$sdk_name"
-
-    (cd "$sdk_dir" && ./run.sh "$BASE_LOG_DIR/$LOG_FILE" "$BASE_LOG_DIR/$sdk_name/$ERROR_FILE")
+    (cd "$sdk_dir" && timeout --preserve-status 1m ./run.sh "$BASE_LOG_DIR/$LOG_FILE" "$BASE_LOG_DIR/$sdk_name/$ERROR_FILE")
     rv=$?
     end=$(date +%s)
     duration=$(humanize_time $(( end - start )))
-
     if [ "$rv" -eq 0 ]; then
         echo "done in $duration"
     else
@@ -105,24 +93,19 @@ function run_test()
     fi
     return $rv
 }
-
 function trust_s3_endpoint_tls_cert()
 {
     # Download the public certificate from the server
     openssl s_client -showcerts -connect "$SERVER_ENDPOINT" </dev/null 2>/dev/null | \
 	openssl x509 -outform PEM -out /usr/local/share/ca-certificates/s3_server_cert.crt || \
 	exit 1
-
     # Load the certificate in the system
     update-ca-certificates --fresh >/dev/null
-
     # Ask different SDKs/tools to load system certificates
     export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
     export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
     export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 }
-
-
 function main()
 {
     export MINT_DATA_DIR
@@ -130,14 +113,12 @@ function main()
     export SERVER_ENDPOINT
     export SERVER_IP
     export SERVER_PORT
-
     export ACCESS_KEY
     export SECRET_KEY
     export ENABLE_HTTPS
     export SERVER_REGION
     export ENABLE_VIRTUAL_STYLE
     export GO111MODULE
-
     echo "Running with"
     echo "SERVER_ENDPOINT:      $SERVER_ENDPOINT"
     echo "ACCESS_KEY:           $ACCESS_KEY"
@@ -150,18 +131,14 @@ function main()
     echo
     echo "To get logs, run 'docker cp ${CONTAINER_ID}:/mint/log /tmp/mint-logs'"
     echo
-
     [ "$ENABLE_HTTPS" == "1" ] && trust_s3_endpoint_tls_cert
-
     declare -a run_list
     sdks=( "$@" )
-
     if [ "$#" -eq 0 ]; then
         cd "$TESTS_DIR" || exit
         sdks=(*)
         cd .. || exit
     fi
-
     for sdk in "${sdks[@]}"; do
         sdk=$(basename "$sdk")
         run_list=( "${run_list[@]}" "$TESTS_DIR/$sdk" )
