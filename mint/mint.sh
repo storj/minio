@@ -81,7 +81,7 @@ function run_test()
 
     mkdir -p "$BASE_LOG_DIR/$sdk_name"
 
-    (cd "$sdk_dir" && timeout --preserve-status "$MINT_TEST_TIMEOUT" ./run.sh "$BASE_LOG_DIR/$LOG_FILE" "$BASE_LOG_DIR/$sdk_name/$ERROR_FILE")
+    (cd "$sdk_dir" && timeout "$MINT_TEST_TIMEOUT" ./run.sh "$BASE_LOG_DIR/$LOG_FILE" "$BASE_LOG_DIR/$sdk_name/$ERROR_FILE")
     rv=$?
     end=$(date +%s)
     duration=$(humanize_time $(( end - start )))
