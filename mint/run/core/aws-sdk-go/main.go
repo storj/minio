@@ -882,7 +882,7 @@ func testListMultipartUploads(s3Client *s3.S3) {
 		Key:    aws.String(object),
 	})
 	if err != nil {
-		if pErr, ok := err.(*minio.NotImplemented); ok {
+		if pErr, ok := err.(*error.NotImplemented); ok {
 			successLogger(function, args, startTime).Info()
 			return
 		}
