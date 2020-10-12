@@ -1693,9 +1693,9 @@ function test_serverside_encryption_error() {
 # main handler for all the tests.
 main() {
     # Success tests
-    test_create_bucket #&& \
-    # test_upload_object && \
-    # test_lookup_object_prefix && \
+    test_create_bucket && \
+    test_upload_object && \
+    test_lookup_object_prefix #&& \
     # test_list_objects && \
     # test_multipart_upload_0byte && \
     # test_multipart_upload && \
