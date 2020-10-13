@@ -37,7 +37,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/minio/minio-go/v6"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -884,12 +883,12 @@ func testListMultipartUploads(s3Client *s3.S3) {
 	})
 	if err != nil {
 		var notImplemented = "NotImplemented"
-	if !strings.Contains(err.Error(), notImplemented) {
+		if !strings.Contains(err.Error(), notImplemented) {
 
-		//if serr, ok := err.(*NotImplemented); ok {
+			//if serr, ok := err.(*NotImplemented); ok {
 			successLogger(function, args, startTime).Info()
 			return
-		//}
+		}
 		failureLog(function, args, startTime, "", "AWS SDK Go createMultipartupload API failed", err).Fatal()
 		return
 	}
