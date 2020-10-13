@@ -882,10 +882,8 @@ func testListMultipartUploads(s3Client *s3.S3) {
 		Key:    aws.String(object),
 	})
 	if err != nil {
-		var notImplemented = "NotImplemented"
+		var notImplemented = "501"
 		if !strings.Contains(err.Error(), notImplemented) {
-
-			//if serr, ok := err.(*NotImplemented); ok {
 			successLogger(function, args, startTime).Info()
 			return
 		}
