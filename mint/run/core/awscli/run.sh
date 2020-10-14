@@ -15,6 +15,8 @@
 #  limitations under the License.
 #
 
+set +x
+
 # handle command line arguments
 if [ $# -ne 2 ]; then
     echo "usage: run.sh <OUTPUT-LOG-FILE> <ERROR-LOG-FILE>"
