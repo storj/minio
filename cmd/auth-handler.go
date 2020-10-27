@@ -336,6 +336,9 @@ func checkRequestAuthTypeToAccessKey(ctx context.Context, r *http.Request, actio
 	if cred.AccessKey != "" {
 		logger.GetReqInfo(ctx).AccessKey = cred.AccessKey
 	}
+	if cred.AccessGrant != "" {
+		logger.GetReqInfo(ctx).AccessGrant = cred.AccessGrant
+	}
 
 	if action != policy.ListAllMyBucketsAction && cred.AccessKey == "" {
 		// Anonymous checks are not meant for ListBuckets action
@@ -642,6 +645,9 @@ func isPutActionAllowed(ctx context.Context, atype authType, bucketName, objectN
 
 	if cred.AccessKey != "" {
 		logger.GetReqInfo(ctx).AccessKey = cred.AccessKey
+	}
+	if cred.AccessGrant != "" {
+		logger.GetReqInfo(ctx).AccessGrant = cred.AccessGrant
 	}
 
 	// Do not check for PutObjectRetentionAction permission,

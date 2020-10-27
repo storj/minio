@@ -1,0 +1,90 @@
+GO_VERSION ?= 1.16
+GOOS ?= linux
+GOARCH ?= amd64
+GOPATH ?= $(shell go env GOPATH)
+COMPONENTLIST := minio-mint
+COMPOSE_PROJECT_NAME := ${TAG}-$(shell git rev-parse --abbrev-ref HEAD)
+BRANCH_NAME ?= $(shell git rev-parse --abbrev-ref HEAD | sed "s!/!-!g")
+TAG    := $(shell git rev-parse --short HEAD)-go${GO_VERSION}
+LATEST_TAG := latest
+
+FILEEXT :=
+ifeq (${GOOS},windows)
+FILEEXT := .exe
+endif
+
+DOCKER_BUILD := docker build \
+	--build-arg TAG=${TAG}
+
+.DEFAULT_GOAL := help
+.PHONY: help
+help:
+	@awk 'BEGIN { \
+		FS = ":.*##"; \
+		printf "\nUsage:\n  make \033[36m<target>\033[0m\n"\
+	} \
+	/^[a-zA-Z_-]+:.*?##/ { \
+		printf "  \033[36m%-17s\033[0m %s\n", $$1, $$2 \
+	} \
+	/^##@/ { \
+		printf "\n\033[1m%s\033[0m\n", substr($$0, 5) \
+	} ' $(MAKEFILE_LIST)
+
+##@ Dependencies
+
+.PHONY: build-dev-deps
+build-dev-deps: ## Install dependencies for builds
+	go get golang.org/x/tools/cover
+	go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+
+.PHONY: build-packages
+build-packages: build-packages-normal build-packages-race ## Test docker images locally
+build-packages-normal:
+	go build -v ./...
+build-packages-race:
+	go build -v -race ./...
+
+##@ Build
+
+.PHONY: images
+images: minio-mint-image
+	echo Built version: ${TAG}
+
+.PHONY: minio-mint-image
+minio-mint-image: ## Build minio-mint Docker image
+	${DOCKER_BUILD} --pull=true -t storjlabs/minio-mint:${TAG}-amd64 \
+		-f Dockerfile.mint .
+	${DOCKER_BUILD} --pull=true -t storjlabs/minio-mint:${TAG}-arm32v6 \
+		--build-arg=GOARCH=arm --build-arg=DOCKER_ARCH=arm32v6 \
+		-f Dockerfile.mint .
+	${DOCKER_BUILD} --pull=true -t storjlabs/minio-mint:${TAG}-aarch64 \
+		--build-arg=GOARCH=arm64 --build-arg=DOCKER_ARCH=aarch64 \
+		-f Dockerfile.mint .
+
+
+##@ Deploy
+
+.PHONY: push-images
+push-images: ## Push Docker images to Docker Hub (jenkins)
+	# images have to be pushed before a manifest can be created
+	for c in ${COMPONENTLIST}; do \
+		docker push storjlabs/$$c:${TAG}-amd64 \
+		&& docker push storjlabs/$$c:${TAG}-arm32v6 \
+		&& docker push storjlabs/$$c:${TAG}-aarch64 \
+		&& for t in ${TAG} ${LATEST_TAG}; do \
+			docker manifest create storjlabs/$$c:$$t \
+			storjlabs/$$c:${TAG}-amd64 \
+			storjlabs/$$c:${TAG}-arm32v6 \
+			storjlabs/$$c:${TAG}-aarch64 \
+			&& docker manifest annotate storjlabs/$$c:$$t storjlabs/$$c:${TAG}-amd64 --os linux --arch amd64 \
+			&& docker manifest annotate storjlabs/$$c:$$t storjlabs/$$c:${TAG}-arm32v6 --os linux --arch arm --variant v6 \
+			&& docker manifest annotate storjlabs/$$c:$$t storjlabs/$$c:${TAG}-aarch64 --os linux --arch arm64 \
+			&& docker manifest push --purge storjlabs/$$c:$$t \
+		; done \
+	; done
+
+.PHONY: clean-images
+clean-images:
+	-docker rmi storjlabs/minio-mint:${TAG}-amd64
+	-docker rmi storjlabs/minio-mint:${TAG}-arm32v6
+	-docker rmi storjlabs/minio-mint:${TAG}-aarch64

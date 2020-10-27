@@ -86,6 +86,7 @@ var (
 // Credentials holds access and secret keys.
 type Credentials struct {
 	AccessKey    string    `xml:"AccessKeyId" json:"accessKey,omitempty"`
+	AccessGrant  string    `xml:"AccessGrant" json:"accessGrant,omitempty"`
 	SecretKey    string    `xml:"SecretAccessKey" json:"secretKey,omitempty"`
 	Expiration   time.Time `xml:"Expiration" json:"expiration,omitempty"`
 	SessionToken string    `xml:"SessionToken" json:"sessionToken,omitempty"`
