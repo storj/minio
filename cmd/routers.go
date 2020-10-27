@@ -96,8 +96,12 @@ func configureServerHandler(endpointServerPools EndpointServerPools) (http.Handl
 	// Add STS router always.
 	registerSTSRouter(router)
 
-	// Add Admin router, all APIs are enabled in server mode.
-	registerAdminRouter(router, true, true)
+	// Only enable admin APIs if no auth is disabled
+	if !globalNoAuthConfig.Enabled {
+		// Add Admin router, all APIs are enabled in server mode.
+		registerAdminRouter(router, true, true)
+
+	}
 
 	// Add healthcheck router
 	registerHealthCheckRouter(router)

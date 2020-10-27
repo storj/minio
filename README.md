@@ -1,3 +1,24 @@
+# How to update to latest minio changes
+
+The Storj changes are contained in two commits:
+
+1. The first commit holds all the code changes.
+2. The second commit renames the module to github.com/storj/minio and changes
+   the import paths.
+
+The process to update to a new minio version in the future:
+
+1. Create a new branch that contains the new minio code (i.e., no storj forked
+   code).
+2. Squash the storj changes into a single commit (if possible, do not include
+   the second commit, containing the module rename), as much as is possible, to
+   make cherry-picking easier.
+3. Cherry-pick the squashed commit with all the storj code.
+4. Rename the module again. The command used last time was:
+    find ./ -type f -exec sed -i -e 's/github.com\/minio\/minio\//github.com\/storj\/minio\//g' {} \;
+5. Make this new branch the `main` branch of the repo. This will require
+   force-pushing to github and gerrit, and restarting the syncer.
+
 # MinIO Quickstart Guide
 [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/minio.svg?maxAge=604800)](https://hub.docker.com/r/minio/minio/)
 

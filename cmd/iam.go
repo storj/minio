@@ -49,6 +49,9 @@ const (
 	// This mode uses users and groups from a configured LDAP
 	// server.
 	LDAPUsersSysType UsersSysType = "LDAPUsersSys"
+
+	// This mode does not restrict users and groups.
+	NoAuthSysType UsersSysType = "NoAuthSys"
 )
 
 const (
@@ -421,7 +424,10 @@ func (sys *IAMSys) InitStore(objAPI ObjectLayer) {
 	sys.Lock()
 	defer sys.Unlock()
 
-	if globalEtcdClient == nil {
+	if globalNoAuthConfig.Enabled {
+		sys.store = newIAMNoAuthStore(objAPI)
+		sys.usersSysType = NoAuthSysType
+	} else if globalEtcdClient == nil {
 		sys.store = newIAMObjectStore(objAPI)
 	} else {
 		sys.store = newIAMEtcdStore()
@@ -1879,6 +1885,11 @@ func (sys *IAMSys) IsAllowed(args iampolicy.Args) bool {
 
 	// Policies don't apply to the owner.
 	if args.IsOwner {
+		return true
+	}
+
+	// Policies don't apply when authorization is disabled.
+	if globalNoAuthConfig.Enabled {
 		return true
 	}
 

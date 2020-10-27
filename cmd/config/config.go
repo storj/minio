@@ -66,6 +66,7 @@ const (
 	PolicyOPASubSys      = "policy_opa"
 	IdentityOpenIDSubSys = "identity_openid"
 	IdentityLDAPSubSys   = "identity_ldap"
+	IdentityNoAuthSubSys = "identity_noauth"
 	CacheSubSys          = "cache"
 	RegionSubSys         = "region"
 	EtcdSubSys           = "etcd"
@@ -113,6 +114,7 @@ var SubSystems = set.CreateStringSet(
 	AuditWebhookSubSys,
 	PolicyOPASubSys,
 	IdentityLDAPSubSys,
+	IdentityNoAuthSubSys,
 	IdentityOpenIDSubSys,
 	CrawlerSubSys,
 	HealSubSys,
@@ -149,6 +151,7 @@ var SubSystemsSingleTargets = set.CreateStringSet([]string{
 	KmsKesSubSys,
 	PolicyOPASubSys,
 	IdentityLDAPSubSys,
+	IdentityNoAuthSubSys,
 	IdentityOpenIDSubSys,
 	HealSubSys,
 	CrawlerSubSys,
