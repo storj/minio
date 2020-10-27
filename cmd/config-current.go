@@ -29,6 +29,7 @@ import (
 	"github.com/minio/minio/cmd/config/dns"
 	"github.com/minio/minio/cmd/config/etcd"
 	xldap "github.com/minio/minio/cmd/config/identity/ldap"
+	"github.com/minio/minio/cmd/config/identity/noauth"
 	"github.com/minio/minio/cmd/config/identity/openid"
 	"github.com/minio/minio/cmd/config/notify"
 	"github.com/minio/minio/cmd/config/policy/opa"
@@ -47,6 +48,7 @@ func initHelp() {
 		config.CacheSubSys:          cache.DefaultKVS,
 		config.CompressionSubSys:    compress.DefaultKVS,
 		config.IdentityLDAPSubSys:   xldap.DefaultKVS,
+		config.IdentityNoAuthSubSys: noauth.DefaultKVS,
 		config.IdentityOpenIDSubSys: openid.DefaultKVS,
 		config.PolicyOPASubSys:      opa.DefaultKVS,
 		config.RegionSubSys:         config.DefaultRegionKVS,
@@ -87,6 +89,10 @@ func initHelp() {
 		config.HelpKV{
 			Key:         config.IdentityOpenIDSubSys,
 			Description: "enable OpenID SSO support",
+		},
+		config.HelpKV{
+			Key:         config.IdentityNoAuthSubSys,
+			Description: "disable user authentication support",
 		},
 		config.HelpKV{
 			Key:         config.IdentityLDAPSubSys,
@@ -193,6 +199,7 @@ func initHelp() {
 		config.CompressionSubSys:    compress.Help,
 		config.CrawlerSubSys:        crawler.Help,
 		config.IdentityOpenIDSubSys: openid.Help,
+		config.IdentityNoAuthSubSys: noauth.Help,
 		config.IdentityLDAPSubSys:   xldap.Help,
 		config.PolicyOPASubSys:      opa.Help,
 		config.KmsVaultSubSys:       crypto.HelpVault,
@@ -389,6 +396,8 @@ func lookupConfigs(s config.Config, setDriveCount int) {
 			}
 		}
 	}
+
+	globalNoAuthConfig = noauth.LookupConfig(s[config.IdentityNoAuthSubSys][config.Enable])
 
 	// Bucket federation is 'true' only when IAM assets are not namespaced
 	// per tenant and all tenants interested in globally available users

@@ -48,6 +48,9 @@ const (
 	// This mode uses users and groups from a configured LDAP
 	// server.
 	LDAPUsersSysType UsersSysType = "LDAPUsersSys"
+
+	// This mode does not restrict users and groups.
+	NoAuthSysType UsersSysType = "NoAuthSys"
 )
 
 const (
@@ -422,7 +425,10 @@ func (sys *IAMSys) Init(ctx context.Context, objAPI ObjectLayer) {
 		return
 	}
 
-	if globalEtcdClient == nil {
+	if globalNoAuthConfig.Enabled {
+		sys.store = newIAMNoAuthStore(ctx, objAPI)
+		sys.usersSysType = NoAuthSysType
+	} else if globalEtcdClient == nil {
 		sys.store = newIAMObjectStore(ctx, objAPI)
 	} else {
 		sys.store = newIAMEtcdStore(ctx)
@@ -1125,8 +1131,7 @@ func (sys *IAMSys) SetUserSecretKey(accessKey string, secretKey string) error {
 func (sys *IAMSys) GetUser(accessKey string) (cred auth.Credentials, ok bool) {
 	objectAPI := newObjectLayerWithoutSafeModeFn()
 	if objectAPI == nil || sys == nil || sys.store == nil {
-		// Storj hack: we want a user to be always found for the provided access key, so we can bypass access key validation
-		return cred, true
+		return cred, false
 	}
 
 	sys.store.rlock()

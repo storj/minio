@@ -323,7 +323,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 			"Unable to handle encrypted backend for iam and policies")
 	}
 
-	if enableIAMOps {
+	if enableIAMOps || globalNoAuthConfig.Enabled {
 		// Initialize IAM sys.
 		startBackgroundIAMLoad(GlobalContext)
 	}
