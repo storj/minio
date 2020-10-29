@@ -21,14 +21,13 @@ package http
 import (
 	"context"
 	"net"
-	"syscall"
 	"time"
 )
 
 // TODO: if possible implement for non-linux platforms, not a priority at the moment
-func setInternalTCPParameters(c syscall.RawConn) error {
-	return nil
-}
+// func setInternalTCPParameters(c syscall.RawConn) error {
+// 	return nil
+// }
 
 // DialContext is a function to make custom Dial for internode communications
 type DialContext func(ctx context.Context, network, address string) (net.Conn, error)
