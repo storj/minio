@@ -2,6 +2,12 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"sync"
 	"time"
 
 	"github.com/minio/minio/cmd/logger"
@@ -9,25 +15,26 @@ import (
 	iampolicy "github.com/minio/minio/pkg/iam/policy"
 )
 
+func getenv(key, def string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return def
+}
+
 // IAMNoAuthStore implements IAMStorageAPI
 type IAMNoAuthStore struct {
+	mu sync.RWMutex
 }
 
 func newIAMNoAuthStore(ctx context.Context, objAPI ObjectLayer) *IAMNoAuthStore {
 	return &IAMNoAuthStore{}
 }
 
-func (iamOS *IAMNoAuthStore) lock() {
-}
-
-func (iamOS *IAMNoAuthStore) unlock() {
-}
-
-func (iamOS *IAMNoAuthStore) rlock() {
-}
-
-func (iamOS *IAMNoAuthStore) runlock() {
-}
+func (iamOS *IAMNoAuthStore) lock()    { iamOS.mu.Lock() }
+func (iamOS *IAMNoAuthStore) unlock()  { iamOS.mu.Unlock() }
+func (iamOS *IAMNoAuthStore) rlock()   { iamOS.mu.RLock() }
+func (iamOS *IAMNoAuthStore) runlock() { iamOS.mu.RUnlock() }
 
 // Migrate users directory in a single scan.
 func (iamOS *IAMNoAuthStore) migrateUsersConfigToV1(ctx context.Context, isSTS bool) error {
@@ -64,25 +71,52 @@ func (iamOS *IAMNoAuthStore) loadPolicyDocs(ctx context.Context, m map[string]ia
 }
 
 func (iamOS *IAMNoAuthStore) loadUser(user string, userType IAMUserType, m map[string]auth.Credentials) error {
-	databaseOfUsers := map[string]auth.Credentials{
-		"aaa": {
-			AccessKey: "1gioUdqrCiaf7XNZsQGZ9a6qNVACsdgeTrWuMdYkBDKx8LQYu7V2We8Qis3iE6iAd7TH9gcYiM875WCr7LdVYHBdkzgcTGNGSP1RXLuLaqzagGNRQZ4GgxJFqqZsfKVikeVWdjosh6joiKEQsbxwhvnSk3kJmJ5HSkXWqX7T9AEFEpXMFVR955CFBzKiekFafFq8EYY7tautiUPTKsLuhPht1KshyZBTGRLkJQN31g8ZE4mN5yet5BVgsgju3JSmPhTpWnGPhMDANTNeA4KtQuZpgLNfTZrirBsw6VpGtUukdFBKPTmmudMk6cfBkLyRtFkwECvpNhb5WwuFP54exapVZstnq8o7Uk2a8jomS3MPejYXCAote9e7Uuoa1nynfsNvN1TjDGGL2uReCbH6yzWurq",
-			SecretKey: "11111111",
-			Status:    "on",
-		},
-		"bbb": {
-			AccessKey: "1gioUdqrCiaf7XNZsQGZ9a6qNVACsdgeTrWuMdYkBDKx8LQYu7V2We8Qis3iE6iAd7TH9gcYiM875WCr7LdVYHBdkzgcTGNGSP1RXLuLaqzagGNRQZ4GgxJFqqZsfKVikeVWdjosh6joiKEQsbxwhvnSk3kJmJ5HSkXWqX7T9AEFEpXMFVR955CFBzKiekFafFq8F9K9facGmqyMi2fnUy7aHwQGgf5dwCSpexJo4LpjhJWjYzLRE4q4DUPHBN2x6QhShuF2nEyyK58ki2BJb41V7AxacbFeJSaD33U4zEFj7ScDuwJs1Z4wiFktNZxKzjsBNxb8BKCe1C4Pn1PMMPJ36Gg22HoDo82W52PmkMv81DrzpEJT7xYcNgwCaTQYuwpW9MFuZJ8TJh7eQdzv54VV4q",
-			SecretKey: "22222222",
-			Status:    "on",
-		},
-		"ccc": {
-			AccessKey: "1gioUdqrCiaf7XNZsQGZ9a6qNVACsdgeTrWuMdYkBDKx8LQYu7V2We8Qis3iE6iAd7TH9gcYiM875WCr7LdVYHBdkzgcTGNGSP1RXLuLaqzagGNRQZ4GgxJFqqZsfKVikeVWdjosh6joiKEQsbxwhvnSk3kJmJ5HSkXWqX7T9AEFEpXMFVR955CFBzKiekFafFq8F3tp5wu1gxJ7TzCfo5rycBs2DJNRGtusmQV2PLhUZkAbStdJPDDWKADoSDecg9pFnt6hpVCzNiryuYFTjJqx9qVx5GeXBLD5yhmY1bXpu5KRXow7PW8n9kidmeKP3htorQdHsYQtB3SyDYWVqEyiMcZKsH4aExfjfghKUeYYU2TPdpjsLHfVKECuqaMEcdqM6nrXZkPMjMJbMG27Hy77jT",
-			SecretKey: "33333333",
-			Status:    "on",
-		},
+	if _, ok := m[user]; ok {
+		return nil
 	}
 
-	m[user] = databaseOfUsers[user]
+	// TODO: is there a better way to configure this?
+	host := getenv("MINIO_NOAUTH_SERVER_ADDR", "localhost:8000")
+	token := getenv("MINIO_NOAUTH_AUTH_TOKEN", "")
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/v1/access/%s", host, user), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	// TODO: should iamOS have it's own http client instead of the DefaultClient?
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// TODO: should we cache negative acknowledgement of not found?
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("invalid status code")
+	}
+
+	var response struct {
+		AccessGrant string `json:"access_grant"`
+		SecretKey   string `json:"secret_key"`
+		Public      bool   `json:"public"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return err
+	}
+
+	// TODO: i forget if we're supposed to reject requests that have Public set to true
+
+	// TODO: we need to eventually remove values from this map, but when? how do we have
+	//       access to it? do we need to hold locks to mutate it? if so, which ones?
+	m[user] = auth.Credentials{
+		AccessKey: response.AccessGrant,
+		SecretKey: response.SecretKey,
+		Status:    "on",
+	}
+
 	return nil
 }
 
