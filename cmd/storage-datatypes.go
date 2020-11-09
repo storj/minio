@@ -17,9 +17,28 @@
 package cmd
 
 import (
-	"os"
 	"time"
 )
+
+//go:generate msgp -file=$GOFILE
+
+// DiskInfo is an extended type which returns current
+// disk usage per path.
+type DiskInfo struct {
+	Total     uint64
+	Free      uint64
+	Used      uint64
+	FSType    string
+	RootDisk  bool
+	Healing   bool
+	Endpoint  string
+	MountPath string
+	ID        string
+	Error     string // carries the error over the network
+}
+
+// VolsInfo is a collection of volume(bucket) information
+type VolsInfo []VolInfo
 
 // VolInfo - represents volume stat information.
 type VolInfo struct {
@@ -59,7 +78,23 @@ type FileInfoVersions struct {
 	Versions []FileInfo
 }
 
+// forwardPastVersion will truncate the result to only contain versions after 'v'.
+// If v is empty or the version isn't found no changes will be made.
+func (f *FileInfoVersions) forwardPastVersion(v string) {
+	if v == "" {
+		return
+	}
+	for i, ver := range f.Versions {
+		if ver.VersionID == v {
+			f.Versions = f.Versions[i+1:]
+			return
+		}
+	}
+}
+
 // FileInfo - represents file stat information.
+//msgp:tuple FileInfo
+// The above means that any added/deleted fields are incompatible.
 type FileInfo struct {
 	// Name of the volume.
 	Volume string
@@ -91,7 +126,7 @@ type FileInfo struct {
 	Size int64
 
 	// File mode bits.
-	Mode os.FileMode
+	Mode uint32
 
 	// File metadata
 	Metadata map[string]string

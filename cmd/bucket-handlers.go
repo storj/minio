@@ -383,6 +383,10 @@ func (api objectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 		return
 	}
 
+	// Call checkRequestAuthType to populate ReqInfo.AccessKey before GetBucketInfo()
+	// Ignore errors here to preserve the S3 error behavior of GetBucketInfo()
+	checkRequestAuthType(ctx, r, policy.DeleteObjectAction, bucket, "")
+
 	// Before proceeding validate if bucket exists.
 	_, err := objectAPI.GetBucketInfo(ctx, bucket)
 	if err != nil {
@@ -457,7 +461,10 @@ func (api objectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 
 	deletedObjects := make([]DeletedObject, len(deleteObjects.Objects))
 	for i := range errs {
-		dindex := objectsToDelete[deleteList[i]]
+		dindex := objectsToDelete[ObjectToDelete{
+			ObjectName: dObjects[i].ObjectName,
+			VersionID:  dObjects[i].VersionID,
+		}]
 		apiErr := toAPIError(ctx, errs[i])
 		if apiErr.Code == "" || apiErr.Code == "NoSuchKey" || apiErr.Code == "InvalidArgument" {
 			deletedObjects[dindex] = dObjects[i]
@@ -487,19 +494,21 @@ func (api objectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 
 	// Notify deleted event for objects.
 	for _, dobj := range deletedObjects {
+		eventName := event.ObjectRemovedDelete
+
 		objInfo := ObjectInfo{
 			Name:      dobj.ObjectName,
 			VersionID: dobj.VersionID,
 		}
+
 		if dobj.DeleteMarker {
-			objInfo = ObjectInfo{
-				Name:         dobj.ObjectName,
-				DeleteMarker: dobj.DeleteMarker,
-				VersionID:    dobj.DeleteMarkerVersionID,
-			}
+			objInfo.DeleteMarker = dobj.DeleteMarker
+			objInfo.VersionID = dobj.DeleteMarkerVersionID
+			eventName = event.ObjectRemovedDeleteMarkerCreated
 		}
+
 		sendEvent(eventArgs{
-			EventName:    event.ObjectRemovedDelete,
+			EventName:    eventName,
 			BucketName:   bucket,
 			Object:       objInfo,
 			ReqParams:    extractReqParams(r),

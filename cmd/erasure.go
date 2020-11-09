@@ -68,8 +68,8 @@ type erasureObjects struct {
 }
 
 // NewNSLock - initialize a new namespace RWLocker instance.
-func (er erasureObjects) NewNSLock(ctx context.Context, bucket string, objects ...string) RWLocker {
-	return er.nsMutex.NewNSLock(ctx, er.getLockers, bucket, objects...)
+func (er erasureObjects) NewNSLock(bucket string, objects ...string) RWLocker {
+	return er.nsMutex.NewNSLock(er.getLockers, bucket, objects...)
 }
 
 // SetDriveCount returns the current drives per set.
@@ -81,14 +81,6 @@ func (er erasureObjects) SetDriveCount() int {
 func (er erasureObjects) Shutdown(ctx context.Context) error {
 	// Add any object layer shutdown activities here.
 	closeStorageDisks(er.getDisks())
-	select {
-	case _, ok := <-er.mrfOpCh:
-		if ok {
-			close(er.mrfOpCh)
-		}
-	default:
-		close(er.mrfOpCh)
-	}
 	return nil
 }
 
@@ -186,7 +178,9 @@ func getDisksInfo(disks []StorageAPI, endpoints []string) (disksInfo []madmin.Di
 		}
 	}
 
-	if len(disksInfo) == rootDiskCount {
+	// Count offline disks as well to ensure consistent
+	// reportability of offline drives on local setups.
+	if len(disksInfo) == (rootDiskCount + offlineDisks.Sum()) {
 		// Success.
 		return disksInfo, errs, onlineDisks, offlineDisks
 	}
@@ -252,7 +246,7 @@ func (er erasureObjects) crawlAndGetDataUsage(ctx context.Context, buckets []Buc
 	}
 
 	// Collect disks we can use.
-	disks := er.getLoadBalancedDisks()
+	disks := er.getOnlineDisks()
 	if len(disks) == 0 {
 		logger.Info(color.Green("data-crawl:") + " all disks are offline or being healed, skipping crawl")
 		return nil
