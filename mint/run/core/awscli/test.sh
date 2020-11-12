@@ -1697,22 +1697,22 @@ main() {
     test_upload_object && \
     test_lookup_object_prefix && \
     test_list_objects && \
-    test_multipart_upload_0byte && \
-    test_multipart_upload && \
-    test_max_key_list && \
-    test_copy_object && \
-    test_copy_object_storage_class && \
-    test_copy_object_storage_class_same && \
-    test_presigned_object && \
+    #test_multipart_upload_0byte && \
+    #test_multipart_upload && \
+    #test_max_key_list && \
+    #test_copy_object && \
+    #test_copy_object_storage_class && \
+    #test_copy_object_storage_class_same && \
+    #test_presigned_object && \
     test_upload_object_10 && \
-    test_multipart_upload_10 && \
+    #test_multipart_upload_10 && \
     test_serverside_encryption && \
     test_serverside_encryption_get_range && \
-    test_serverside_encryption_multipart && \
-    test_serverside_encryption_multipart_copy && \
+    #test_serverside_encryption_multipart && \
+    #test_serverside_encryption_multipart_copy && \
     # Success cli ops.
-    test_aws_s3_cp && \
-    test_aws_s3_sync && \
+    #test_aws_s3_cp && \
+    #test_aws_s3_sync && \
     # Error tests
     test_list_objects_error && \
     test_put_object_error && \

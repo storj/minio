@@ -1056,7 +1056,7 @@ func main() {
 	// log Info or above -- success cases are Info level, failures are Fatal level
 	log.SetLevel(log.InfoLevel)
 	// execute tests
-	testPresignedPutInvalidHash(s3Client)
+	//testPresignedPutInvalidHash(s3Client)
 	testListObjects(s3Client)
 	testSelectObject(s3Client)
 	testCreateBucketError(s3Client)
