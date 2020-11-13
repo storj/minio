@@ -19,15 +19,15 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
-	"errors"
 	"io"
 	"net/url"
+	"strconv"
 
 	"github.com/minio/minio/cmd/http"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/rest"
 	"github.com/minio/minio/pkg/dsync"
+	xnet "github.com/minio/minio/pkg/net"
 )
 
 // lockRESTClient is authenticable lock REST client
@@ -76,6 +76,11 @@ func (client *lockRESTClient) IsOnline() bool {
 	return client.restClient.IsOnline()
 }
 
+// Not a local locker
+func (client *lockRESTClient) IsLocal() bool {
+	return false
+}
+
 // Close - marks the client as closed.
 func (client *lockRESTClient) Close() error {
 	client.restClient.Close()
@@ -88,6 +93,7 @@ func (client *lockRESTClient) restCall(ctx context.Context, call string, args ds
 	values.Set(lockRESTUID, args.UID)
 	values.Set(lockRESTOwner, args.Owner)
 	values.Set(lockRESTSource, args.Source)
+	values.Set(lockRESTQuorum, strconv.Itoa(args.Quorum))
 	var buffer bytes.Buffer
 	for _, resource := range args.Resources {
 		buffer.WriteString(resource)
@@ -145,25 +151,17 @@ func newlockRESTClient(endpoint Endpoint) *lockRESTClient {
 		Path:   pathJoin(lockRESTPrefix, endpoint.Path, lockRESTVersion),
 	}
 
-	var tlsConfig *tls.Config
-	if globalIsSSL {
-		tlsConfig = &tls.Config{
-			ServerName: endpoint.Hostname(),
-			RootCAs:    globalRootCAs,
-		}
-	}
-
-	trFn := newInternodeHTTPTransport(tlsConfig, rest.DefaultTimeout)
-	restClient := rest.NewClient(serverURL, trFn, newAuthToken)
+	restClient := rest.NewClient(serverURL, globalInternodeTransport, newAuthToken)
+	restClient.ExpectTimeouts = true
+	// Use a separate client to avoid recursive calls.
+	healthClient := rest.NewClient(serverURL, globalInternodeTransport, newAuthToken)
+	healthClient.ExpectTimeouts = true
 	restClient.HealthCheckFn = func() bool {
 		ctx, cancel := context.WithTimeout(GlobalContext, restClient.HealthCheckTimeout)
-		// Instantiate a new rest client for healthcheck
-		// to avoid recursive healthCheckFn()
-		respBody, err := rest.NewClient(serverURL, trFn, newAuthToken).Call(ctx, lockRESTMethodHealth, nil, nil, -1)
+		defer cancel()
+		respBody, err := healthClient.Call(ctx, lockRESTMethodHealth, nil, nil, -1)
 		xhttp.DrainBody(respBody)
-		cancel()
-		var ne *rest.NetworkError
-		return !errors.Is(err, context.DeadlineExceeded) && !errors.As(err, &ne)
+		return !xnet.IsNetworkOrHostDown(err, false)
 	}
 
 	return &lockRESTClient{endpoint: endpoint, restClient: restClient}

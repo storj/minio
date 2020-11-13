@@ -27,7 +27,7 @@ type IAMNoAuthStore struct {
 	mu sync.RWMutex
 }
 
-func newIAMNoAuthStore(ctx context.Context, objAPI ObjectLayer) *IAMNoAuthStore {
+func newIAMNoAuthStore(objAPI ObjectLayer) *IAMNoAuthStore {
 	return &IAMNoAuthStore{}
 }
 
@@ -50,19 +50,19 @@ func (iamOS *IAMNoAuthStore) migrateBackendFormat(ctx context.Context) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) saveIAMConfig(item interface{}, path string) error {
+func (iamOS *IAMNoAuthStore) saveIAMConfig(ctx context.Context, item interface{}, path string, opts ...options) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) loadIAMConfig(item interface{}, path string) error {
+func (iamOS *IAMNoAuthStore) loadIAMConfig(ctx context.Context, item interface{}, path string) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) deleteIAMConfig(path string) error {
+func (iamOS *IAMNoAuthStore) deleteIAMConfig(ctx context.Context, path string) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) loadPolicyDoc(policy string, m map[string]iampolicy.Policy) error {
+func (iamOS *IAMNoAuthStore) loadPolicyDoc(ctx context.Context, policy string, m map[string]iampolicy.Policy) error {
 	return nil
 }
 
@@ -70,7 +70,7 @@ func (iamOS *IAMNoAuthStore) loadPolicyDocs(ctx context.Context, m map[string]ia
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) loadUser(user string, userType IAMUserType, m map[string]auth.Credentials) error {
+func (iamOS *IAMNoAuthStore) loadUser(ctx context.Context, user string, userType IAMUserType, m map[string]auth.Credentials) error {
 	if _, ok := m[user]; ok {
 		return nil
 	}
@@ -124,7 +124,7 @@ func (iamOS *IAMNoAuthStore) loadUsers(ctx context.Context, userType IAMUserType
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) loadGroup(group string, m map[string]GroupInfo) error {
+func (iamOS *IAMNoAuthStore) loadGroup(ctx context.Context, group string, m map[string]GroupInfo) error {
 	return nil
 }
 
@@ -132,7 +132,7 @@ func (iamOS *IAMNoAuthStore) loadGroups(ctx context.Context, m map[string]GroupI
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) loadMappedPolicy(name string, userType IAMUserType, isGroup bool, m map[string]MappedPolicy) error {
+func (iamOS *IAMNoAuthStore) loadMappedPolicy(ctx context.Context, name string, userType IAMUserType, isGroup bool, m map[string]MappedPolicy) error {
 	return nil
 }
 
@@ -145,35 +145,35 @@ func (iamOS *IAMNoAuthStore) loadAll(ctx context.Context, sys *IAMSys) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) savePolicyDoc(policyName string, p iampolicy.Policy) error {
+func (iamOS *IAMNoAuthStore) savePolicyDoc(ctx context.Context, policyName string, p iampolicy.Policy) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) saveMappedPolicy(name string, userType IAMUserType, isGroup bool, mp MappedPolicy) error {
+func (iamOS *IAMNoAuthStore) saveMappedPolicy(ctx context.Context, name string, userType IAMUserType, isGroup bool, mp MappedPolicy, opts ...options) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) saveUserIdentity(name string, userType IAMUserType, u UserIdentity) error {
+func (iamOS *IAMNoAuthStore) saveUserIdentity(ctx context.Context, name string, userType IAMUserType, u UserIdentity, opts ...options) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) saveGroupInfo(name string, gi GroupInfo) error {
+func (iamOS *IAMNoAuthStore) saveGroupInfo(ctx context.Context, name string, gi GroupInfo) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) deletePolicyDoc(name string) error {
+func (iamOS *IAMNoAuthStore) deletePolicyDoc(ctx context.Context, name string) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) deleteMappedPolicy(name string, userType IAMUserType, isGroup bool) error {
+func (iamOS *IAMNoAuthStore) deleteMappedPolicy(ctx context.Context, name string, userType IAMUserType, isGroup bool) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) deleteUserIdentity(name string, userType IAMUserType) error {
+func (iamOS *IAMNoAuthStore) deleteUserIdentity(ctx context.Context, name string, userType IAMUserType) error {
 	return nil
 }
 
-func (iamOS *IAMNoAuthStore) deleteGroupInfo(name string) error {
+func (iamOS *IAMNoAuthStore) deleteGroupInfo(ctx context.Context, name string) error {
 	return nil
 }
 
