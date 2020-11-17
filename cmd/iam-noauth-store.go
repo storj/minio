@@ -112,9 +112,10 @@ func (iamOS *IAMNoAuthStore) loadUser(ctx context.Context, user string, userType
 	// TODO: we need to eventually remove values from this map, but when? how do we have
 	//       access to it? do we need to hold locks to mutate it? if so, which ones?
 	m[user] = auth.Credentials{
-		AccessKey: response.AccessGrant,
-		SecretKey: response.SecretKey,
-		Status:    "on",
+		AccessKey:   user,
+		AccessGrant: response.AccessGrant,
+		SecretKey:   response.SecretKey,
+		Status:      "on",
 	}
 
 	return nil
