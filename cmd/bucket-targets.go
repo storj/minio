@@ -25,8 +25,8 @@ import (
 	minio "github.com/minio/minio-go/v7"
 	miniogo "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio/pkg/bucket/versioning"
-	"github.com/minio/minio/pkg/madmin"
+	"github.com/storj/minio/pkg/bucket/versioning"
+	"github.com/storj/minio/pkg/madmin"
 )
 
 // BucketTargetSys represents bucket targets subsystem

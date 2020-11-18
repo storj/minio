@@ -29,8 +29,8 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/pkg/auth"
+	xhttp "github.com/storj/minio/cmd/http"
+	"github.com/storj/minio/pkg/auth"
 	sha256 "github.com/minio/sha256-simd"
 )
 

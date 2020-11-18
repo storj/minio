@@ -57,14 +57,14 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/signer"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/crypto"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/cmd/rest"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/hash"
+	"github.com/storj/minio/cmd/config"
+	"github.com/storj/minio/cmd/crypto"
+	xhttp "github.com/storj/minio/cmd/http"
+	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/cmd/rest"
+	"github.com/storj/minio/pkg/auth"
+	"github.com/storj/minio/pkg/bucket/policy"
+	"github.com/storj/minio/pkg/hash"
 )
 
 // TestMain to set up global env.
@@ -694,7 +694,7 @@ func newTestStreamingRequest(method, urlStr string, dataLength, chunkSize int64,
 
 	if body == nil {
 		// this is added to avoid panic during ioutil.ReadAll(req.Body).
-		// th stack trace can be found here  https://github.com/minio/minio/pull/2074 .
+		// th stack trace can be found here  https://github.com/storj/minio/pull/2074 .
 		// This is very similar to https://github.com/golang/go/issues/7527.
 		req.Body = ioutil.NopCloser(bytes.NewReader([]byte("")))
 	}
@@ -1193,7 +1193,7 @@ func newWebRPCRequest(methodRPC, authorization string, body io.ReadSeeker) (*htt
 		req.Body = ioutil.NopCloser(body)
 	} else {
 		// this is added to avoid panic during ioutil.ReadAll(req.Body).
-		// th stack trace can be found here  https://github.com/minio/minio/pull/2074 .
+		// th stack trace can be found here  https://github.com/storj/minio/pull/2074 .
 		// This is very similar to https://github.com/golang/go/issues/7527.
 		req.Body = ioutil.NopCloser(bytes.NewReader([]byte("")))
 	}

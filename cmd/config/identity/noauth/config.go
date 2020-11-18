@@ -17,8 +17,8 @@
 package noauth
 
 import (
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/env"
+	"github.com/storj/minio/cmd/config"
+	"github.com/storj/minio/pkg/env"
 )
 
 // Config contains disables user authorization within MinIO, allowing any user to act as owner.

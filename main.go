@@ -18,19 +18,19 @@
 
 /*
  * Below main package has canonical imports for 'go get' and 'go build'
- * to work with all other clones of github.com/minio/minio repository. For
+ * to work with all other clones of github.com/storj/minio repository. For
  * more information refer https://golang.org/doc/go1.4#canonicalimports
  */
 
-package main // import "github.com/minio/minio"
+package main // import "github.com/storj/minio"
 
 import (
 	"os"
 
-	minio "github.com/minio/minio/cmd"
+	minio "github.com/storj/minio/cmd"
 
 	// Import gateway
-	_ "github.com/minio/minio/cmd/gateway"
+	_ "github.com/storj/minio/cmd/gateway"
 )
 
 func main() {

@@ -36,7 +36,7 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/s3utils"
-	xhttp "github.com/minio/minio/cmd/http"
+	xhttp "github.com/storj/minio/cmd/http"
 	sha256 "github.com/minio/sha256-simd"
 )
 

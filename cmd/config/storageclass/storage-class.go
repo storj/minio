@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/env"
+	"github.com/storj/minio/cmd/config"
+	"github.com/storj/minio/pkg/env"
 )
 
 // Standard constants for all storage class

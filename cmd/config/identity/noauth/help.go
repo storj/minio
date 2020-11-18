@@ -16,7 +16,7 @@
 
 package noauth
 
-import "github.com/minio/minio/cmd/config"
+import "github.com/storj/minio/cmd/config"
 
 // Help template for OpenID identity feature.
 var (

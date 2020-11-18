@@ -21,7 +21,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/minio/minio/pkg/madmin"
+	"github.com/storj/minio/pkg/madmin"
 )
 
 // healTask represents what to heal along with options

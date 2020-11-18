@@ -25,7 +25,7 @@ import (
 	"github.com/gorilla/mux"
 	jsonrpc "github.com/gorilla/rpc/v2"
 	"github.com/gorilla/rpc/v2/json2"
-	"github.com/minio/minio/browser"
+	"github.com/storj/minio/browser"
 )
 
 // webAPI container for Web API.

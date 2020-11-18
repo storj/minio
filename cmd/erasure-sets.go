@@ -31,11 +31,11 @@ import (
 	"github.com/dchest/siphash"
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/bpool"
-	"github.com/minio/minio/pkg/dsync"
-	"github.com/minio/minio/pkg/madmin"
-	"github.com/minio/minio/pkg/sync/errgroup"
+	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/pkg/bpool"
+	"github.com/storj/minio/pkg/dsync"
+	"github.com/storj/minio/pkg/madmin"
+	"github.com/storj/minio/pkg/sync/errgroup"
 )
 
 // setsDsyncLockers is encapsulated type for Close()

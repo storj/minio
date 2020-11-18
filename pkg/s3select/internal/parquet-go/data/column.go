@@ -23,10 +23,10 @@ import (
 	"strings"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
-	"github.com/minio/minio/pkg/s3select/internal/parquet-go/common"
-	"github.com/minio/minio/pkg/s3select/internal/parquet-go/encoding"
-	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
-	"github.com/minio/minio/pkg/s3select/internal/parquet-go/schema"
+	"github.com/storj/minio/pkg/s3select/internal/parquet-go/common"
+	"github.com/storj/minio/pkg/s3select/internal/parquet-go/encoding"
+	"github.com/storj/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"github.com/storj/minio/pkg/s3select/internal/parquet-go/schema"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

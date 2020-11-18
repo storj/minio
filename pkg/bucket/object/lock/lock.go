@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"github.com/beevik/ntp"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/env"
+	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/pkg/env"
 )
 
 // RetMode - object retention mode.

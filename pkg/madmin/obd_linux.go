@@ -20,7 +20,7 @@
 package madmin
 
 import (
-	smart "github.com/minio/minio/pkg/smart"
+	smart "github.com/storj/minio/pkg/smart"
 	diskhw "github.com/shirou/gopsutil/disk"
 )
 

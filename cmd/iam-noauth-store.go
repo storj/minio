@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/pkg/auth"
+	iampolicy "github.com/storj/minio/pkg/iam/policy"
 )
 
 func getenv(key, def string) string {

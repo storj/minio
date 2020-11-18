@@ -28,15 +28,15 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/minio/cmd/logger"
-	bucketsse "github.com/minio/minio/pkg/bucket/encryption"
-	"github.com/minio/minio/pkg/bucket/lifecycle"
-	objectlock "github.com/minio/minio/pkg/bucket/object/lock"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/bucket/replication"
-	"github.com/minio/minio/pkg/bucket/versioning"
-	"github.com/minio/minio/pkg/event"
-	"github.com/minio/minio/pkg/madmin"
+	"github.com/storj/minio/cmd/logger"
+	bucketsse "github.com/storj/minio/pkg/bucket/encryption"
+	"github.com/storj/minio/pkg/bucket/lifecycle"
+	objectlock "github.com/storj/minio/pkg/bucket/object/lock"
+	"github.com/storj/minio/pkg/bucket/policy"
+	"github.com/storj/minio/pkg/bucket/replication"
+	"github.com/storj/minio/pkg/bucket/versioning"
+	"github.com/storj/minio/pkg/event"
+	"github.com/storj/minio/pkg/madmin"
 )
 
 const (

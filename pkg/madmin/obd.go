@@ -25,8 +25,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio/pkg/disk"
-	"github.com/minio/minio/pkg/net"
+	"github.com/storj/minio/pkg/disk"
+	"github.com/storj/minio/pkg/net"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/host"

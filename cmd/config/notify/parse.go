@@ -26,12 +26,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/env"
-	"github.com/minio/minio/pkg/event"
-	"github.com/minio/minio/pkg/event/target"
-	xnet "github.com/minio/minio/pkg/net"
+	"github.com/storj/minio/cmd/config"
+	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/pkg/env"
+	"github.com/storj/minio/pkg/event"
+	"github.com/storj/minio/pkg/event/target"
+	xnet "github.com/storj/minio/pkg/net"
 )
 
 const (

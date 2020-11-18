@@ -30,9 +30,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/minio/minio/cmd/crypto"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
+	"github.com/storj/minio/cmd/crypto"
+	xhttp "github.com/storj/minio/cmd/http"
+	"github.com/storj/minio/cmd/logger"
 	sha256 "github.com/minio/sha256-simd"
 	"github.com/minio/sio"
 )

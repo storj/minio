@@ -24,10 +24,10 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/madmin"
+	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/pkg/auth"
+	iampolicy "github.com/storj/minio/pkg/iam/policy"
+	"github.com/storj/minio/pkg/madmin"
 )
 
 func validateAdminUsersReq(ctx context.Context, w http.ResponseWriter, r *http.Request, action iampolicy.AdminAction) (ObjectLayer, auth.Credentials) {

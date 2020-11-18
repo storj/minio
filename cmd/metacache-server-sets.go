@@ -23,7 +23,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/minio/minio/cmd/logger"
+	"github.com/storj/minio/cmd/logger"
 )
 
 // listPath will return the requested entries.

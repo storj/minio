@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/minio/minio/pkg/dsync"
+	"github.com/storj/minio/pkg/dsync"
 )
 
 // Tests lock rpc client.

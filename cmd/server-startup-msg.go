@@ -24,10 +24,10 @@ import (
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/logger"
-	color "github.com/minio/minio/pkg/color"
-	xnet "github.com/minio/minio/pkg/net"
+	"github.com/storj/minio/cmd/config"
+	"github.com/storj/minio/cmd/logger"
+	color "github.com/storj/minio/pkg/color"
+	xnet "github.com/storj/minio/pkg/net"
 )
 
 // Documentation links, these are part of message printing code.

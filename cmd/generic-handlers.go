@@ -25,12 +25,12 @@ import (
 	"github.com/minio/minio-go/v7/pkg/set"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/minio/minio/cmd/config/dns"
-	"github.com/minio/minio/cmd/crypto"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/http/stats"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/handlers"
+	"github.com/storj/minio/cmd/config/dns"
+	"github.com/storj/minio/cmd/crypto"
+	xhttp "github.com/storj/minio/cmd/http"
+	"github.com/storj/minio/cmd/http/stats"
+	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/pkg/handlers"
 )
 
 // MiddlewareFunc - useful to chain different http.Handler middlewares

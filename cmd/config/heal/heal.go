@@ -19,7 +19,7 @@ package heal
 import (
 	"errors"
 
-	"github.com/minio/minio/cmd/config"
+	"github.com/storj/minio/cmd/config"
 )
 
 // Compression environment variables

@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
-	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"github.com/storj/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
 )
 
 // getBitWidth - returns bits required to place num e.g.

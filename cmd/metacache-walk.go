@@ -29,7 +29,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/cmd/logger"
+	"github.com/storj/minio/cmd/logger"
 )
 
 // WalkDirOptions provides options for WalkDir operations.

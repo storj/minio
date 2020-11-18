@@ -20,8 +20,8 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/env"
+	"github.com/storj/minio/cmd/config"
+	"github.com/storj/minio/pkg/env"
 )
 
 // Cache ENVs
