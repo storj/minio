@@ -1703,7 +1703,7 @@ main() {
     #test_copy_object && \
     #test_copy_object_storage_class && \
     #test_copy_object_storage_class_same && \
-    #test_presigned_object && \
+    test_presigned_object && \
     test_upload_object_10 && \
     #test_multipart_upload_10 && \
     test_serverside_encryption && \

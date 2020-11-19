@@ -841,7 +841,7 @@ file_list = file_name_list.map { |f| File.join(data_dir, f) }
 destination = '/tmp'
 
 aws.listBucketsTest()
-#aws.listObjectsTest(file_list)
+aws.listObjectsTest(file_list)
 aws.makeBucketTest()
 aws.bucketExistsNegativeTest()
 aws.removeBucketTest()
@@ -850,6 +850,6 @@ aws.removeObjectTest(File.join(data_dir, file_name1))
 aws.getObjectTest(File.join(data_dir, file_name1), destination)
 #aws.copyObjectTest(data_dir, file_name1)
 #aws.copyObjectTest(data_dir, file_name1, file_new_name)
-#aws.presignedGetObjectTest(data_dir, file_name1)
-#aws.presignedPutObjectTest(data_dir, file_name1)
+aws.presignedGetObjectTest(data_dir, file_name1)
+aws.presignedPutObjectTest(data_dir, file_name1)
 #aws.presignedPostObjectTest(data_dir, file_name1, 60, 3*1024*1024)
