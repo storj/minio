@@ -77,7 +77,7 @@ func (iamOS *IAMNoAuthStore) loadUser(ctx context.Context, user string, userType
 	}
 
 	// TODO: is there a better way to configure this?
-	rawURL := getenv("MINIO_NOAUTH_AUTH_URL", "http://127.0.0.1:8000/v1/access")
+	rawURL := getenv("MINIO_NOAUTH_AUTH_URL", "http://127.0.0.1:8000")
 	token := getenv("MINIO_NOAUTH_AUTH_TOKEN", "")
 
 	reqURL, err := url.Parse(rawURL)
@@ -85,7 +85,7 @@ func (iamOS *IAMNoAuthStore) loadUser(ctx context.Context, user string, userType
 		return err
 	}
 
-	reqURL.Path = path.Join(reqURL.Path, user)
+	reqURL.Path = path.Join(reqURL.Path, "/v1/access", user)
 	req, err := http.NewRequest("GET", reqURL.String(), nil)
 	if err != nil {
 		return err
