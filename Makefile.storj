@@ -2,7 +2,7 @@ GO_VERSION ?= 1.15.5
 GOOS ?= linux
 GOARCH ?= amd64
 GOPATH ?= $(shell go env GOPATH)
-COMPONENTLIST := storjmint
+COMPONENTLIST := minio-mint
 COMPOSE_PROJECT_NAME := ${TAG}-$(shell git rev-parse --abbrev-ref HEAD)
 BRANCH_NAME ?= $(shell git rev-parse --abbrev-ref HEAD | sed "s!/!-!g")
 ifeq (${BRANCH_NAME},main)
@@ -55,17 +55,17 @@ build-packages-race:
 ##@ Build
 
 .PHONY: images
-images: storjmint-image
+images: minio-mint-image
 	echo Built version: ${TAG}
 
-.PHONY: storjmint-image
-storjmint-image: ## Build storjmint Docker image
-	${DOCKER_BUILD} --pull=true -t storjlabs/storjmint:${TAG}-amd64 \
+.PHONY: minio-mint-image
+minio-mint-image: ## Build minio-mint Docker image
+	${DOCKER_BUILD} --pull=true -t storjlabs/minio-mint:${TAG}-amd64 \
 		-f Dockerfile.mint .
-	${DOCKER_BUILD} --pull=true -t storjlabs/storjmint:${TAG}-arm32v6 \
+	${DOCKER_BUILD} --pull=true -t storjlabs/minio-mint:${TAG}-arm32v6 \
 		--build-arg=GOARCH=arm --build-arg=DOCKER_ARCH=arm32v6 \
 		-f Dockerfile.mint .
-	${DOCKER_BUILD} --pull=true -t storjlabs/storjmint:${TAG}-aarch64 \
+	${DOCKER_BUILD} --pull=true -t storjlabs/minio-mint:${TAG}-aarch64 \
 		--build-arg=GOARCH=arm64 --build-arg=DOCKER_ARCH=aarch64 \
 		-f Dockerfile.mint .
 
