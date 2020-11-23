@@ -252,9 +252,12 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 
 	enableIAMOps := globalEtcdClient != nil
 
-	// Enable IAM admin APIs if etcd is enabled, if not just enable basic
-	// operations such as profiling, server info etc.
-	registerAdminRouter(router, enableConfigOps, enableIAMOps)
+	// Only enable admin APIs if no auth is disabled
+	if !globalNoAuthConfig.Enabled {
+		// Enable IAM admin APIs if etcd is enabled, if not just enable basic
+		// operations such as profiling, server info etc.
+		registerAdminRouter(router, enableConfigOps, enableIAMOps)
+	}
 
 	// Add healthcheck router
 	registerHealthCheckRouter(router)
