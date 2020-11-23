@@ -16,7 +16,6 @@ timeout(time: 26, unit: 'MINUTES') {
 				stage('Build') {
 					checkout scm
 				}
-
 			}
 			catch(err) {
 				throw err
