@@ -24,12 +24,12 @@ timeout(time: 26, unit: 'MINUTES') {
 					echo "Current build result: ${currentBuild.result}"
 				}
 
-				stage('Push Images') {
-					lastStage = env.STAGE_NAME
-					sh 'make -f Makefile.storj push-images'
+				// stage('Push Images') {
+				// 	lastStage = env.STAGE_NAME
+				// 	sh 'make -f Makefile.storj push-images'
 
-					echo "Current build result: ${currentBuild.result}"
-				}
+				// 	echo "Current build result: ${currentBuild.result}"
+				// }
 
 			}
 			catch(err) {
