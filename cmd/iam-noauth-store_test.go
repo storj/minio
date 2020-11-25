@@ -13,7 +13,7 @@ import (
 )
 
 func TestLoadUserBadURL(t *testing.T) {
-	for _, badURL := range []string{"", "badURL", "http://badURL"} {
+	for _, badURL := range []string{"", "test.url.invalid", "http://test.url.invalid"} {
 		store := GetTestAuthStore(badURL, "token", 2*time.Second)
 		blankCredentialMap := make(map[string]auth.Credentials)
 		require.Error(t, store.loadUser(context.Background(), "fakeUser", regularUser, blankCredentialMap))
