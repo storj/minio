@@ -25,11 +25,19 @@ func getenv(key, def string) string {
 
 // IAMNoAuthStore implements IAMStorageAPI
 type IAMNoAuthStore struct {
-	mu sync.RWMutex
+	mu        sync.RWMutex
+	transport *http.Transport
+	authURL   string
+	authToken string
 }
 
 func newIAMNoAuthStore(objAPI ObjectLayer) *IAMNoAuthStore {
-	return &IAMNoAuthStore{}
+	return &IAMNoAuthStore{
+		transport: NewGatewayHTTPTransport(),
+		// TODO: is there a better way to configure this?
+		authURL:   getenv("MINIO_NOAUTH_AUTH_URL", "http://127.0.0.1:8000"),
+		authToken: getenv("MINIO_NOAUTH_AUTH_TOKEN", ""),
+	}
 }
 
 func (iamOS *IAMNoAuthStore) lock()    { iamOS.mu.Lock() }
@@ -76,11 +84,7 @@ func (iamOS *IAMNoAuthStore) loadUser(ctx context.Context, user string, userType
 		return nil
 	}
 
-	// TODO: is there a better way to configure this?
-	rawURL := getenv("MINIO_NOAUTH_AUTH_URL", "http://127.0.0.1:8000")
-	token := getenv("MINIO_NOAUTH_AUTH_TOKEN", "")
-
-	reqURL, err := url.Parse(rawURL)
+	reqURL, err := url.Parse(iamOS.authURL)
 	if err != nil {
 		return err
 	}
@@ -90,10 +94,10 @@ func (iamOS *IAMNoAuthStore) loadUser(ctx context.Context, user string, userType
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Authorization", "Bearer "+iamOS.authToken)
 
-	// TODO: should iamOS have it's own http client instead of the DefaultClient?
-	resp, err := http.DefaultClient.Do(req)
+	httpClient := &http.Client{Transport: iamOS.transport}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
