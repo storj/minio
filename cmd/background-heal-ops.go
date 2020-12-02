@@ -18,9 +18,9 @@ package cmd
 
 import (
 	"context"
-	"path"
 	"time"
 
+	"github.com/storj/minio/cmd/logger"
 	"github.com/storj/minio/pkg/madmin"
 )
 
@@ -54,20 +54,28 @@ func (h *healRoutine) queueHealTask(task healTask) {
 	h.tasks <- task
 }
 
-func waitForLowHTTPReq(tolerance int32, maxWait time.Duration) {
-	const wait = 10 * time.Millisecond
-	waitCount := maxWait / wait
+func waitForLowHTTPReq(tolerance int, maxWait time.Duration) {
+	// At max 10 attempts to wait with 100 millisecond interval before proceeding
+	waitCount := 10
+	waitTick := 100 * time.Millisecond
 
 	// Bucket notification and http trace are not costly, it is okay to ignore them
 	// while counting the number of concurrent connections
-	tolerance += int32(globalHTTPListen.NumSubscribers() + globalHTTPTrace.NumSubscribers())
+	toleranceFn := func() int {
+		return tolerance + globalHTTPListen.NumSubscribers() + globalHTTPTrace.NumSubscribers()
+	}
 
 	if httpServer := newHTTPServerFn(); httpServer != nil {
 		// Any requests in progress, delay the heal.
-		for (httpServer.GetRequestCount() >= tolerance) &&
-			waitCount > 0 {
+		for httpServer.GetRequestCount() >= toleranceFn() {
+			time.Sleep(waitTick)
 			waitCount--
-			time.Sleep(wait)
+			if waitCount == 0 {
+				if intDataUpdateTracker.debug {
+					logger.Info("waitForLowHTTPReq: waited %d times, resuming", waitCount)
+				}
+				break
+			}
 		}
 	}
 }
@@ -81,9 +89,6 @@ func (h *healRoutine) run(ctx context.Context, objAPI ObjectLayer) {
 				break
 			}
 
-			// Wait and proceed if there are active requests
-			waitForLowHTTPReq(int32(globalEndpoints.NEndpoints()), time.Second)
-
 			var res madmin.HealResultItem
 			var err error
 			switch {
@@ -95,9 +100,6 @@ func (h *healRoutine) run(ctx context.Context, objAPI ObjectLayer) {
 				res, err = objAPI.HealBucket(ctx, task.bucket, task.opts.DryRun, task.opts.Remove)
 			case task.bucket != "" && task.object != "":
 				res, err = objAPI.HealObject(ctx, task.bucket, task.object, task.versionID, task.opts)
-			}
-			if task.bucket != "" && task.object != "" {
-				ObjectPathUpdated(path.Join(task.bucket, task.object))
 			}
 			task.responseCh <- healResult{result: res, err: err}
 

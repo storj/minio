@@ -56,7 +56,7 @@ func newBucketMetacache(bucket string, cleanup bool) *bucketMetacache {
 	if cleanup {
 		// Recursively delete all caches.
 		objAPI := newObjectLayerFn()
-		ez, ok := objAPI.(*erasureServerSets)
+		ez, ok := objAPI.(*erasureServerPools)
 		if ok {
 			ctx := context.Background()
 			ez.deleteAll(ctx, minioMetaBucket, metacachePrefixForID(bucket, slashSeparator))
@@ -226,6 +226,10 @@ func (b *bucketMetacache) findCache(o listPathOptions) metacache {
 		// Root of what we are looking for must at least have
 		if !strings.HasPrefix(o.BaseDir, cached.root) {
 			debugPrint("cache %s prefix mismatch, cached:%v, want:%v", cached.id, cached.root, o.BaseDir)
+			continue
+		}
+		if cached.filter != "" && strings.HasPrefix(cached.filter, o.FilterPrefix) {
+			debugPrint("cache %s cannot be used because of filter %s", cached.id, cached.filter)
 			continue
 		}
 		// If the existing listing wasn't recursive root must match.
@@ -406,7 +410,7 @@ func (b *bucketMetacache) deleteAll() {
 	defer b.mu.Unlock()
 
 	ctx := context.Background()
-	ez, ok := newObjectLayerFn().(*erasureServerSets)
+	ez, ok := newObjectLayerFn().(*erasureServerPools)
 	if !ok {
 		logger.LogIf(ctx, errors.New("bucketMetacache: expected objAPI to be *erasureZones"))
 		return

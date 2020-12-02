@@ -148,11 +148,12 @@ type folderScanner struct {
 
 	newFolders      []cachedFolder
 	existingFolders []cachedFolder
+	disks           []StorageAPI
 }
 
 // crawlDataFolder will crawl the basepath+cache.Info.Name and return an updated cache.
 // The returned cache will always be valid, but may not be updated from the existing.
-// Before each operation waitForLowActiveIO is called which can be used to temporarily halt the crawler.
+// Before each operation sleepDuration is called which can be used to temporarily halt the crawler.
 // If the supplied context is canceled the function will return at the first chance.
 func crawlDataFolder(ctx context.Context, basePath string, cache dataUsageCache, getSize getSizeFn) (dataUsageCache, error) {
 	t := UTCNow()
@@ -176,7 +177,6 @@ func crawlDataFolder(ctx context.Context, basePath string, cache dataUsageCache,
 		logger.LogIf(ctx, err)
 		delayMult = dataCrawlSleepDefMult
 	}
-
 	s := folderScanner{
 		root:                basePath,
 		getSize:             getSize,
@@ -188,6 +188,18 @@ func crawlDataFolder(ctx context.Context, basePath string, cache dataUsageCache,
 		dataUsageCrawlDebug: intDataUpdateTracker.debug,
 		healFolderInclude:   0,
 		healObjectSelect:    0,
+	}
+
+	// Add disks for set healing.
+	if len(cache.Disks) > 0 {
+		objAPI, ok := newObjectLayerFn().(*erasureServerPools)
+		if ok {
+			s.disks = objAPI.GetDisksID(cache.Disks...)
+			if len(s.disks) != len(cache.Disks) {
+				logger.Info(logPrefix+"Missing disks, want %d, found %d. Cannot heal."+logSuffix, len(cache.Disks), len(s.disks))
+				s.disks = s.disks[:0]
+			}
+		}
 	}
 
 	// Enable healing in XL mode.
@@ -459,8 +471,8 @@ func (f *folderScanner) scanQueuedLevels(ctx context.Context, folders []cachedFo
 			continue
 		}
 
-		objAPI := newObjectLayerFn()
-		if objAPI == nil {
+		objAPI, ok := newObjectLayerFn().(*erasureServerPools)
+		if !ok || len(f.disks) == 0 {
 			continue
 		}
 
@@ -480,6 +492,13 @@ func (f *folderScanner) scanQueuedLevels(ctx context.Context, folders []cachedFo
 		// We therefore perform a heal check.
 		// If that doesn't bring it back we remove the folder and assume it was deleted.
 		// This means that the next run will not look for it.
+		// How to resolve results.
+		resolver := metadataResolutionParams{
+			dirQuorum: getReadQuorum(len(f.disks)),
+			objQuorum: getReadQuorum(len(f.disks)),
+			bucket:    "",
+		}
+
 		for k := range existing {
 			bucket, prefix := path2BucketObject(k)
 			if f.dataUsageCrawlDebug {
@@ -489,29 +508,115 @@ func (f *folderScanner) scanQueuedLevels(ctx context.Context, folders []cachedFo
 			// Dynamic time delay.
 			t := UTCNow()
 
-			err = objAPI.HealObjects(ctx, bucket, prefix, madmin.HealOpts{Recursive: true, Remove: healDeleteDangling},
-				func(bucket, object, versionID string) error {
-					// Wait for each heal as per crawler frequency.
-					sleepDuration(time.Since(t), f.dataUsageCrawlMult)
+			resolver.bucket = bucket
 
-					defer func() {
+			foundObjs := false
+			dangling := true
+			ctx, cancel := context.WithCancel(ctx)
+			err := listPathRaw(ctx, listPathRawOptions{
+				disks:          f.disks,
+				bucket:         bucket,
+				path:           prefix,
+				recursive:      true,
+				reportNotFound: true,
+				minDisks:       len(f.disks), // We want full consistency.
+				// Weird, maybe transient error.
+				agreed: func(entry metaCacheEntry) {
+					if f.dataUsageCrawlDebug {
+						logger.Info(color.Green("healObjects:")+" got agreement: %v", entry.name)
+					}
+					if entry.isObject() {
+						dangling = false
+					}
+				},
+				// Some disks have data for this.
+				partial: func(entries metaCacheEntries, nAgreed int, errs []error) {
+					if f.dataUsageCrawlDebug {
+						logger.Info(color.Green("healObjects:")+" got partial, %d agreed, errs: %v", nAgreed, errs)
+					}
+					// Sleep and reset.
+					sleepDuration(time.Since(t), f.dataUsageCrawlMult)
+					t = UTCNow()
+					entry, ok := entries.resolve(&resolver)
+					if !ok {
+						for _, err := range errs {
+							if err != nil {
+								// Not all disks are ready, do nothing for now.
+								dangling = false
+								return
+							}
+						}
+
+						// If no errors, queue it for healing.
+						entry, _ = entries.firstFound()
+					}
+
+					if f.dataUsageCrawlDebug {
+						logger.Info(color.Green("healObjects:")+" resolved to: %v, dir: %v", entry.name, entry.isDir())
+					}
+					if entry.isDir() {
+						return
+					}
+					dangling = false
+					// We got an entry which we should be able to heal.
+					fiv, err := entry.fileInfoVersions(bucket)
+					if err != nil {
+						err := bgSeq.queueHealTask(healSource{
+							bucket:    bucket,
+							object:    entry.name,
+							versionID: "",
+						}, madmin.HealItemObject)
+						logger.LogIf(ctx, err)
+						foundObjs = foundObjs || err == nil
+						return
+					}
+					for _, ver := range fiv.Versions {
+						// Sleep and reset.
+						sleepDuration(time.Since(t), f.dataUsageCrawlMult)
 						t = UTCNow()
-					}()
-					return bgSeq.queueHealTask(healSource{
-						bucket:    bucket,
-						object:    object,
-						versionID: versionID,
-					}, madmin.HealItemObject)
-				})
+						err := bgSeq.queueHealTask(healSource{
+							bucket:    bucket,
+							object:    fiv.Name,
+							versionID: ver.VersionID,
+						}, madmin.HealItemObject)
+						logger.LogIf(ctx, err)
+						foundObjs = foundObjs || err == nil
+					}
+				},
+				// Too many disks failed.
+				finished: func(errs []error) {
+					if f.dataUsageCrawlDebug {
+						logger.Info(color.Green("healObjects:")+" too many errors: %v", errs)
+					}
+					dangling = false
+					cancel()
+				},
+			})
+
+			if f.dataUsageCrawlDebug && err != nil && err != errFileNotFound {
+				logger.Info(color.Green("healObjects:")+" checking returned value %v (%T)", err, err)
+			}
+
+			// If we found one or more disks with this folder, delete it.
+			if err == nil && dangling {
+				if f.dataUsageCrawlDebug {
+					logger.Info(color.Green("healObjects:")+" deleting dangling directory %s", prefix)
+				}
+				// If we have quorum, found directories, but no objects, issue heal to delete the dangling.
+				objAPI.HealObjects(ctx, bucket, prefix, madmin.HealOpts{Recursive: true, Remove: true},
+					func(bucket, object, versionID string) error {
+						return bgSeq.queueHealTask(healSource{
+							bucket:    bucket,
+							object:    object,
+							versionID: versionID,
+						}, madmin.HealItemObject)
+					})
+			}
 
 			sleepDuration(time.Since(t), f.dataUsageCrawlMult)
 
-			if f.dataUsageCrawlDebug && err != nil {
-				logger.Info(color.Green("healObjects:")+" checking returned value %v", err)
-			}
-
 			// Add unless healing returned an error.
-			if err == nil {
+			if foundObjs {
 				this := cachedFolder{name: k, parent: &thisHash, objectHealProbDiv: folder.objectHealProbDiv}
 				cache.addChild(hashPath(k))
 				if final {
@@ -672,12 +777,17 @@ func (i *crawlItem) applyActions(ctx context.Context, o ObjectLayer, meta action
 			IsLatest:         meta.oi.IsLatest,
 			NumVersions:      meta.numVersions,
 			SuccessorModTime: meta.successorModTime,
+			RestoreOngoing:   meta.oi.RestoreOngoing,
+			RestoreExpires:   meta.oi.RestoreExpires,
+			TransitionStatus: meta.oi.TransitionStatus,
 		})
 	if i.debug {
 		logger.Info(color.Green("applyActions:")+" lifecycle: %q (version-id=%s), Initial scan: %v", i.objectPath(), versionID, action)
 	}
 	switch action {
 	case lifecycle.DeleteAction, lifecycle.DeleteVersionAction:
+	case lifecycle.TransitionAction, lifecycle.TransitionVersionAction:
+	case lifecycle.DeleteRestoredAction, lifecycle.DeleteRestoredVersionAction:
 	default:
 		// No action.
 		return size
@@ -706,22 +816,28 @@ func (i *crawlItem) applyActions(ctx context.Context, o ObjectLayer, meta action
 	size = obj.Size
 
 	// Recalculate action.
-	action = i.lifeCycle.ComputeAction(
-		lifecycle.ObjectOpts{
-			Name:             i.objectPath(),
-			UserTags:         obj.UserTags,
-			ModTime:          obj.ModTime,
-			VersionID:        obj.VersionID,
-			DeleteMarker:     obj.DeleteMarker,
-			IsLatest:         obj.IsLatest,
-			NumVersions:      meta.numVersions,
-			SuccessorModTime: meta.successorModTime,
-		})
+	lcOpts := lifecycle.ObjectOpts{
+		Name:             i.objectPath(),
+		UserTags:         obj.UserTags,
+		ModTime:          obj.ModTime,
+		VersionID:        obj.VersionID,
+		DeleteMarker:     obj.DeleteMarker,
+		IsLatest:         obj.IsLatest,
+		NumVersions:      meta.numVersions,
+		SuccessorModTime: meta.successorModTime,
+		RestoreOngoing:   obj.RestoreOngoing,
+		RestoreExpires:   obj.RestoreExpires,
+		TransitionStatus: obj.TransitionStatus,
+	}
+	action = i.lifeCycle.ComputeAction(lcOpts)
+
 	if i.debug {
 		logger.Info(color.Green("applyActions:")+" lifecycle: Secondary scan: %v", action)
 	}
 	switch action {
 	case lifecycle.DeleteAction, lifecycle.DeleteVersionAction:
+	case lifecycle.TransitionAction, lifecycle.TransitionVersionAction:
+	case lifecycle.DeleteRestoredAction, lifecycle.DeleteRestoredVersionAction:
 	default:
 		// No action.
 		return size
@@ -729,7 +845,7 @@ func (i *crawlItem) applyActions(ctx context.Context, o ObjectLayer, meta action
 
 	opts := ObjectOptions{}
 	switch action {
-	case lifecycle.DeleteVersionAction:
+	case lifecycle.DeleteVersionAction, lifecycle.DeleteRestoredVersionAction:
 		// Defensive code, should never happen
 		if obj.VersionID == "" {
 			return size
@@ -744,15 +860,34 @@ func (i *crawlItem) applyActions(ctx context.Context, o ObjectLayer, meta action
 			}
 		}
 		opts.VersionID = obj.VersionID
-	case lifecycle.DeleteAction:
+	case lifecycle.DeleteAction, lifecycle.DeleteRestoredAction:
 		opts.Versioned = globalBucketVersioningSys.Enabled(i.bucket)
+	case lifecycle.TransitionAction, lifecycle.TransitionVersionAction:
+		if obj.TransitionStatus == "" {
+			opts.Versioned = globalBucketVersioningSys.Enabled(obj.Bucket)
+			opts.VersionID = obj.VersionID
+			opts.TransitionStatus = lifecycle.TransitionPending
+			if _, err = o.DeleteObject(ctx, obj.Bucket, obj.Name, opts); err != nil {
+				// Assume it is still there.
+				logger.LogIf(ctx, err)
+				return size
+			}
+		}
+		globalTransitionState.queueTransitionTask(obj)
+		return 0
 	}
-
-	obj, err = o.DeleteObject(ctx, i.bucket, i.objectPath(), opts)
-	if err != nil {
-		// Assume it is still there.
-		logger.LogIf(ctx, err)
-		return size
+	if obj.TransitionStatus != "" {
+		if err := deleteTransitionedObject(ctx, o, i.bucket, i.objectPath(), lcOpts, action, false); err != nil {
+			logger.LogIf(ctx, err)
+			return size
+		}
+	} else {
+		obj, err = o.DeleteObject(ctx, i.bucket, i.objectPath(), opts)
+		if err != nil {
+			// Assume it is still there.
+			logger.LogIf(ctx, err)
+			return size
+		}
 	}
 
 	eventName := event.ObjectRemovedDelete
@@ -792,8 +927,43 @@ func sleepDuration(d time.Duration, x float64) {
 
 // healReplication will heal a scanned item that has failed replication.
 func (i *crawlItem) healReplication(ctx context.Context, o ObjectLayer, meta actionMeta) {
+	if meta.oi.DeleteMarker || !meta.oi.VersionPurgeStatus.Empty() {
+		//heal delete marker replication failure or versioned delete replication failure
+		if meta.oi.ReplicationStatus == replication.Pending ||
+			meta.oi.ReplicationStatus == replication.Failed ||
+			meta.oi.VersionPurgeStatus == Failed || meta.oi.VersionPurgeStatus == Pending {
+			i.healReplicationDeletes(ctx, o, meta)
+			return
+		}
+	}
 	if meta.oi.ReplicationStatus == replication.Pending ||
 		meta.oi.ReplicationStatus == replication.Failed {
 		globalReplicationState.queueReplicaTask(meta.oi)
+	}
+}
+
+// healReplicationDeletes will heal a scanned deleted item that failed to replicate deletes.
+func (i *crawlItem) healReplicationDeletes(ctx context.Context, o ObjectLayer, meta actionMeta) {
+	// handle soft delete and permanent delete failures here.
+	if meta.oi.DeleteMarker || !meta.oi.VersionPurgeStatus.Empty() {
+		versionID := ""
+		dmVersionID := ""
+		if meta.oi.VersionPurgeStatus.Empty() {
+			dmVersionID = meta.oi.VersionID
+		} else {
+			versionID = meta.oi.VersionID
+		}
+		globalReplicationState.queueReplicaDeleteTask(DeletedObjectVersionInfo{
+			DeletedObject: DeletedObject{
+				ObjectName:                    meta.oi.Name,
+				DeleteMarkerVersionID:         dmVersionID,
+				VersionID:                     versionID,
+				DeleteMarkerReplicationStatus: string(meta.oi.ReplicationStatus),
+				DeleteMarkerMTime:             DeleteMarkerMTime{meta.oi.ModTime},
+				DeleteMarker:                  meta.oi.DeleteMarker,
+				VersionPurgeStatus:            meta.oi.VersionPurgeStatus,
+			},
+			Bucket: meta.oi.Bucket,
+		})
 	}
 }

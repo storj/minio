@@ -191,7 +191,7 @@ var (
 	// registered listeners
 	globalConsoleSys *HTTPConsoleLoggerSys
 
-	globalEndpoints EndpointServerSets
+	globalEndpoints EndpointServerPools
 
 	// Global server's network statistics
 	globalConnStats = newConnStats()

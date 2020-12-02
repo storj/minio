@@ -35,12 +35,12 @@ import (
 	"time"
 
 	"github.com/djherbis/atime"
+	"github.com/minio/sio"
 	"github.com/storj/minio/cmd/config/cache"
 	"github.com/storj/minio/cmd/crypto"
 	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/cmd/logger"
 	"github.com/storj/minio/pkg/disk"
-	"github.com/minio/sio"
 )
 
 const (
@@ -205,9 +205,9 @@ func (c *diskCache) diskUsageLow() bool {
 		logger.LogIf(ctx, err)
 		return false
 	}
-	usedPercent := (di.Used / di.Total) * 100
+	usedPercent := float64(di.Used) * 100 / float64(di.Total)
 	low := int(usedPercent) < gcStopPct
-	atomic.StoreUint64(&c.stats.UsagePercent, usedPercent)
+	atomic.StoreUint64(&c.stats.UsagePercent, uint64(usedPercent))
 	if low {
 		atomic.StoreInt32(&c.stats.UsageState, 0)
 	}
@@ -704,7 +704,7 @@ func (c *diskCache) Put(ctx context.Context, bucket, object string, data io.Read
 
 	meta, _, numHits, err := c.statCache(ctx, cachePath)
 	// Case where object not yet cached
-	if os.IsNotExist(err) && c.after >= 1 {
+	if osIsNotExist(err) && c.after >= 1 {
 		return oi, c.saveMetadata(ctx, bucket, object, opts.UserDefined, size, nil, "", false)
 	}
 	// Case where object already has a cache metadata entry but not yet cached

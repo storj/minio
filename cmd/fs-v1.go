@@ -55,8 +55,6 @@ type FSObjects struct {
 
 	// The count of concurrent calls on FSObjects API
 	activeIOCount int64
-	// The active IO count ceiling for crawling to work
-	maxActiveIOCount int64
 
 	// Path to be exported over S3 API.
 	fsPath string
@@ -168,8 +166,6 @@ func NewFSObjectLayer(fsPath string) (ObjectLayer, error) {
 		listPool:      NewTreeWalkPool(globalLookupTimeout),
 		appendFileMap: make(map[string]*fsAppendFile),
 		diskMount:     mountinfo.IsLikelyMountPoint(fsPath),
-
-		maxActiveIOCount: 10,
 	}
 
 	// Once the filesystem has initialized hold the read lock for
@@ -228,12 +224,6 @@ func (fs *FSObjects) StorageInfo(ctx context.Context, _ bool) (StorageInfo, []er
 	}
 	storageInfo.Backend.Type = BackendFS
 	return storageInfo, nil
-}
-
-func (fs *FSObjects) waitForLowActiveIO() {
-	for atomic.LoadInt64(&fs.activeIOCount) >= fs.maxActiveIOCount {
-		time.Sleep(lowActiveIOWaitTick)
-	}
 }
 
 // CrawlAndGetDataUsage returns data usage stats of the current FS deployment
@@ -330,7 +320,7 @@ func (fs *FSObjects) crawlBucket(ctx context.Context, bucket string, cache dataU
 	cache, err = crawlDataFolder(ctx, fs.fsPath, cache, func(item crawlItem) (int64, error) {
 		bucket, object := item.bucket, item.objectPath()
 		fsMetaBytes, err := ioutil.ReadFile(pathJoin(fs.fsPath, minioMetaBucket, bucketMetaPrefix, bucket, object, fs.metaJSONFile))
-		if err != nil && !os.IsNotExist(err) {
+		if err != nil && !osIsNotExist(err) {
 			return 0, errSkipFile
 		}
 
