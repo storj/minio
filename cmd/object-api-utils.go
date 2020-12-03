@@ -43,6 +43,7 @@ import (
 	"github.com/storj/minio/cmd/crypto"
 	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/pkg/bucket/lifecycle"
 	"github.com/storj/minio/pkg/hash"
 	"github.com/storj/minio/pkg/ioutil"
 	"github.com/storj/minio/pkg/trie"
@@ -590,7 +591,10 @@ func NewGetObjectReader(rs *HTTPRangeSpec, oi ObjectInfo, opts ObjectOptions, cl
 	if err != nil {
 		return nil, 0, 0, err
 	}
-
+	// if object is encrypted, transition content without decrypting.
+	if opts.TransitionStatus == lifecycle.TransitionPending && isEncrypted {
+		isEncrypted = false
+	}
 	var skipLen int64
 	// Calculate range to read (different for
 	// e.g. encrypted/compressed objects)

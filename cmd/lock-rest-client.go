@@ -27,7 +27,6 @@ import (
 	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/cmd/rest"
 	"github.com/storj/minio/pkg/dsync"
-	xnet "github.com/storj/minio/pkg/net"
 )
 
 // lockRESTClient is authenticable lock REST client
@@ -161,7 +160,7 @@ func newlockRESTClient(endpoint Endpoint) *lockRESTClient {
 		defer cancel()
 		respBody, err := healthClient.Call(ctx, lockRESTMethodHealth, nil, nil, -1)
 		xhttp.DrainBody(respBody)
-		return !xnet.IsNetworkOrHostDown(err, false)
+		return !isNetworkError(err)
 	}
 
 	return &lockRESTClient{endpoint: endpoint, restClient: restClient}

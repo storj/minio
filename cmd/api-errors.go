@@ -121,8 +121,10 @@ const (
 	ErrReplicationNeedsVersioningError
 	ErrReplicationBucketNeedsVersioningError
 	ErrBucketReplicationDisabledError
+	ErrObjectRestoreAlreadyInProgress
 	ErrNoSuchKey
 	ErrNoSuchUpload
+	ErrInvalidVersionID
 	ErrNoSuchVersion
 	ErrNotImplemented
 	ErrPreconditionFailed
@@ -362,6 +364,7 @@ const (
 	ErrInvalidDecompressedSize
 	ErrAddUserInvalidArgument
 	ErrAdminAccountNotEligible
+	ErrAccountNotEligible
 	ErrServiceAccountNotFound
 	ErrPostPolicyConditionInvalidFormat
 )
@@ -556,10 +559,15 @@ var errorCodes = errorCodeMap{
 		Description:    "The specified multipart upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed.",
 		HTTPStatusCode: http.StatusNotFound,
 	},
-	ErrNoSuchVersion: {
+	ErrInvalidVersionID: {
 		Code:           "InvalidArgument",
 		Description:    "Invalid version id specified",
 		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrNoSuchVersion: {
+		Code:           "NoSuchVersion",
+		Description:    "The specified version does not exist.",
+		HTTPStatusCode: http.StatusNotFound,
 	},
 	ErrNotImplemented: {
 		Code:           "NotImplemented",
@@ -828,7 +836,7 @@ var errorCodes = errorCodeMap{
 	},
 	ErrReplicationRemoteConnectionError: {
 		Code:           "XMinioAdminReplicationRemoteConnectionError",
-		Description:    "Remote service endpoint or target bucket not available",
+		Description:    "Remote service connection error - please check remote service credentials and target bucket",
 		HTTPStatusCode: http.StatusNotFound,
 	},
 	ErrBucketRemoteIdenticalToSource: {
@@ -915,6 +923,11 @@ var errorCodes = errorCodeMap{
 		Code:           "InvalidRequest",
 		Description:    "x-amz-object-lock-retain-until-date and x-amz-object-lock-mode must both be supplied",
 		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrObjectRestoreAlreadyInProgress: {
+		Code:           "RestoreAlreadyInProgress",
+		Description:    "Object restore is already in progress",
+		HTTPStatusCode: http.StatusConflict,
 	},
 	/// Bucket notification related errors.
 	ErrEventNotification: {
@@ -1720,12 +1733,17 @@ var errorCodes = errorCodeMap{
 	ErrAddUserInvalidArgument: {
 		Code:           "XMinioInvalidIAMCredentials",
 		Description:    "User is not allowed to be same as admin access key",
-		HTTPStatusCode: http.StatusConflict,
+		HTTPStatusCode: http.StatusForbidden,
 	},
 	ErrAdminAccountNotEligible: {
 		Code:           "XMinioInvalidIAMCredentials",
 		Description:    "The administrator key is not eligible for this operation",
-		HTTPStatusCode: http.StatusConflict,
+		HTTPStatusCode: http.StatusForbidden,
+	},
+	ErrAccountNotEligible: {
+		Code:           "XMinioInvalidIAMCredentials",
+		Description:    "The account key is not eligible for this operation",
+		HTTPStatusCode: http.StatusForbidden,
 	},
 	ErrServiceAccountNotFound: {
 		Code:           "XMinioInvalidIAMCredentials",
@@ -1874,6 +1892,8 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 		apiErr = ErrNoSuchKey
 	case MethodNotAllowed:
 		apiErr = ErrMethodNotAllowed
+	case InvalidVersionID:
+		apiErr = ErrInvalidVersionID
 	case VersionNotFound:
 		apiErr = ErrNoSuchVersion
 	case ObjectAlreadyExists:

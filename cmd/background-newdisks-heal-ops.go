@@ -39,7 +39,7 @@ type healingTracker struct {
 }
 
 func initAutoHeal(ctx context.Context, objAPI ObjectLayer) {
-	z, ok := objAPI.(*erasureServerSets)
+	z, ok := objAPI.(*erasureServerPools)
 	if !ok {
 		return
 	}
@@ -116,15 +116,14 @@ func initBackgroundHealing(ctx context.Context, objAPI ObjectLayer) {
 // monitorLocalDisksAndHeal - ensures that detected new disks are healed
 //  1. Only the concerned erasure set will be listed and healed
 //  2. Only the node hosting the disk is responsible to perform the heal
-func monitorLocalDisksAndHeal(ctx context.Context, z *erasureServerSets, bgSeq *healSequence) {
+func monitorLocalDisksAndHeal(ctx context.Context, z *erasureServerPools, bgSeq *healSequence) {
 	// Perform automatic disk healing when a disk is replaced locally.
+wait:
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(defaultMonitorNewDiskInterval):
-			waitForLowHTTPReq(int32(globalEndpoints.NEndpoints()), time.Second)
-
 			var erasureSetInZoneDisksToHeal []map[int][]StorageAPI
 
 			healDisks := globalBackgroundHealState.getHealLocalDisks()
@@ -138,8 +137,8 @@ func monitorLocalDisksAndHeal(ctx context.Context, z *erasureServerSets, bgSeq *
 				logger.Info(fmt.Sprintf("Found drives to heal %d, proceeding to heal content...",
 					len(healDisks)))
 
-				erasureSetInZoneDisksToHeal = make([]map[int][]StorageAPI, len(z.serverSets))
-				for i := range z.serverSets {
+				erasureSetInZoneDisksToHeal = make([]map[int][]StorageAPI, len(z.serverPools))
+				for i := range z.serverPools {
 					erasureSetInZoneDisksToHeal[i] = map[int][]StorageAPI{}
 				}
 			}
@@ -158,10 +157,10 @@ func monitorLocalDisksAndHeal(ctx context.Context, z *erasureServerSets, bgSeq *
 				}
 
 				// Calculate the set index where the current endpoint belongs
-				z.serverSets[zoneIdx].erasureDisksMu.RLock()
+				z.serverPools[zoneIdx].erasureDisksMu.RLock()
 				// Protect reading reference format.
-				setIndex, _, err := findDiskIndex(z.serverSets[zoneIdx].format, format)
-				z.serverSets[zoneIdx].erasureDisksMu.RUnlock()
+				setIndex, _, err := findDiskIndex(z.serverPools[zoneIdx].format, format)
+				z.serverPools[zoneIdx].erasureDisksMu.RUnlock()
 				if err != nil {
 					printEndpointError(endpoint, err, false)
 					continue
@@ -176,7 +175,27 @@ func monitorLocalDisksAndHeal(ctx context.Context, z *erasureServerSets, bgSeq *
 					for _, disk := range disks {
 						logger.Info("Healing disk '%s' on %s zone", disk, humanize.Ordinal(i+1))
 
-						lbDisks := z.serverSets[i].sets[setIndex].getOnlineDisks()
+						// So someone changed the drives underneath, healing tracker missing.
+						if !disk.Healing() {
+							logger.Info("Healing tracker missing on '%s', disk was swapped again on %s zone", disk, humanize.Ordinal(i+1))
+							diskID, err := disk.GetDiskID()
+							if err != nil {
+								logger.LogIf(ctx, err)
+								// reading format.json failed or not found, proceed to look
+								// for new disks to be healed again, we cannot proceed further.
+								goto wait
+							}
+
+							if err := saveHealingTracker(disk, diskID); err != nil {
+								logger.LogIf(ctx, err)
+								// Unable to write healing tracker, permission denied or some
+								// other unexpected error occurred. Proceed to look for new
+								// disks to be healed again, we cannot proceed further.
+								goto wait
+							}
+						}
+
+						lbDisks := z.serverPools[i].sets[setIndex].getOnlineDisks()
 						if err := healErasureSet(ctx, setIndex, buckets, lbDisks); err != nil {
 							logger.LogIf(ctx, err)
 							continue

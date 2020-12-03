@@ -422,7 +422,7 @@ func (s *erasureSets) SetDriveCount() int {
 }
 
 // StorageUsageInfo - combines output of StorageInfo across all erasure coded object sets.
-// This only returns disk usage info for ServerSets to perform placement decision, this call
+// This only returns disk usage info for ServerPools to perform placement decision, this call
 // is not implemented in Object interface and is not meant to be used by other object
 // layer implementations.
 func (s *erasureSets) StorageUsageInfo(ctx context.Context) StorageInfo {
@@ -759,9 +759,7 @@ func (s *erasureSets) DeleteObjects(ctx context.Context, bucket string, objects 
 		dobjects, errs := s.getHashedSet(objsGroup[0].object.ObjectName).DeleteObjects(ctx, bucket, toNames(objsGroup), opts)
 		for i, obj := range objsGroup {
 			delErrs[obj.origIndex] = errs[i]
-			if delErrs[obj.origIndex] == nil {
-				delObjects[obj.origIndex] = dobjects[i]
-			}
+			delObjects[obj.origIndex] = dobjects[i]
 		}
 	}
 
@@ -774,7 +772,6 @@ func (s *erasureSets) CopyObject(ctx context.Context, srcBucket, srcObject, dstB
 	dstSet := s.getHashedSet(dstObject)
 
 	cpSrcDstSame := srcSet == dstSet
-
 	// Check if this request is only metadata update.
 	if cpSrcDstSame && srcInfo.metadataOnly {
 
@@ -803,6 +800,7 @@ func (s *erasureSets) CopyObject(ctx context.Context, srcBucket, srcObject, dstB
 		UserDefined:          srcInfo.UserDefined,
 		Versioned:            dstOpts.Versioned,
 		VersionID:            dstOpts.VersionID,
+		MTime:                dstOpts.MTime,
 	}
 
 	return dstSet.putObject(ctx, dstBucket, dstObject, srcInfo.PutObjReader, putOpts)

@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -46,6 +47,11 @@ type listPathOptions struct {
 
 	// Scan/return only content with prefix.
 	Prefix string
+
+	// FilterPrefix will return only results with this prefix when scanning.
+	// Should never contain a slash.
+	// Prefix should still be set.
+	FilterPrefix string
 
 	// Marker to resume listing.
 	// The response will be the first entry AFTER this object name.
@@ -87,6 +93,9 @@ type listPathOptions struct {
 	// This means the cache metadata will not be persisted on disk.
 	// A transient result will never be returned from the cache so knowing the list id is required.
 	Transient bool
+
+	// singleObject will assume that prefix refers to an exact single object.
+	singleObject bool
 }
 
 func init() {
@@ -109,6 +118,7 @@ func (o listPathOptions) newMetacache() metacache {
 		startedCycle: o.CurrentCycle,
 		endedCycle:   0,
 		dataVersion:  metacacheStreamVersion,
+		filter:       o.FilterPrefix,
 	}
 }
 
@@ -276,6 +286,28 @@ func (o *listPathOptions) objectPath(block int) string {
 	return pathJoin(metacachePrefixForID(o.Bucket, o.ID), "block-"+strconv.Itoa(block)+".s2")
 }
 
+func (o *listPathOptions) SetFilter() {
+	switch {
+	case metacacheSharePrefix:
+		return
+	case o.CurrentCycle != o.OldestCycle:
+		// We have a clean bloom filter
+		return
+	case o.Prefix == o.BaseDir:
+		// No additional prefix
+		return
+	}
+	// Remove basedir.
+	o.FilterPrefix = strings.TrimPrefix(o.Prefix, o.BaseDir)
+	// Remove leading and trailing slashes.
+	o.FilterPrefix = strings.Trim(o.FilterPrefix, slashSeparator)
+
+	if strings.Contains(o.FilterPrefix, slashSeparator) {
+		// Sanity check, should not happen.
+		o.FilterPrefix = ""
+	}
+}
+
 // filter will apply the options and return the number of objects requested by the limit.
 // Will return io.EOF if there are no more entries with the same filter.
 // The last entry can be used as a marker to resume the listing.
@@ -339,8 +371,8 @@ func (r *metacacheReader) filter(o listPathOptions) (entries metaCacheEntriesSor
 
 func (er *erasureObjects) streamMetadataParts(ctx context.Context, o listPathOptions) (entries metaCacheEntriesSorted, err error) {
 	retries := 0
-	const debugPrint = false
 	rpc := globalNotificationSys.restClientFromHash(o.Bucket)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -351,11 +383,8 @@ func (er *erasureObjects) streamMetadataParts(ctx context.Context, o listPathOpt
 		// If many failures, check the cache state.
 		if retries > 10 {
 			err := o.checkMetacacheState(ctx, rpc)
-			if debugPrint {
-				logger.Info("waiting for first part (%s), err: %v", o.objectPath(0), err)
-			}
 			if err != nil {
-				return entries, err
+				return entries, fmt.Errorf("remote listing canceled: %w", err)
 			}
 			retries = 1
 		}
@@ -393,35 +422,25 @@ func (er *erasureObjects) streamMetadataParts(ctx context.Context, o listPathOpt
 				time.Sleep(retryDelay)
 				continue
 			default:
-				if debugPrint {
-					console.Infoln("first getObjectFileInfo", o.objectPath(0), "returned err:", err)
-					console.Infof("err type: %T\n", err)
-				}
-				return entries, err
+				return entries, fmt.Errorf("reading first part metadata: %w", err)
 			}
-		}
-		if fi.Deleted {
-			return entries, errFileNotFound
 		}
 
 		partN, err := o.findFirstPart(fi)
-		switch err {
-		case nil:
-		case io.ErrUnexpectedEOF:
+		switch {
+		case err == nil:
+		case errors.Is(err, io.ErrUnexpectedEOF):
 			if retries == 10 {
 				err := o.checkMetacacheState(ctx, rpc)
-				if debugPrint {
-					logger.Info("waiting for metadata, err: %v", err)
-				}
 				if err != nil {
-					return entries, err
+					return entries, fmt.Errorf("remote listing canceled: %w", err)
 				}
 				retries = -1
 			}
 			retries++
 			time.Sleep(retryDelay)
 			continue
-		case io.EOF:
+		case errors.Is(err, io.EOF):
 			return entries, io.EOF
 		}
 
@@ -438,11 +457,8 @@ func (er *erasureObjects) streamMetadataParts(ctx context.Context, o listPathOpt
 			if partN != loadedPart {
 				if retries > 10 {
 					err := o.checkMetacacheState(ctx, rpc)
-					if debugPrint {
-						logger.Info("waiting for part data (%v), err: %v", o.objectPath(partN), err)
-					}
 					if err != nil {
-						return entries, err
+						return entries, fmt.Errorf("waiting for next part %d: %w", partN, err)
 					}
 					retries = 1
 				}
@@ -478,9 +494,6 @@ func (er *erasureObjects) streamMetadataParts(ctx context.Context, o listPathOpt
 						return entries, io.EOF
 					}
 				}
-				if fi.Deleted {
-					return entries, io.ErrUnexpectedEOF
-				}
 			}
 			buf.Reset()
 			err := er.getObjectWithFileInfo(ctx, minioMetaBucket, o.objectPath(partN), 0, fi.Size, &buf, fi, metaArr, onlineDisks)
@@ -509,28 +522,29 @@ func (er *erasureObjects) streamMetadataParts(ctx context.Context, o listPathOpt
 				entries.truncate(o.Limit)
 				return entries, nil
 			}
-			switch err {
-			case io.EOF:
-				// We finished at the end of the block.
-				// And should not expect any more results.
-				bi, err := getMetacacheBlockInfo(fi, partN)
-				logger.LogIf(ctx, err)
-				if err != nil || bi.EOS {
-					// We are done and there are no more parts.
-					return entries, io.EOF
-				}
-				if bi.endedPrefix(o.Prefix) {
-					// Nothing more for prefix.
-					return entries, io.EOF
-				}
-				partN++
-				retries = 0
-			case nil:
+			if err == nil {
 				// We stopped within the listing, we are done for now...
 				return entries, nil
-			default:
+			}
+			if !errors.Is(err, io.EOF) {
+				logger.LogIf(ctx, err)
 				return entries, err
 			}
+
+			// We finished at the end of the block.
+			// And should not expect any more results.
+			bi, err := getMetacacheBlockInfo(fi, partN)
+			logger.LogIf(ctx, err)
+			if err != nil || bi.EOS {
+				// We are done and there are no more parts.
+				return entries, io.EOF
+			}
+			if bi.endedPrefix(o.Prefix) {
+				// Nothing more for prefix.
+				return entries, io.EOF
+			}
+			partN++
+			retries = 0
 		}
 	}
 }
@@ -541,14 +555,24 @@ func (er *erasureObjects) listPath(ctx context.Context, o listPathOptions) (entr
 	if debugPrint {
 		console.Printf("listPath with options: %#v\n", o)
 	}
+
 	// See if we have the listing stored.
-	if !o.Create {
+	if !o.Create && !o.singleObject {
 		entries, err := er.streamMetadataParts(ctx, o)
-		switch err {
-		case nil, io.EOF, context.Canceled, context.DeadlineExceeded:
-			return entries, err
+		if IsErr(err, []error{
+			nil,
+			context.Canceled,
+			context.DeadlineExceeded,
+		}...) {
+			// Expected good errors we don't need to return error.
+			return entries, nil
 		}
-		logger.LogIf(ctx, err)
+
+		if !errors.Is(err, io.EOF) { // io.EOF is expected and should be returned but no need to log it.
+			// Log an return errors on unexpected errors.
+			logger.LogIf(ctx, err)
+		}
+
 		return entries, err
 	}
 
@@ -569,14 +593,16 @@ func (er *erasureObjects) listPath(ctx context.Context, o listPathOptions) (entr
 		if debugPrint {
 			console.Println("listPath returning:", entries.len(), "err:", err)
 		}
-		if err != nil && err != io.EOF {
-			metaMu.Lock()
-			if meta.status != scanStateError {
-				meta.error = err.Error()
-				meta.status = scanStateError
-			}
-			meta, _ = o.updateMetacacheListing(meta, rpc)
-			metaMu.Unlock()
+		if err != nil && !errors.Is(err, io.EOF) {
+			go func(err string) {
+				metaMu.Lock()
+				if meta.status != scanStateError {
+					meta.error = err
+					meta.status = scanStateError
+				}
+				meta, _ = o.updateMetacacheListing(meta, rpc)
+				metaMu.Unlock()
+			}(err.Error())
 			cancel()
 		}
 	}()
@@ -599,25 +625,6 @@ func (er *erasureObjects) listPath(ctx context.Context, o listPathOptions) (entr
 	// Select askDisks random disks.
 	if len(disks) > askDisks {
 		disks = disks[:askDisks]
-	}
-
-	var readers = make([]*metacacheReader, askDisks)
-	for i := range disks {
-		r, w := io.Pipe()
-		d := disks[i]
-		readers[i], err = newMetacacheReader(r)
-		if err != nil {
-			cancel()
-			return entries, err
-		}
-		// Send request to each disk.
-		go func() {
-			err := d.WalkDir(ctx, WalkDirOptions{Bucket: o.Bucket, BaseDir: o.BaseDir, Recursive: o.Recursive || o.Separator != SlashSeparator}, w)
-			w.CloseWithError(err)
-			if err != io.EOF {
-				logger.LogIf(ctx, err)
-			}
-		}()
 	}
 
 	// Create output for our results.
@@ -662,6 +669,10 @@ func (er *erasureObjects) listPath(ctx context.Context, o listPathOptions) (entr
 
 		// Write results to disk.
 		bw := newMetacacheBlockWriter(cacheCh, func(b *metacacheBlock) error {
+			if o.singleObject {
+				// Don't save single object listings.
+				return nil
+			}
 			if debugPrint {
 				console.Println("listPath: saving block", b.n, "to", o.objectPath(b.n))
 			}
@@ -712,88 +723,33 @@ func (er *erasureObjects) listPath(ctx context.Context, o listPathOptions) (entr
 			bucket:    o.Bucket,
 		}
 
-		topEntries := make(metaCacheEntries, len(readers))
-		for {
-			// Get the top entry from each
-			var current metaCacheEntry
-			var atEOF, agree int
-			for i, r := range readers {
-				topEntries[i].name = ""
-				entry, err := r.peek()
-				switch err {
-				case io.EOF:
-					atEOF++
-					continue
-				case nil:
-				default:
-					closeChannels()
-					metaMu.Lock()
-					meta.status = scanStateError
-					meta.error = err.Error()
-					metaMu.Unlock()
-					return
+		err := listPathRaw(ctx, listPathRawOptions{
+			disks:        disks,
+			bucket:       o.Bucket,
+			path:         o.BaseDir,
+			recursive:    o.Recursive,
+			filterPrefix: o.FilterPrefix,
+			minDisks:     askDisks - 1,
+			agreed: func(entry metaCacheEntry) {
+				cacheCh <- entry
+				filterCh <- entry
+			},
+			partial: func(entries metaCacheEntries, nAgreed int, errs []error) {
+				// Results Disagree :-(
+				entry, ok := entries.resolve(&resolver)
+				if ok {
+					cacheCh <- *entry
+					filterCh <- *entry
 				}
-				// If no current, add it.
-				if current.name == "" {
-					topEntries[i] = entry
-					current = entry
-					agree++
-					continue
-				}
-				// If exact match, we agree.
-				if current.matches(&entry, o.Bucket) {
-					topEntries[i] = entry
-					agree++
-					continue
-				}
-				// If only the name matches we didn't agree, but add it for resolution.
-				if entry.name == current.name {
-					topEntries[i] = entry
-					continue
-				}
-				// We got different entries
-				if entry.name > current.name {
-					continue
-				}
-				// We got a new, better current.
-				// Clear existing entries.
-				for i := range topEntries[:i] {
-					topEntries[i] = metaCacheEntry{}
-				}
-				agree = 1
-				current = entry
-				topEntries[i] = entry
-			}
-			// Break if all at EOF.
-			if atEOF == len(readers) {
-				break
-			}
-			if agree == len(readers) {
-				// Everybody agreed
-				for _, r := range readers {
-					r.skip(1)
-				}
-				cacheCh <- topEntries[0]
-				filterCh <- topEntries[0]
-				continue
-			}
+			},
+		})
 
-			// Results Disagree :-(
-			entry, ok := topEntries.resolve(&resolver)
-			if ok {
-				cacheCh <- *entry
-				filterCh <- *entry
-			}
-			// Skip the inputs we used.
-			for i, r := range readers {
-				if topEntries[i].name != "" {
-					r.skip(1)
-				}
-			}
-		}
-
-		// Save success
 		metaMu.Lock()
+		if err != nil {
+			meta.status = scanStateError
+			meta.error = err.Error()
+		}
+		// Save success
 		if meta.error == "" {
 			meta.status = scanStateSuccess
 			meta.endedCycle = intDataUpdateTracker.current()
@@ -812,4 +768,185 @@ func (er *erasureObjects) listPath(ctx context.Context, o listPathOptions) (entr
 	}()
 
 	return filteredResults()
+}
+
+type listPathRawOptions struct {
+	disks        []StorageAPI
+	bucket, path string
+	recursive    bool
+	filterPrefix string
+	// Minimum number of good disks to continue.
+	// An error will be returned if this many disks returned an error.
+	minDisks       int
+	reportNotFound bool
+
+	// Callbacks with results:
+	// If set to nil, it will not be called.
+
+	// agreed is called if all disks agreed.
+	agreed func(entry metaCacheEntry)
+
+	// partial will be returned when there is disagreement between disks.
+	// if disk did not return any result, but also haven't errored
+	// the entry will be empty and errs will
+	partial func(entries metaCacheEntries, nAgreed int, errs []error)
+
+	// finished will be called when all streams have finished and
+	// more than one disk returned an error.
+	// Will not be called if everything operates as expected.
+	finished func(errs []error)
+}
+
+// listPathRaw will list a path on the provided drives.
+// See listPathRawOptions on how results are delivered.
+// Directories are always returned.
+// Cache will be bypassed.
+// Context cancellation will be respected but may take a while to effectuate.
+func listPathRaw(ctx context.Context, opts listPathRawOptions) (err error) {
+	disks := opts.disks
+	if len(disks) == 0 {
+		return fmt.Errorf("listPathRaw: 0 drives provided")
+	}
+
+	// Disconnect from call above, but cancel on exit.
+	ctx, cancel := context.WithCancel(GlobalContext)
+	defer cancel()
+
+	askDisks := len(disks)
+	var readers = make([]*metacacheReader, askDisks)
+	for i := range disks {
+		r, w := io.Pipe()
+		d := disks[i]
+		readers[i], err = newMetacacheReader(r)
+		if err != nil {
+			return err
+		}
+		// Send request to each disk.
+		go func() {
+			err := d.WalkDir(ctx, WalkDirOptions{
+				Bucket:         opts.bucket,
+				BaseDir:        opts.path,
+				Recursive:      opts.recursive,
+				ReportNotFound: opts.reportNotFound,
+				FilterPrefix:   opts.filterPrefix}, w)
+			w.CloseWithError(err)
+			if err != io.EOF {
+				logger.LogIf(ctx, err)
+			}
+		}()
+	}
+
+	topEntries := make(metaCacheEntries, len(readers))
+	errs := make([]error, len(readers))
+	for {
+		// Get the top entry from each
+		var current metaCacheEntry
+		var atEOF, fnf, hasErr, agree int
+		for i := range topEntries {
+			topEntries[i] = metaCacheEntry{}
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		for i, r := range readers {
+			if errs[i] != nil {
+				hasErr++
+				continue
+			}
+			entry, err := r.peek()
+			switch err {
+			case io.EOF:
+				atEOF++
+				continue
+			case nil:
+			default:
+				if err.Error() == errFileNotFound.Error() {
+					atEOF++
+					fnf++
+					continue
+				}
+
+				hasErr++
+				errs[i] = err
+				continue
+			}
+			// If no current, add it.
+			if current.name == "" {
+				topEntries[i] = entry
+				current = entry
+				agree++
+				continue
+			}
+			// If exact match, we agree.
+			if current.matches(&entry, opts.bucket) {
+				topEntries[i] = entry
+				agree++
+				continue
+			}
+			// If only the name matches we didn't agree, but add it for resolution.
+			if entry.name == current.name {
+				topEntries[i] = entry
+				continue
+			}
+			// We got different entries
+			if entry.name > current.name {
+				continue
+			}
+			// We got a new, better current.
+			// Clear existing entries.
+			for i := range topEntries[:i] {
+				topEntries[i] = metaCacheEntry{}
+			}
+			agree = 1
+			current = entry
+			topEntries[i] = entry
+		}
+
+		// Stop if we exceed number of bad disks
+		if hasErr > len(disks)-opts.minDisks && hasErr > 0 {
+			if opts.finished != nil {
+				opts.finished(errs)
+			}
+			var combinedErr []string
+			for i, err := range errs {
+				if err != nil {
+					combinedErr = append(combinedErr, fmt.Sprintf("disk %d returned: %s", i, err))
+				}
+			}
+			return errors.New(strings.Join(combinedErr, ", "))
+		}
+
+		// Break if all at EOF or error.
+		if atEOF+hasErr == len(readers) {
+			if hasErr > 0 && opts.finished != nil {
+				opts.finished(errs)
+			}
+			break
+		}
+		if fnf == len(readers) {
+			return errFileNotFound
+		}
+		if agree == len(readers) {
+			// Everybody agreed
+			for _, r := range readers {
+				r.skip(1)
+			}
+			if opts.agreed != nil {
+				opts.agreed(current)
+			}
+			continue
+		}
+		if opts.partial != nil {
+			opts.partial(topEntries, agree, errs)
+		}
+		// Skip the inputs we used.
+		for i, r := range readers {
+			if topEntries[i].name != "" {
+				r.skip(1)
+			}
+		}
+	}
+	return nil
 }
