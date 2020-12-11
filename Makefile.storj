@@ -1,4 +1,4 @@
-GO_VERSION ?= 1.15.5
+GO_VERSION ?= 1.15.6
 GOOS ?= linux
 GOARCH ?= amd64
 GOPATH ?= $(shell go env GOPATH)
@@ -85,4 +85,6 @@ push-images: ## Push Docker images to Docker Hub (jenkins)
 
 .PHONY: clean-images
 clean-images:
-	-docker rmi storjlabs/minio-mint:${TAG}
+	-docker rmi storjlabs/minio-mint:${TAG}-amd64
+	-docker rmi storjlabs/minio-mint:${TAG}-arm32v6
+	-docker rmi storjlabs/minio-mint:${TAG}-aarch64
