@@ -930,6 +930,16 @@ func testListMultipartUploads(s3Client *s3.S3) {
 		}
 	}
 
+	_, err = s3Client.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+		Bucket:   aws.String(bucket),
+		Key:      aws.String(object),
+		UploadId: multipartUpload.UploadId,
+	})
+	if err != nil {
+		failureLog(function, args, startTime, "", fmt.Sprintf("AWS SDK Go AbortMultipartUpload failed"), err).Fatal()
+		return
+	}
+
 	successLogger(function, args, startTime).Info()
 }
 
@@ -1055,7 +1065,7 @@ func main() {
 	testListObjects(s3Client)
 	testSelectObject(s3Client)
 	testCreateBucketError(s3Client)
-	//testListMultipartUploads(s3Client)
+	testListMultipartUploads(s3Client)
 	if secure == "1" {
 		testSSECopyObject(s3Client)
 	}
