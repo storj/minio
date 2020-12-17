@@ -25,8 +25,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/minio/minio/pkg/madmin"
-	"github.com/minio/minio/pkg/smart"
+	"github.com/storj/minio/pkg/madmin"
+	"github.com/storj/minio/pkg/smart"
 	diskhw "github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
 )

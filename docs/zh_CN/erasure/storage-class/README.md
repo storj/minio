@@ -66,7 +66,7 @@ export MINIO_STORAGE_CLASS_STANDARD=EC:3
 export MINIO_STORAGE_CLASS_RRS=EC:2
 ```
 
-也可以通过`mc admin config` get/set 命令来设置存储类型。参考 [存储类型](https://github.com/minio/minio/tree/master/docs/zh_CN/config#存储类型) 获取更多详细信息。
+也可以通过`mc admin config` get/set 命令来设置存储类型。参考 [存储类型](https://github.com/storj/minio/tree/master/docs/zh_CN/config#存储类型) 获取更多详细信息。
 
 
 *注意*

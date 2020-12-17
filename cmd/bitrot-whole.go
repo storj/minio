@@ -22,7 +22,7 @@ import (
 	"hash"
 	"io"
 
-	"github.com/minio/minio/cmd/logger"
+	"github.com/storj/minio/cmd/logger"
 )
 
 // Implementation to calculate bitrot for the whole file.

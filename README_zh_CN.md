@@ -152,7 +152,7 @@ service iptables restart
 ## 使用MinIO浏览器进行验证
 MinIO Server带有一个嵌入的Web对象浏览器，安装后使用浏览器访问[http://127.0.0.1:9000](http://127.0.0.1:9000)，如果可以访问，则表示minio已经安装成功。
 
-![Screenshot](https://github.com/minio/minio/blob/master/docs/screenshots/minio-browser.png?raw=true)
+![Screenshot](https://github.com/storj/minio/blob/master/docs/screenshots/minio-browser.png?raw=true)
 
 ## 使用MinIO客户端 `mc`进行验证
 `mc` 提供了一些UNIX常用命令的替代品，像ls, cat, cp, mirror, diff这些。 它支持文件系统和亚马逊S3云存储服务。 更多信息请参考 [mc快速入门](https://docs.min.io/docs/minio-client-quickstart-guide) 。
@@ -190,7 +190,7 @@ mc admin update <minio alias, e.g., myminio>
 - [MinIO文档](https://docs.min.io)
 
 ## 如何参与到MinIO项目
-请参考 [贡献者指南](https://github.com/minio/minio/blob/master/CONTRIBUTING.md)。欢迎各位中国程序员加到MinIO项目中。
+请参考 [贡献者指南](https://github.com/storj/minio/blob/master/CONTRIBUTING.md)。欢迎各位中国程序员加到MinIO项目中。
 
 ## 授权许可
 MinIO的使用受 Apache 2.0 License 约束，你可以在 [LICENSE](./LICENSE) 查看许可。

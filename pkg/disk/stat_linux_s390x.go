@@ -70,7 +70,7 @@ func GetInfo(path string) (info Info, err error) {
 		FSType: getFSType(s.Type),
 	}
 	// Check for overflows.
-	// https://github.com/minio/minio/issues/8035
+	// https://github.com/storj/minio/issues/8035
 	// XFS can show wrong values at times error out
 	// in such scenarios.
 	if info.Free > info.Total {

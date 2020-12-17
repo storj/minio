@@ -25,8 +25,8 @@ Let's setup a server and register a codec and service:
 
 	import (
 		"http"
-		"github.com/minio/minio/pkg/rpc/"
-		"github.com/minio/minio/pkg/rpc/json2"
+		"github.com/storj/minio/pkg/rpc/"
+		"github.com/storj/minio/pkg/rpc/json2"
 	)
 
 	func init() {

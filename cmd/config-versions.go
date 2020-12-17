@@ -19,19 +19,19 @@ package cmd
 import (
 	"sync"
 
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/config/cache"
-	"github.com/minio/minio/cmd/config/compress"
-	xldap "github.com/minio/minio/cmd/config/identity/ldap"
-	"github.com/minio/minio/cmd/config/identity/openid"
-	"github.com/minio/minio/cmd/config/notify"
-	"github.com/minio/minio/cmd/config/policy/opa"
-	"github.com/minio/minio/cmd/config/storageclass"
-	"github.com/minio/minio/cmd/crypto"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/event/target"
-	"github.com/minio/minio/pkg/quick"
+	"github.com/storj/minio/cmd/config"
+	"github.com/storj/minio/cmd/config/cache"
+	"github.com/storj/minio/cmd/config/compress"
+	xldap "github.com/storj/minio/cmd/config/identity/ldap"
+	"github.com/storj/minio/cmd/config/identity/openid"
+	"github.com/storj/minio/cmd/config/notify"
+	"github.com/storj/minio/cmd/config/policy/opa"
+	"github.com/storj/minio/cmd/config/storageclass"
+	"github.com/storj/minio/cmd/crypto"
+	"github.com/storj/minio/cmd/logger"
+	"github.com/storj/minio/pkg/auth"
+	"github.com/storj/minio/pkg/event/target"
+	"github.com/storj/minio/pkg/quick"
 )
 
 /////////////////// Config V1 ///////////////////

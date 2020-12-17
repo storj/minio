@@ -22,7 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/minio/minio/cmd/logger"
+	"github.com/storj/minio/cmd/logger"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

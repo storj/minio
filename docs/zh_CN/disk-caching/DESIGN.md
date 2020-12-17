@@ -1,6 +1,6 @@
 # 磁盘缓存设计 [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io)
 
-本文档介绍了一些基本假设和设计方法，以及磁盘缓存功能的限制。如果您希望入门使用磁盘缓存，建议您先阅读[入门文档](https://github.com/minio/minio/blob/master/docs/zh_CN/disk-caching/README.md)。
+本文档介绍了一些基本假设和设计方法，以及磁盘缓存功能的限制。如果您希望入门使用磁盘缓存，建议您先阅读[入门文档](https://github.com/storj/minio/blob/master/docs/zh_CN/disk-caching/README.md)。
 
 ## 命令行
 

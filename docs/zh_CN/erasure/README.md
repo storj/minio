@@ -6,7 +6,7 @@ Minio使用纠删码`erasure code`和`checksum`来保护数据免受硬件故障
 
 纠删码是一种恢复丢失和损坏数据的数学算法， Minio采用里德-所罗门码将对象分片为数据和奇偶校验块。 这就意味着如果是12块盘，一个对象可被分片的范围是：6个数据块和6个奇偶校验块 到 10个数据块和2个奇偶校验块之间。
 
-默认情况下, MinIO 将对象拆分成N/2数据和N/2 奇偶校验盘. 虽然你可以通过 [存储类型](https://github.com/minio/minio/tree/master/docs/zh_CN/erasure/storage-class) 自定义配置, 但是我们还是推荐N/2个数据和奇偶校验块, 因为它可以确保对硬盘故障提供最佳保护。
+默认情况下, MinIO 将对象拆分成N/2数据和N/2 奇偶校验盘. 虽然你可以通过 [存储类型](https://github.com/storj/minio/tree/master/docs/zh_CN/erasure/storage-class) 自定义配置, 但是我们还是推荐N/2个数据和奇偶校验块, 因为它可以确保对硬盘故障提供最佳保护。
 
 比如上面12个盘的例子，通过默认配置运行MinIO服务的话，你可以丢失任意6块盘（不管其是存放的数据块还是奇偶校验块），你仍可以从剩下的盘中的数据进行恢复，是不是很NB，感兴趣的同学请翻墙google。
 
@@ -14,7 +14,7 @@ Minio使用纠删码`erasure code`和`checksum`来保护数据免受硬件故障
 
 纠删码的工作原理和RAID或者复制不同，像RAID6可以在损失两块盘的情况下不丢数据，而Minio纠删码可以在丢失一半的盘的情况下，仍可以保证数据安全。 而且Minio纠删码是作用在对象级别，可以一次恢复一个对象，而RAID是作用在卷级别，数据恢复时间很长。 Minio对每个对象单独编码，存储服务一经部署，通常情况下是不需要更换硬盘或者修复。Minio纠删码的设计目标是为了性能和尽可能的使用硬件加速。
 
-![Erasure](https://github.com/minio/minio/blob/master/docs/screenshots/erasure-code.jpg?raw=true)
+![Erasure](https://github.com/storj/minio/blob/master/docs/screenshots/erasure-code.jpg?raw=true)
 
 ## 什么是位衰减`bit rot`保护?
 

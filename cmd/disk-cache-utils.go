@@ -29,7 +29,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/minio/cmd/crypto"
+	"github.com/storj/minio/cmd/crypto"
 )
 
 // CacheStatusType - whether the request was served from cache.

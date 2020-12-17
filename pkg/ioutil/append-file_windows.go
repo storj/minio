@@ -20,7 +20,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/minio/minio/pkg/lock"
+	"github.com/storj/minio/pkg/lock"
 )
 
 // AppendFile - appends the file "src" to the file "dst"

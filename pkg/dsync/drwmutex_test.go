@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/minio/minio/pkg/dsync"
+	. "github.com/storj/minio/pkg/dsync"
 )
 
 const (

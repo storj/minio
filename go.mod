@@ -1,4 +1,4 @@
-module github.com/minio/minio
+module github.com/storj/minio
 
 go 1.14
 
@@ -42,6 +42,7 @@ require (
 	github.com/miekg/dns v1.1.35
 	github.com/minio/cli v1.22.0
 	github.com/minio/highwayhash v1.0.0
+	github.com/minio/minio v0.0.0-20201202191200-96c0ce1f0c47 // indirect
 	github.com/minio/minio-go/v7 v7.0.6
 	github.com/minio/selfupdate v0.3.1
 	github.com/minio/sha256-simd v0.1.1
@@ -64,7 +65,6 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/secure-io/sio-go v0.3.0
 	github.com/shirou/gopsutil v3.20.11+incompatible
-	github.com/storj/minio v0.0.0-20201211104947-bc7f0f1ec3d9
 	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tidwall/gjson v1.3.5

@@ -91,7 +91,7 @@ minio server /data
 ```
 
 ### 存储类型
-默认情况下，标准存储类型的奇偶校验值设置为N/2，低冗余的存储类型奇偶校验值设置为2。在[此处](https://github.com/minio/minio/blob/master/docs/zh_CN/erasure/storage-class/README.md)了解有关MinIO服务器存储类型的更多信息。
+默认情况下，标准存储类型的奇偶校验值设置为N/2，低冗余的存储类型奇偶校验值设置为2。在[此处](https://github.com/storj/minio/blob/master/docs/zh_CN/erasure/storage-class/README.md)了解有关MinIO服务器存储类型的更多信息。
 
 ```
 KEY:
@@ -177,7 +177,7 @@ MINIO_ETCD_COMMENT          (sentence)  为这个设置添加一个可选的注�
 ```
 
 ### API
-默认情况下，服务器/集群同时处理的并发请求数没有限制。 但是，可以使用API子系统强加这种限制。 在[此处](https://github.com/minio/minio/blob/master/docs/zh_CN/throttle/README.md)阅读有关MinIO服务器中限制限制的更多信息。
+默认情况下，服务器/集群同时处理的并发请求数没有限制。 但是，可以使用API子系统强加这种限制。 在[此处](https://github.com/storj/minio/blob/master/docs/zh_CN/throttle/README.md)阅读有关MinIO服务器中限制限制的更多信息。
 
 ```
 KEY:

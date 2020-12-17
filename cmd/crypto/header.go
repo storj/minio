@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	jsoniter "github.com/json-iterator/go"
-	xhttp "github.com/minio/minio/cmd/http"
+	xhttp "github.com/storj/minio/cmd/http"
 )
 
 // SSEHeader is the general AWS SSE HTTP header key.

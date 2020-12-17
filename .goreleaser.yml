@@ -67,7 +67,7 @@ builds:
       - -trimpath
 
     ldflags:
-      - "-s -w -X github.com/minio/minio/cmd.Version={{.Version}} -X github.com/minio/minio/cmd.ReleaseTag={{.Tag}} -X github.com/minio/minio/cmd.CommitID={{.FullCommit}} -X github.com/minio/minio/cmd.ShortCommitID={{.ShortCommit}}"
+      - "-s -w -X github.com/storj/minio/cmd.Version={{.Version}} -X github.com/storj/minio/cmd.ReleaseTag={{.Tag}} -X github.com/storj/minio/cmd.CommitID={{.FullCommit}} -X github.com/storj/minio/cmd.ShortCommitID={{.ShortCommit}}"
 
 archives:
   -

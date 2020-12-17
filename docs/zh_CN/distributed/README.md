@@ -9,7 +9,7 @@
 ### 数据保护
 
 
-分布式Minio采用 [纠删码](https://docs.min.io/cn/minio-erasure-code-quickstart-guide)来防范多个节点宕机和[位衰减`bit rot`](https://github.com/minio/minio/blob/master/docs/zh_CN/erasure/README.md#what-is-bit-rot-protection)。  
+分布式Minio采用 [纠删码](https://docs.min.io/cn/minio-erasure-code-quickstart-guide)来防范多个节点宕机和[位衰减`bit rot`](https://github.com/storj/minio/blob/master/docs/zh_CN/erasure/README.md#what-is-bit-rot-protection)。  
 
 分布式Minio至少需要4个硬盘，使用分布式Minio自动引入了纠删码功能。
 
@@ -19,7 +19,7 @@
 
 例如，一个16节点的Minio集群，每个节点200块硬盘，就算8台服務器宕机，即大概有1600块硬盘，这个集群仍然是可读的，不过你需要9台服務器在线才能写数据。
 
-你还可以使用[存储类型](https://github.com/minio/minio/tree/master/docs/zh_CN/erasure/storage-class)自定义每个对象的奇偶分布。
+你还可以使用[存储类型](https://github.com/storj/minio/tree/master/docs/zh_CN/erasure/storage-class)自定义每个对象的奇偶分布。
 
 ### 一致性
 
@@ -53,7 +53,7 @@ Minio在分布式和单机模式下，所有读写操作都严格遵守**read-af
 示例1: 启动分布式Minio实例，8个节点，每节点1块盘，需要在8个节点上都运行下面的命令。 
 示例1: 在n个节点上启动分布式MinIO实例，每个节点有m个磁盘，分别挂载在`/export1` 到 `/exportm` (如下图所示), 在所有n个节点上运行此命令:
 
-![Distributed MinIO, n nodes with m drives each](https://github.com/minio/minio/blob/master/docs/screenshots/Architecture-diagram_distributed_nm.png?raw=true)
+![Distributed MinIO, n nodes with m drives each](https://github.com/storj/minio/blob/master/docs/screenshots/Architecture-diagram_distributed_nm.png?raw=true)
 
 #### GNU/Linux 和 macOS
 
