@@ -489,14 +489,14 @@ function testMultipartUploadFailure($s3Client, $params) {
     }
 
     $params = [
-        'EntityTooSmall' => [
-            'Bucket' => $bucket,
-            'Key' => $object,
-            'UploadId' => $uploadId,
-            'MultipartUpload' => [
-                'Parts' => $parts,
-            ],
-        ],
+//        'EntityTooSmall' => [
+//            'Bucket' => $bucket,
+//            'Key' => $object,
+//            'UploadId' => $uploadId,
+//            'MultipartUpload' => [
+//                'Parts' => $parts,
+//            ],
+//        ],
         'NoSuchUpload' => [
             'Bucket' => $bucket,
             'Key' => $object,
