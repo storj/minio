@@ -31,8 +31,8 @@ import (
 	"github.com/storj/minio/cmd/config/compress"
 	"github.com/storj/minio/cmd/config/dns"
 	xldap "github.com/storj/minio/cmd/config/identity/ldap"
-	"github.com/storj/minio/cmd/config/identity/noauth"
 	"github.com/storj/minio/cmd/config/identity/openid"
+	"github.com/storj/minio/cmd/config/identity/storjauth"
 	"github.com/storj/minio/cmd/config/policy/opa"
 	"github.com/storj/minio/cmd/config/storageclass"
 	"github.com/storj/minio/cmd/crypto"
@@ -164,10 +164,10 @@ var (
 	// healthcheck readiness deadlines and cors settings.
 	globalAPIConfig = apiConfig{listQuorum: 3}
 
-	globalStorageClass storageclass.Config
-	globalLDAPConfig   xldap.Config
-	globalOpenIDConfig openid.Config
-	globalNoAuthConfig noauth.Config
+	globalStorageClass    storageclass.Config
+	globalLDAPConfig      xldap.Config
+	globalOpenIDConfig    openid.Config
+	globalStorjAuthConfig storjauth.Config
 
 	// CA root certificates, a nil value means system certs pool will be used
 	globalRootCAs *x509.CertPool

@@ -62,23 +62,23 @@ const (
 
 // Top level config constants.
 const (
-	CredentialsSubSys    = "credentials"
-	PolicyOPASubSys      = "policy_opa"
-	IdentityOpenIDSubSys = "identity_openid"
-	IdentityLDAPSubSys   = "identity_ldap"
-	IdentityNoAuthSubSys = "identity_noauth"
-	CacheSubSys          = "cache"
-	RegionSubSys         = "region"
-	EtcdSubSys           = "etcd"
-	StorageClassSubSys   = "storage_class"
-	APISubSys            = "api"
-	CompressionSubSys    = "compression"
-	KmsVaultSubSys       = "kms_vault"
-	KmsKesSubSys         = "kms_kes"
-	LoggerWebhookSubSys  = "logger_webhook"
-	AuditWebhookSubSys   = "audit_webhook"
-	HealSubSys           = "heal"
-	CrawlerSubSys        = "crawler"
+	CredentialsSubSys       = "credentials"
+	PolicyOPASubSys         = "policy_opa"
+	IdentityOpenIDSubSys    = "identity_openid"
+	IdentityLDAPSubSys      = "identity_ldap"
+	IdentityStorjAuthSubSys = "identity_storjauth"
+	CacheSubSys             = "cache"
+	RegionSubSys            = "region"
+	EtcdSubSys              = "etcd"
+	StorageClassSubSys      = "storage_class"
+	APISubSys               = "api"
+	CompressionSubSys       = "compression"
+	KmsVaultSubSys          = "kms_vault"
+	KmsKesSubSys            = "kms_kes"
+	LoggerWebhookSubSys     = "logger_webhook"
+	AuditWebhookSubSys      = "audit_webhook"
+	HealSubSys              = "heal"
+	CrawlerSubSys           = "crawler"
 
 	// Add new constants here if you add new fields to config.
 )
@@ -114,7 +114,7 @@ var SubSystems = set.CreateStringSet(
 	AuditWebhookSubSys,
 	PolicyOPASubSys,
 	IdentityLDAPSubSys,
-	IdentityNoAuthSubSys,
+	IdentityStorjAuthSubSys,
 	IdentityOpenIDSubSys,
 	CrawlerSubSys,
 	HealSubSys,
@@ -151,7 +151,7 @@ var SubSystemsSingleTargets = set.CreateStringSet([]string{
 	KmsKesSubSys,
 	PolicyOPASubSys,
 	IdentityLDAPSubSys,
-	IdentityNoAuthSubSys,
+	IdentityStorjAuthSubSys,
 	IdentityOpenIDSubSys,
 	HealSubSys,
 	CrawlerSubSys,

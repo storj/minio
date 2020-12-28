@@ -44,8 +44,8 @@ func TestLoadUserTimeout(t *testing.T) {
 	}
 }
 
-func GetTestAuthStore(authURL, authToken string, timeout time.Duration) *IAMNoAuthStore {
-	return &IAMNoAuthStore{
+func GetTestAuthStore(authURL, authToken string, timeout time.Duration) *IAMStorjAuthStore {
+	return &IAMStorjAuthStore{
 		transport: newGatewayHTTPTransport(timeout),
 		authURL:   authURL,
 		authToken: authToken,

@@ -30,8 +30,8 @@ import (
 	"github.com/storj/minio/cmd/config/cache"
 	"github.com/storj/minio/cmd/config/etcd"
 	xldap "github.com/storj/minio/cmd/config/identity/ldap"
-	"github.com/storj/minio/cmd/config/identity/noauth"
 	"github.com/storj/minio/cmd/config/identity/openid"
+	"github.com/storj/minio/cmd/config/identity/storjauth"
 	"github.com/storj/minio/cmd/config/policy/opa"
 	"github.com/storj/minio/cmd/config/storageclass"
 	"github.com/storj/minio/cmd/crypto"
@@ -465,8 +465,8 @@ func (a adminAPIHandlers) GetConfigHandler(w http.ResponseWriter, r *http.Reques
 				off = !openid.Enabled(kv)
 			case config.IdentityLDAPSubSys:
 				off = !xldap.Enabled(kv)
-			case config.IdentityNoAuthSubSys:
-				off = !noauth.Enabled(kv)
+			case config.IdentityStorjAuthSubSys:
+				off = !storjauth.Enabled(kv)
 			}
 			if off {
 				s.WriteString(config.KvComment)

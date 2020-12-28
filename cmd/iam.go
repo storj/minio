@@ -50,8 +50,8 @@ const (
 	// server.
 	LDAPUsersSysType UsersSysType = "LDAPUsersSys"
 
-	// This mode does not restrict users and groups.
-	NoAuthSysType UsersSysType = "NoAuthSys"
+	// This mode does uses Storj's Auth Svc to restrict users and groups.
+	StorjAuthSysType UsersSysType = "StorjAuthSys"
 )
 
 const (
@@ -424,9 +424,9 @@ func (sys *IAMSys) InitStore(objAPI ObjectLayer) {
 	sys.Lock()
 	defer sys.Unlock()
 
-	if globalNoAuthConfig.Enabled {
-		sys.store = newIAMNoAuthStore(objAPI)
-		sys.usersSysType = NoAuthSysType
+	if globalStorjAuthConfig.Enabled {
+		sys.store = newIAMStorjAuthStore(objAPI)
+		sys.usersSysType = StorjAuthSysType
 	} else if globalEtcdClient == nil {
 		sys.store = newIAMObjectStore(objAPI)
 	} else {
@@ -1889,7 +1889,7 @@ func (sys *IAMSys) IsAllowed(args iampolicy.Args) bool {
 	}
 
 	// Policies don't apply when authorization is disabled.
-	if globalNoAuthConfig.Enabled {
+	if globalStorjAuthConfig.Enabled {
 		return true
 	}
 

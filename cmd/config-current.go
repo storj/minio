@@ -31,8 +31,8 @@ import (
 	"github.com/storj/minio/cmd/config/etcd"
 	"github.com/storj/minio/cmd/config/heal"
 	xldap "github.com/storj/minio/cmd/config/identity/ldap"
-	"github.com/storj/minio/cmd/config/identity/noauth"
 	"github.com/storj/minio/cmd/config/identity/openid"
+	"github.com/storj/minio/cmd/config/identity/storjauth"
 	"github.com/storj/minio/cmd/config/notify"
 	"github.com/storj/minio/cmd/config/policy/opa"
 	"github.com/storj/minio/cmd/config/storageclass"
@@ -46,22 +46,22 @@ import (
 
 func initHelp() {
 	var kvs = map[string]config.KVS{
-		config.EtcdSubSys:           etcd.DefaultKVS,
-		config.CacheSubSys:          cache.DefaultKVS,
-		config.CompressionSubSys:    compress.DefaultKVS,
-		config.IdentityLDAPSubSys:   xldap.DefaultKVS,
-		config.IdentityNoAuthSubSys: noauth.DefaultKVS,
-		config.IdentityOpenIDSubSys: openid.DefaultKVS,
-		config.PolicyOPASubSys:      opa.DefaultKVS,
-		config.RegionSubSys:         config.DefaultRegionKVS,
-		config.APISubSys:            api.DefaultKVS,
-		config.CredentialsSubSys:    config.DefaultCredentialKVS,
-		config.KmsVaultSubSys:       crypto.DefaultVaultKVS,
-		config.KmsKesSubSys:         crypto.DefaultKesKVS,
-		config.LoggerWebhookSubSys:  logger.DefaultKVS,
-		config.AuditWebhookSubSys:   logger.DefaultAuditKVS,
-		config.HealSubSys:           heal.DefaultKVS,
-		config.CrawlerSubSys:        crawler.DefaultKVS,
+		config.EtcdSubSys:              etcd.DefaultKVS,
+		config.CacheSubSys:             cache.DefaultKVS,
+		config.CompressionSubSys:       compress.DefaultKVS,
+		config.IdentityLDAPSubSys:      xldap.DefaultKVS,
+		config.IdentityStorjAuthSubSys: storjauth.DefaultKVS,
+		config.IdentityOpenIDSubSys:    openid.DefaultKVS,
+		config.PolicyOPASubSys:         opa.DefaultKVS,
+		config.RegionSubSys:            config.DefaultRegionKVS,
+		config.APISubSys:               api.DefaultKVS,
+		config.CredentialsSubSys:       config.DefaultCredentialKVS,
+		config.KmsVaultSubSys:          crypto.DefaultVaultKVS,
+		config.KmsKesSubSys:            crypto.DefaultKesKVS,
+		config.LoggerWebhookSubSys:     logger.DefaultKVS,
+		config.AuditWebhookSubSys:      logger.DefaultAuditKVS,
+		config.HealSubSys:              heal.DefaultKVS,
+		config.CrawlerSubSys:           crawler.DefaultKVS,
 	}
 	for k, v := range notify.DefaultNotificationKVS {
 		kvs[k] = v
@@ -94,7 +94,7 @@ func initHelp() {
 			Description: "enable OpenID SSO support",
 		},
 		config.HelpKV{
-			Key:         config.IdentityNoAuthSubSys,
+			Key:         config.IdentityStorjAuthSubSys,
 			Description: "disable user authentication support",
 		},
 		config.HelpKV{
@@ -197,33 +197,33 @@ func initHelp() {
 	}
 
 	var helpMap = map[string]config.HelpKVS{
-		"":                          helpSubSys, // Help for all sub-systems.
-		config.RegionSubSys:         config.RegionHelp,
-		config.APISubSys:            api.Help,
-		config.StorageClassSubSys:   storageclass.Help,
-		config.EtcdSubSys:           etcd.Help,
-		config.CacheSubSys:          cache.Help,
-		config.CompressionSubSys:    compress.Help,
-		config.HealSubSys:           heal.Help,
-		config.CrawlerSubSys:        crawler.Help,
-		config.IdentityOpenIDSubSys: openid.Help,
-		config.IdentityNoAuthSubSys: noauth.Help,
-		config.IdentityLDAPSubSys:   xldap.Help,
-		config.PolicyOPASubSys:      opa.Help,
-		config.KmsVaultSubSys:       crypto.HelpVault,
-		config.KmsKesSubSys:         crypto.HelpKes,
-		config.LoggerWebhookSubSys:  logger.Help,
-		config.AuditWebhookSubSys:   logger.HelpAudit,
-		config.NotifyAMQPSubSys:     notify.HelpAMQP,
-		config.NotifyKafkaSubSys:    notify.HelpKafka,
-		config.NotifyMQTTSubSys:     notify.HelpMQTT,
-		config.NotifyNATSSubSys:     notify.HelpNATS,
-		config.NotifyNSQSubSys:      notify.HelpNSQ,
-		config.NotifyMySQLSubSys:    notify.HelpMySQL,
-		config.NotifyPostgresSubSys: notify.HelpPostgres,
-		config.NotifyRedisSubSys:    notify.HelpRedis,
-		config.NotifyWebhookSubSys:  notify.HelpWebhook,
-		config.NotifyESSubSys:       notify.HelpES,
+		"":                             helpSubSys, // Help for all sub-systems.
+		config.RegionSubSys:            config.RegionHelp,
+		config.APISubSys:               api.Help,
+		config.StorageClassSubSys:      storageclass.Help,
+		config.EtcdSubSys:              etcd.Help,
+		config.CacheSubSys:             cache.Help,
+		config.CompressionSubSys:       compress.Help,
+		config.HealSubSys:              heal.Help,
+		config.CrawlerSubSys:           crawler.Help,
+		config.IdentityOpenIDSubSys:    openid.Help,
+		config.IdentityStorjAuthSubSys: storjauth.Help,
+		config.IdentityLDAPSubSys:      xldap.Help,
+		config.PolicyOPASubSys:         opa.Help,
+		config.KmsVaultSubSys:          crypto.HelpVault,
+		config.KmsKesSubSys:            crypto.HelpKes,
+		config.LoggerWebhookSubSys:     logger.Help,
+		config.AuditWebhookSubSys:      logger.HelpAudit,
+		config.NotifyAMQPSubSys:        notify.HelpAMQP,
+		config.NotifyKafkaSubSys:       notify.HelpKafka,
+		config.NotifyMQTTSubSys:        notify.HelpMQTT,
+		config.NotifyNATSSubSys:        notify.HelpNATS,
+		config.NotifyNSQSubSys:         notify.HelpNSQ,
+		config.NotifyMySQLSubSys:       notify.HelpMySQL,
+		config.NotifyPostgresSubSys:    notify.HelpPostgres,
+		config.NotifyRedisSubSys:       notify.HelpRedis,
+		config.NotifyWebhookSubSys:     notify.HelpWebhook,
+		config.NotifyESSubSys:          notify.HelpES,
 	}
 
 	config.RegisterHelpSubSys(helpMap)
@@ -419,7 +419,7 @@ func lookupConfigs(s config.Config, setDriveCount int) {
 		}
 	}
 
-	globalNoAuthConfig = noauth.LookupConfig(s[config.IdentityNoAuthSubSys][config.Enable])
+	globalStorjAuthConfig = storjauth.LookupConfig(s[config.IdentityStorjAuthSubSys][config.Enable])
 
 	// Bucket federation is 'true' only when IAM assets are not namespaced
 	// per tenant and all tenants interested in globally available users

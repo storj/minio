@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package noauth
+package storjauth
 
 import "github.com/storj/minio/cmd/config"
 

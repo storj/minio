@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package noauth
+package storjauth
 
 import (
 	"github.com/storj/minio/cmd/config"
@@ -26,26 +26,26 @@ type Config struct {
 	Enabled bool `json:"enabled"`
 }
 
-//NoAuthEnabled is the key for the NoAuthSubSys KVS
-const NoAuthEnabled = "enabled"
+//StorjAuthEnabled is the key for the StorjAuthSubSys KVS
+const StorjAuthEnabled = "enabled"
 
-//EnvNoAuthEnabled is the key for sys.Env
-const EnvNoAuthEnabled = "MINIO_NOAUTH_ENABLED"
+//EnvStorjAuthEnabled is the key for sys.Env
+const EnvStorjAuthEnabled = "STORJ_AUTH_ENABLED"
 
 // DefaultKVS - default config for LDAP config
 var DefaultKVS = config.KVS{
 	config.KV{
-		Key:   NoAuthEnabled,
+		Key:   StorjAuthEnabled,
 		Value: config.EnableOff,
 	},
 }
 
 // Enabled returns if jwks is enabled.
 func Enabled(kvs config.KVS) bool {
-	return kvs.Get(NoAuthEnabled) == config.Enable
+	return kvs.Get(StorjAuthEnabled) == config.Enable
 }
 
-// LookupConfig - Initialize new noauth config.
+// LookupConfig - Initialize new storjauth config.
 func LookupConfig(kvs config.KVS) Config {
-	return Config{Enabled: env.Get(EnvNoAuthEnabled, kvs.Get(NoAuthEnabled)) == config.Enable}
+	return Config{Enabled: env.Get(EnvStorjAuthEnabled, kvs.Get(StorjAuthEnabled)) == config.Enable}
 }

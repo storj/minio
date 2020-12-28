@@ -252,8 +252,8 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 
 	enableIAMOps := globalEtcdClient != nil
 
-	// Only enable admin APIs if no auth is disabled
-	if !globalNoAuthConfig.Enabled {
+	// Only enable admin APIs if Storj auth is disabled
+	if !globalStorjAuthConfig.Enabled {
 		// Enable IAM admin APIs if etcd is enabled, if not just enable basic
 		// operations such as profiling, server info etc.
 		registerAdminRouter(router, enableConfigOps, enableIAMOps)
@@ -327,7 +327,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 			"Unable to handle encrypted backend for iam and policies")
 	}
 
-	if enableIAMOps || globalNoAuthConfig.Enabled {
+	if enableIAMOps || globalStorjAuthConfig.Enabled {
 		// Initialize users credentials and policies in background.
 		globalIAMSys.InitStore(newObject)
 
