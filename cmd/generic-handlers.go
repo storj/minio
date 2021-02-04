@@ -36,6 +36,11 @@ import (
 // MiddlewareFunc - useful to chain different http.Handler middlewares
 type MiddlewareFunc func(http.Handler) http.Handler
 
+// RegisterMiddlewares exports RegisterMiddlewares.
+func RegisterMiddlewares(next http.Handler) http.Handler {
+	return registerMiddlewares(next)
+}
+
 func registerMiddlewares(next http.Handler) http.Handler {
 	for _, handlerFn := range globalHandlers {
 		next = handlerFn(next)

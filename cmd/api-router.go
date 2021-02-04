@@ -21,9 +21,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/pkg/wildcard"
-	"github.com/rs/cors"
 )
 
 func newHTTPServerFn() *xhttp.Server {
@@ -65,6 +65,9 @@ func getHost(r *http.Request) string {
 	}
 	return r.Host
 }
+
+// RegisterAPIRouter exports registerAPIRouter.
+func RegisterAPIRouter(router *mux.Router) { registerAPIRouter(router) }
 
 // registerAPIRouter - registers S3 compatible APIs.
 func registerAPIRouter(router *mux.Router) {
