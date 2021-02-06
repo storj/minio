@@ -23,32 +23,21 @@ type BucketVersioningSys struct{}
 
 // Enabled enabled versioning?
 func (sys *BucketVersioningSys) Enabled(bucket string) bool {
-	vc, err := globalBucketMetadataSys.GetVersioningConfig(bucket)
-	if err != nil {
-		return false
-	}
-	return vc.Enabled()
+	return false
 }
 
 // Suspended suspended versioning?
 func (sys *BucketVersioningSys) Suspended(bucket string) bool {
-	vc, err := globalBucketMetadataSys.GetVersioningConfig(bucket)
-	if err != nil {
-		return false
-	}
-	return vc.Suspended()
+	return false
 }
 
 // Get returns stored bucket policy
 func (sys *BucketVersioningSys) Get(bucket string) (*versioning.Versioning, error) {
-	if globalIsGateway {
-		objAPI := newObjectLayerFn()
-		if objAPI == nil {
-			return nil, errServerNotInitialized
-		}
-		return nil, NotImplemented{}
+	objAPI := newObjectLayerFn()
+	if objAPI == nil {
+		return nil, errServerNotInitialized
 	}
-	return globalBucketMetadataSys.GetVersioningConfig(bucket)
+	return nil, NotImplemented{}
 }
 
 // NewBucketVersioningSys - creates new versioning system.

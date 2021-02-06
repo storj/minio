@@ -24,8 +24,6 @@ import (
 
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/storj/minio/pkg/bucket/policy"
-	"github.com/storj/minio/pkg/madmin"
 )
 
 // CheckPreconditionFn returns true if precondition check failed.
@@ -71,15 +69,8 @@ const (
 
 // ObjectLayer implements primitives for object API layer.
 type ObjectLayer interface {
-	SetDriveCount() int // Only implemented by erasure layer
-
-	// Locking operations on object.
-	NewNSLock(bucket string, objects ...string) RWLocker
-
 	// Storage operations.
 	Shutdown(context.Context) error
-	CrawlAndGetDataUsage(ctx context.Context, bf *bloomFilter, updates chan<- DataUsageInfo) error
-	StorageInfo(ctx context.Context, local bool) (StorageInfo, []error) // local queries only local disks
 
 	// Bucket operations.
 	MakeBucketWithLocation(ctx context.Context, bucket string, opts BucketOptions) error
@@ -119,29 +110,12 @@ type ObjectLayer interface {
 	AbortMultipartUpload(ctx context.Context, bucket, object, uploadID string, opts ObjectOptions) error
 	CompleteMultipartUpload(ctx context.Context, bucket, object, uploadID string, uploadedParts []CompletePart, opts ObjectOptions) (objInfo ObjectInfo, err error)
 
-	// Healing operations.
-	HealFormat(ctx context.Context, dryRun bool) (madmin.HealResultItem, error)
-	HealBucket(ctx context.Context, bucket string, opts madmin.HealOpts) (madmin.HealResultItem, error)
-	HealObject(ctx context.Context, bucket, object, versionID string, opts madmin.HealOpts) (madmin.HealResultItem, error)
-	HealObjects(ctx context.Context, bucket, prefix string, opts madmin.HealOpts, fn HealObjectFn) error
-
-	// Policy operations
-	SetBucketPolicy(context.Context, string, *policy.Policy) error
-	GetBucketPolicy(context.Context, string) (*policy.Policy, error)
-	DeleteBucketPolicy(context.Context, string) error
-
 	// Supported operations check
 	IsNotificationSupported() bool
 	IsListenSupported() bool
 	IsEncryptionSupported() bool
 	IsTaggingSupported() bool
 	IsCompressionSupported() bool
-
-	// Backend related metrics
-	GetMetrics(ctx context.Context) (*Metrics, error)
-
-	// Returns health of the backend
-	Health(ctx context.Context, opts HealthOptions) HealthResult
 
 	// ObjectTagging operations
 	PutObjectTags(context.Context, string, string, string, ObjectOptions) error

@@ -463,63 +463,11 @@ func ToS3ETag(etag string) string {
 	return etag
 }
 
-func newInternodeHTTPTransport(tlsConfig *tls.Config, dialTimeout time.Duration) func() *http.Transport {
-	// For more details about various values used here refer
-	// https://golang.org/pkg/net/http/#Transport documentation
-	tr := &http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
-		DialContext:           xhttp.DialContextWithDNSCache(globalDNSCache, xhttp.NewInternodeDialContext(dialTimeout)),
-		MaxIdleConnsPerHost:   1024,
-		IdleConnTimeout:       15 * time.Second,
-		ResponseHeaderTimeout: 3 * time.Minute, // Set conservative timeouts for MinIO internode.
-		TLSHandshakeTimeout:   15 * time.Second,
-		ExpectContinueTimeout: 15 * time.Second,
-		TLSClientConfig:       tlsConfig,
-		// Go net/http automatically unzip if content-type is
-		// gzip disable this feature, as we are always interested
-		// in raw stream.
-		DisableCompression: true,
-	}
-
-	if tlsConfig != nil {
-		http2.ConfigureTransport(tr)
-	}
-
-	return func() *http.Transport {
-		return tr
-	}
-}
-
-// Used by only proxied requests, specifically only supports HTTP/1.1
-func newCustomHTTPProxyTransport(tlsConfig *tls.Config, dialTimeout time.Duration) func() *http.Transport {
-	// For more details about various values used here refer
-	// https://golang.org/pkg/net/http/#Transport documentation
-	tr := &http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
-		DialContext:           xhttp.DialContextWithDNSCache(globalDNSCache, xhttp.NewInternodeDialContext(dialTimeout)),
-		MaxIdleConnsPerHost:   1024,
-		IdleConnTimeout:       15 * time.Second,
-		ResponseHeaderTimeout: 30 * time.Minute, // Set larger timeouts for proxied requests.
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 10 * time.Second,
-		TLSClientConfig:       tlsConfig,
-		// Go net/http automatically unzip if content-type is
-		// gzip disable this feature, as we are always interested
-		// in raw stream.
-		DisableCompression: true,
-	}
-
-	return func() *http.Transport {
-		return tr
-	}
-}
-
 func newCustomHTTPTransport(tlsConfig *tls.Config, dialTimeout time.Duration) func() *http.Transport {
 	// For more details about various values used here refer
 	// https://golang.org/pkg/net/http/#Transport documentation
 	tr := &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
-		DialContext:           xhttp.DialContextWithDNSCache(globalDNSCache, xhttp.NewInternodeDialContext(dialTimeout)),
 		MaxIdleConnsPerHost:   1024,
 		IdleConnTimeout:       15 * time.Second,
 		ResponseHeaderTimeout: 3 * time.Minute, // Set conservative timeouts for MinIO internode.
@@ -682,19 +630,7 @@ func lcp(l []string) string {
 
 // Returns the mode in which MinIO is running
 func getMinioMode() string {
-	mode := globalMinioModeFS
-	if globalIsDistErasure {
-		mode = globalMinioModeDistErasure
-	} else if globalIsErasure {
-		mode = globalMinioModeErasure
-	} else if globalIsGateway {
-		mode = globalMinioModeGatewayPrefix + globalGatewayName
-	}
-	return mode
-}
-
-func iamPolicyClaimNameOpenID() string {
-	return globalOpenIDConfig.ClaimPrefix + globalOpenIDConfig.ClaimName
+	return globalMinioModeGatewayPrefix + globalGatewayName
 }
 
 func iamPolicyClaimNameSA() string {

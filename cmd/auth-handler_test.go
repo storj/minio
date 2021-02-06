@@ -23,12 +23,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/storj/minio/pkg/auth"
-	iampolicy "github.com/storj/minio/pkg/iam/policy"
 )
 
 // Test get request auth type.
@@ -347,15 +345,6 @@ func mustNewSignedBadMD5Request(method string, urlStr string, contentLength int6
 
 // Tests is requested authenticated function, tests replies for s3 errors.
 func TestIsReqAuthenticated(t *testing.T) {
-	objLayer, fsDir, err := prepareFS()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(fsDir)
-	if err = newTestConfig(globalMinioDefaultRegion, objLayer); err != nil {
-		t.Fatalf("unable initialize config file, %s", err)
-	}
-
 	creds, err := auth.CreateCredentials("myuser", "mypassword")
 	if err != nil {
 		t.Fatalf("unable create credential, %s", err)
@@ -388,86 +377,6 @@ func TestIsReqAuthenticated(t *testing.T) {
 			if _, err := ioutil.ReadAll(testCase.req.Body); toAPIErrorCode(ctx, err) != testCase.s3Error {
 				t.Fatalf("Test %d: Unexpected S3 error: want %d - got %d (got after reading request %s)", i, testCase.s3Error, s3Error, toAPIError(ctx, err).Code)
 			}
-		}
-	}
-}
-
-func TestCheckAdminRequestAuthType(t *testing.T) {
-	objLayer, fsDir, err := prepareFS()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(fsDir)
-
-	if err = newTestConfig(globalMinioDefaultRegion, objLayer); err != nil {
-		t.Fatalf("unable initialize config file, %s", err)
-	}
-
-	creds, err := auth.CreateCredentials("myuser", "mypassword")
-	if err != nil {
-		t.Fatalf("unable create credential, %s", err)
-	}
-
-	globalActiveCred = creds
-	testCases := []struct {
-		Request *http.Request
-		ErrCode APIErrorCode
-	}{
-		{Request: mustNewRequest(http.MethodGet, "http://127.0.0.1:9000", 0, nil, t), ErrCode: ErrAccessDenied},
-		{Request: mustNewSignedRequest(http.MethodGet, "http://127.0.0.1:9000", 0, nil, t), ErrCode: ErrNone},
-		{Request: mustNewSignedV2Request(http.MethodGet, "http://127.0.0.1:9000", 0, nil, t), ErrCode: ErrAccessDenied},
-		{Request: mustNewPresignedV2Request(http.MethodGet, "http://127.0.0.1:9000", 0, nil, t), ErrCode: ErrAccessDenied},
-		{Request: mustNewPresignedRequest(http.MethodGet, "http://127.0.0.1:9000", 0, nil, t), ErrCode: ErrAccessDenied},
-	}
-	ctx := context.Background()
-	for i, testCase := range testCases {
-		if _, s3Error := checkAdminRequestAuthType(ctx, testCase.Request, iampolicy.AllAdminActions, globalServerRegion); s3Error != testCase.ErrCode {
-			t.Errorf("Test %d: Unexpected s3error returned wanted %d, got %d", i, testCase.ErrCode, s3Error)
-		}
-	}
-}
-
-func TestValidateAdminSignature(t *testing.T) {
-
-	ctx := context.Background()
-
-	objLayer, fsDir, err := prepareFS()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(fsDir)
-
-	if err = newTestConfig(globalMinioDefaultRegion, objLayer); err != nil {
-		t.Fatalf("unable initialize config file, %s", err)
-	}
-
-	creds, err := auth.CreateCredentials("admin", "mypassword")
-	if err != nil {
-		t.Fatalf("unable create credential, %s", err)
-	}
-	globalActiveCred = creds
-
-	testCases := []struct {
-		AccessKey string
-		SecretKey string
-		ErrCode   APIErrorCode
-	}{
-		{"", "", ErrInvalidAccessKeyID},
-		{"admin", "", ErrSignatureDoesNotMatch},
-		{"admin", "wrongpassword", ErrSignatureDoesNotMatch},
-		{"wronguser", "mypassword", ErrInvalidAccessKeyID},
-		{"", "mypassword", ErrInvalidAccessKeyID},
-		{"admin", "mypassword", ErrNone},
-	}
-
-	for i, testCase := range testCases {
-		req := mustNewRequest(http.MethodGet, "http://localhost:9000/", 0, nil, t)
-		if err := signRequestV4(req, testCase.AccessKey, testCase.SecretKey); err != nil {
-			t.Fatalf("Unable to inititalized new signed http request %s", err)
-		}
-		_, _, _, s3Error := validateAdminSignature(ctx, req, globalMinioDefaultRegion)
-		if s3Error != testCase.ErrCode {
-			t.Errorf("Test %d: Unexpected s3error returned wanted %d, got %d", i+1, testCase.ErrCode, s3Error)
 		}
 	}
 }

@@ -23,7 +23,6 @@ import (
 	"runtime"
 	"strings"
 
-	humanize "github.com/dustin/go-humanize"
 	"github.com/storj/minio/cmd/config"
 	"github.com/storj/minio/cmd/logger"
 	color "github.com/storj/minio/pkg/color"
@@ -46,11 +45,6 @@ func getFormatStr(strLen int, padding int) string {
 	return "%" + formatStr
 }
 
-func mustGetStorageInfo(objAPI ObjectLayer) StorageInfo {
-	storageInfo, _ := objAPI.StorageInfo(GlobalContext, false)
-	return storageInfo
-}
-
 // Prints the formatted startup message.
 func printStartupMessage(apiEndpoints []string, err error) {
 	if err != nil {
@@ -60,17 +54,6 @@ func printStartupMessage(apiEndpoints []string, err error) {
 	}
 
 	strippedAPIEndpoints := stripStandardPorts(apiEndpoints)
-	// If cache layer is enabled, print cache capacity.
-	cachedObjAPI := newCachedObjectLayerFn()
-	if cachedObjAPI != nil {
-		printCacheStorageInfo(cachedObjAPI.StorageInfo(GlobalContext))
-	}
-
-	// Object layer is initialized then print StorageInfo.
-	objAPI := newObjectLayerFn()
-	if objAPI != nil {
-		printStorageInfo(mustGetStorageInfo(objAPI))
-	}
 
 	// Prints credential, region and browser access.
 	printServerCommonMsg(strippedAPIEndpoints)
@@ -143,31 +126,6 @@ func printServerCommonMsg(apiEndpoints []string) {
 			logStartupMessage(color.Blue("Region: ") + color.Bold(fmt.Sprintf(getFormatStr(len(region), 3), region)))
 		}
 	}
-	printEventNotifiers()
-
-	if globalBrowserEnabled {
-		logStartupMessage(color.Blue("\nBrowser Access:"))
-		logStartupMessage(fmt.Sprintf(getFormatStr(len(apiEndpointStr), 3), apiEndpointStr))
-	}
-}
-
-// Prints bucket notification configurations.
-func printEventNotifiers() {
-	if globalNotificationSys == nil {
-		return
-	}
-
-	arns := globalNotificationSys.GetARNList(true)
-	if len(arns) == 0 {
-		return
-	}
-
-	arnMsg := color.Blue("SQS ARNs: ")
-	for _, arn := range arns {
-		arnMsg += color.Bold(fmt.Sprintf(getFormatStr(len(arn), 1), arn))
-	}
-
-	logStartupMessage(arnMsg)
 }
 
 // Prints startup message for command line access. Prints link to our documentation
@@ -227,13 +185,6 @@ func printStorageInfo(storageInfo StorageInfo) {
 		}
 		logStartupMessage(msg)
 	}
-}
-
-func printCacheStorageInfo(storageInfo CacheStorageInfo) {
-	msg := fmt.Sprintf("%s %s Free, %s Total", color.Blue("Cache Capacity:"),
-		humanize.IBytes(storageInfo.Free),
-		humanize.IBytes(storageInfo.Total))
-	logStartupMessage(msg)
 }
 
 // Prints the certificate expiry message.

@@ -18,14 +18,12 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
 	"time"
 
 	xhttp "github.com/storj/minio/cmd/http"
-	"github.com/storj/minio/pkg/bucket/lifecycle"
 	"github.com/storj/minio/pkg/event"
 	"github.com/storj/minio/pkg/handlers"
 )
@@ -82,7 +80,7 @@ func checkCopyObjectPreconditions(ctx context.Context, w http.ResponseWriter, r 
 			if !ifModifiedSince(objInfo.ModTime, givenTime) {
 				// If the object is not modified since the specified time.
 				writeHeaders()
-				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL, guessIsBrowserReq(r))
+				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL)
 				return true
 			}
 		}
@@ -96,7 +94,7 @@ func checkCopyObjectPreconditions(ctx context.Context, w http.ResponseWriter, r 
 			if ifModifiedSince(objInfo.ModTime, givenTime) {
 				// If the object is modified since the specified time.
 				writeHeaders()
-				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL, guessIsBrowserReq(r))
+				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL)
 				return true
 			}
 		}
@@ -109,7 +107,7 @@ func checkCopyObjectPreconditions(ctx context.Context, w http.ResponseWriter, r 
 		if !isETagEqual(objInfo.ETag, ifMatchETagHeader) {
 			// If the object ETag does not match with the specified ETag.
 			writeHeaders()
-			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL)
 			return true
 		}
 	}
@@ -121,7 +119,7 @@ func checkCopyObjectPreconditions(ctx context.Context, w http.ResponseWriter, r 
 		if isETagEqual(objInfo.ETag, ifNoneMatchETagHeader) {
 			// If the object ETag matches with the specified ETag.
 			writeHeaders()
-			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL)
 			return true
 		}
 	}
@@ -189,7 +187,7 @@ func checkPreconditions(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			if ifModifiedSince(objInfo.ModTime, givenTime) {
 				// If the object is modified since the specified time.
 				writeHeaders()
-				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL, guessIsBrowserReq(r))
+				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL)
 				return true
 			}
 		}
@@ -202,7 +200,7 @@ func checkPreconditions(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		if !isETagEqual(objInfo.ETag, ifMatchETagHeader) {
 			// If the object ETag does not match with the specified ETag.
 			writeHeaders()
-			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrPreconditionFailed), r.URL)
 			return true
 		}
 	}
@@ -260,34 +258,13 @@ func setPutObjHeaders(w http.ResponseWriter, objInfo ObjectInfo, delete bool) {
 			w.Header()[xhttp.AmzDeleteMarker] = []string{strconv.FormatBool(objInfo.DeleteMarker)}
 		}
 	}
-
-	if objInfo.Bucket != "" {
-		if lc, err := globalLifecycleSys.Get(objInfo.Bucket); err == nil && !delete {
-			ruleID, expiryTime := lc.PredictExpiryTime(lifecycle.ObjectOpts{
-				Name:         objInfo.Name,
-				UserTags:     objInfo.UserTags,
-				VersionID:    objInfo.VersionID,
-				ModTime:      objInfo.ModTime,
-				IsLatest:     objInfo.IsLatest,
-				DeleteMarker: objInfo.DeleteMarker,
-			})
-			if !expiryTime.IsZero() {
-				w.Header()[xhttp.AmzExpiration] = []string{
-					fmt.Sprintf(`expiry-date="%s", rule-id="%s"`, expiryTime.Format(http.TimeFormat), ruleID),
-				}
-			}
-		}
-	}
 }
 
 // deleteObject is a convenient wrapper to delete an object, this
 // is a common function to be called from object handlers and
 // web handlers.
-func deleteObject(ctx context.Context, obj ObjectLayer, cache CacheObjectLayer, bucket, object string, w http.ResponseWriter, r *http.Request, opts ObjectOptions) (objInfo ObjectInfo, err error) {
+func deleteObject(ctx context.Context, obj ObjectLayer, bucket, object string, w http.ResponseWriter, r *http.Request, opts ObjectOptions) (objInfo ObjectInfo, err error) {
 	deleteObject := obj.DeleteObject
-	if cache != nil {
-		deleteObject = cache.DeleteObject
-	}
 	// Proceed to delete the object.
 	objInfo, err = deleteObject(ctx, bucket, object, opts)
 	if objInfo.Name != "" {

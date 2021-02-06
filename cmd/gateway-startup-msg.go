@@ -26,11 +26,6 @@ import (
 // Prints the formatted startup message.
 func printGatewayStartupMessage(apiEndPoints []string, backendType string) {
 	strippedAPIEndpoints := stripStandardPorts(apiEndPoints)
-	// If cache layer is enabled, print cache capacity.
-	cacheAPI := newCachedObjectLayerFn()
-	if cacheAPI != nil {
-		printCacheStorageInfo(cacheAPI.StorageInfo(GlobalContext))
-	}
 	// Prints credential.
 	printGatewayCommonMsg(strippedAPIEndpoints)
 
@@ -62,11 +57,5 @@ func printGatewayCommonMsg(apiEndpoints []string) {
 	if color.IsTerminal() && !globalCLIContext.Anonymous {
 		logStartupMessage(color.Blue("AccessKey: ") + color.Bold(fmt.Sprintf("%s ", cred.AccessKey)))
 		logStartupMessage(color.Blue("SecretKey: ") + color.Bold(fmt.Sprintf("%s ", cred.SecretKey)))
-	}
-	printEventNotifiers()
-
-	if globalBrowserEnabled {
-		logStartupMessage(color.Blue("\nBrowser Access:"))
-		logStartupMessage(fmt.Sprintf(getFormatStr(len(apiEndpointStr), 3), apiEndpointStr))
 	}
 }

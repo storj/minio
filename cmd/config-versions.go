@@ -25,7 +25,6 @@ import (
 	xldap "github.com/storj/minio/cmd/config/identity/ldap"
 	"github.com/storj/minio/cmd/config/identity/openid"
 	"github.com/storj/minio/cmd/config/notify"
-	"github.com/storj/minio/cmd/config/policy/opa"
 	"github.com/storj/minio/cmd/config/storageclass"
 	"github.com/storj/minio/cmd/crypto"
 	"github.com/storj/minio/cmd/logger"
@@ -787,9 +786,6 @@ type serverConfigV31 struct {
 
 	// External policy enforcements.
 	Policy struct {
-		// OPA configuration.
-		OPA opa.Args `json:"opa"`
-
 		// Add new external policy enforcements here.
 	} `json:"policy"`
 }
@@ -826,9 +822,6 @@ type serverConfigV32 struct {
 
 	// External policy enforcements.
 	Policy struct {
-		// OPA configuration.
-		OPA opa.Args `json:"opa"`
-
 		// Add new external policy enforcements here.
 	} `json:"policy"`
 }
@@ -867,9 +860,6 @@ type serverConfigV33 struct {
 
 	// External policy enforcements.
 	Policy struct {
-		// OPA configuration.
-		OPA opa.Args `json:"opa"`
-
 		// Add new external policy enforcements here.
 	} `json:"policy"`
 

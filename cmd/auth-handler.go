@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/subtle"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -209,37 +208,6 @@ func getClaimsFromToken(r *http.Request, token string) (map[string]interface{}, 
 
 	if err := xjwt.ParseWithClaims(token, claims, stsTokenCallback); err != nil {
 		return nil, errAuthentication
-	}
-
-	if globalPolicyOPA == nil {
-		// If OPA is not set and if ldap claim key is set, allow the claim.
-		if _, ok := claims.MapClaims[ldapUser]; ok {
-			return claims.Map(), nil
-		}
-
-		// If OPA is not set, session token should
-		// have a policy and its mandatory, reject
-		// requests without policy claim.
-		_, pokOpenID := claims.MapClaims[iamPolicyClaimNameOpenID()]
-		_, pokSA := claims.MapClaims[iamPolicyClaimNameSA()]
-		if !pokOpenID && !pokSA {
-			return nil, errAuthentication
-		}
-
-		sp, spok := claims.Lookup(iampolicy.SessionPolicyName)
-		if !spok {
-			return claims.Map(), nil
-		}
-		// Looks like subpolicy is set and is a string, if set then its
-		// base64 encoded, decode it. Decoding fails reject such requests.
-		spBytes, err := base64.StdEncoding.DecodeString(sp)
-		if err != nil {
-			// Base64 decoding fails, we should log to indicate
-			// something is malforming the request sent by client.
-			logger.LogIf(r.Context(), err, logger.Application)
-			return nil, errAuthentication
-		}
-		claims.MapClaims[iampolicy.SessionPolicyName] = string(spBytes)
 	}
 
 	return claims.Map(), nil
@@ -516,7 +484,7 @@ func (a authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.handler.ServeHTTP(w, r)
 		return
 	}
-	writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrSignatureVersionNotSupported), r.URL, guessIsBrowserReq(r))
+	writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrSignatureVersionNotSupported), r.URL)
 }
 
 func validateSignature(atype authType, r *http.Request) (auth.Credentials, bool, map[string]interface{}, APIErrorCode) {

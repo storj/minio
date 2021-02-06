@@ -18,8 +18,6 @@ package cmd
 
 import (
 	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -33,12 +31,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/storj/minio/cmd/config"
-	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/cmd/logger"
-	"github.com/storj/minio/cmd/rest"
 	"github.com/storj/minio/pkg/env"
 	"github.com/storj/minio/pkg/mountinfo"
 	xnet "github.com/storj/minio/pkg/net"
@@ -383,155 +378,6 @@ func (endpoints Endpoints) atleastOneEndpointLocal() bool {
 	return false
 }
 
-// UpdateIsLocal - resolves the host and discovers the local host.
-func (endpoints Endpoints) UpdateIsLocal(foundPrevLocal bool) error {
-	orchestrated := IsDocker() || IsKubernetes()
-	k8sReplicaSet := IsKubernetesReplicaSet()
-
-	var epsResolved int
-	var foundLocal bool
-	resolvedList := make([]bool, len(endpoints))
-	// Mark the starting time
-	startTime := time.Now()
-	keepAliveTicker := time.NewTicker(10 * time.Millisecond)
-	defer keepAliveTicker.Stop()
-	for {
-		// Break if the local endpoint is found already Or all the endpoints are resolved.
-		if foundLocal || (epsResolved == len(endpoints)) {
-			break
-		}
-		// Retry infinitely on Kubernetes and Docker swarm.
-		// This is needed as the remote hosts are sometime
-		// not available immediately.
-		select {
-		case <-globalOSSignalCh:
-			return fmt.Errorf("The endpoint resolution got interrupted")
-		default:
-			for i, resolved := range resolvedList {
-				if resolved {
-					// Continue if host is already resolved.
-					continue
-				}
-
-				// Log the message to console about the host resolving
-				reqInfo := (&logger.ReqInfo{}).AppendTags(
-					"host",
-					endpoints[i].Hostname(),
-				)
-
-				if k8sReplicaSet && hostResolveToLocalhost(endpoints[i]) {
-					err := fmt.Errorf("host %s resolves to 127.*, DNS incorrectly configured retrying",
-						endpoints[i])
-					// time elapsed
-					timeElapsed := time.Since(startTime)
-					// log error only if more than 1s elapsed
-					if timeElapsed > time.Second {
-						reqInfo.AppendTags("elapsedTime",
-							humanize.RelTime(startTime,
-								startTime.Add(timeElapsed),
-								"elapsed",
-								""))
-						ctx := logger.SetReqInfo(GlobalContext, reqInfo)
-						logger.LogIf(ctx, err, logger.Application)
-					}
-					continue
-				}
-
-				// return err if not Docker or Kubernetes
-				// We use IsDocker() to check for Docker environment
-				// We use IsKubernetes() to check for Kubernetes environment
-				isLocal, err := isLocalHost(endpoints[i].Hostname(),
-					endpoints[i].Port(),
-					globalMinioPort,
-				)
-				if err != nil && !orchestrated {
-					return err
-				}
-				if err != nil {
-					// time elapsed
-					timeElapsed := time.Since(startTime)
-					// log error only if more than 1s elapsed
-					if timeElapsed > time.Second {
-						reqInfo.AppendTags("elapsedTime",
-							humanize.RelTime(startTime,
-								startTime.Add(timeElapsed),
-								"elapsed",
-								"",
-							))
-						ctx := logger.SetReqInfo(GlobalContext,
-							reqInfo)
-						logger.LogIf(ctx, err, logger.Application)
-					}
-				} else {
-					resolvedList[i] = true
-					endpoints[i].IsLocal = isLocal
-					if k8sReplicaSet && !endpoints.atleastOneEndpointLocal() && !foundPrevLocal {
-						// In replicated set in k8s deployment, IPs might
-						// get resolved for older IPs, add this code
-						// to ensure that we wait for this server to
-						// participate atleast one disk and be local.
-						//
-						// In special cases for replica set with expanded
-						// zone setups we need to make sure to provide
-						// value of foundPrevLocal from zone1 if we already
-						// found a local setup. Only if we haven't found
-						// previous local we continue to wait to look for
-						// atleast one local.
-						resolvedList[i] = false
-						// time elapsed
-						err := fmt.Errorf("no endpoint is local to this host: %s", endpoints[i])
-						timeElapsed := time.Since(startTime)
-						// log error only if more than 1s elapsed
-						if timeElapsed > time.Second {
-							reqInfo.AppendTags("elapsedTime",
-								humanize.RelTime(startTime,
-									startTime.Add(timeElapsed),
-									"elapsed",
-									"",
-								))
-							ctx := logger.SetReqInfo(GlobalContext,
-								reqInfo)
-							logger.LogIf(ctx, err, logger.Application)
-						}
-						continue
-					}
-					epsResolved++
-					if !foundLocal {
-						foundLocal = isLocal
-					}
-				}
-			}
-
-			// Wait for the tick, if the there exist a local endpoint in discovery.
-			// Non docker/kubernetes environment we do not need to wait.
-			if !foundLocal && orchestrated {
-				<-keepAliveTicker.C
-			}
-		}
-	}
-
-	// On Kubernetes/Docker setups DNS resolves inappropriately sometimes
-	// where there are situations same endpoints with multiple disks
-	// come online indicating either one of them is local and some
-	// of them are not local. This situation can never happen and
-	// its only a possibility in orchestrated deployments with dynamic
-	// DNS. Following code ensures that we treat if one of the endpoint
-	// says its local for a given host - it is true for all endpoints
-	// for the same host. Following code ensures that this assumption
-	// is true and it works in all scenarios and it is safe to assume
-	// for a given host.
-	endpointLocalMap := make(map[string]bool)
-	for _, ep := range endpoints {
-		if ep.IsLocal {
-			endpointLocalMap[ep.Host] = ep.IsLocal
-		}
-	}
-	for i := range endpoints {
-		endpoints[i].IsLocal = endpointLocalMap[endpoints[i].Host]
-	}
-	return nil
-}
-
 // NewEndpoints - returns new endpoint list based on input args.
 func NewEndpoints(args ...string) (endpoints Endpoints, err error) {
 	var endpointType EndpointType
@@ -642,10 +488,6 @@ func CreateEndpoints(serverAddr string, foundLocal bool, args ...[]string) (Endp
 	if endpoints[0].Type() == PathEndpointType {
 		setupType = ErasureSetupType
 		return endpoints, setupType, nil
-	}
-
-	if err = endpoints.UpdateIsLocal(foundLocal); err != nil {
-		return endpoints, setupType, config.ErrInvalidErasureEndpoints(nil).Msg(err.Error())
 	}
 
 	// Here all endpoints are URL style.
@@ -804,93 +646,6 @@ func httpDo(clnt *http.Client, req *http.Request, f func(*http.Response, error) 
 	case err := <-c:
 		return err
 	}
-}
-
-func getOnlineProxyEndpointIdx() int {
-	type reqIndex struct {
-		Request *http.Request
-		Idx     int
-	}
-
-	proxyRequests := make(map[*http.Client]reqIndex, len(globalProxyEndpoints))
-	for i, proxyEp := range globalProxyEndpoints {
-		proxyEp := proxyEp
-		serverURL := &url.URL{
-			Scheme: proxyEp.Scheme,
-			Host:   proxyEp.Host,
-			Path:   pathJoin(healthCheckPathPrefix, healthCheckLivenessPath),
-		}
-
-		req, err := http.NewRequest(http.MethodGet, serverURL.String(), nil)
-		if err != nil {
-			continue
-		}
-
-		proxyRequests[&http.Client{
-			Transport: proxyEp.Transport,
-		}] = reqIndex{
-			Request: req,
-			Idx:     i,
-		}
-	}
-
-	for c, r := range proxyRequests {
-		if err := httpDo(c, r.Request, func(resp *http.Response, err error) error {
-			if err != nil {
-				return err
-			}
-			xhttp.DrainBody(resp.Body)
-			if resp.StatusCode != http.StatusOK {
-				return errors.New(resp.Status)
-			}
-			if v := resp.Header.Get(xhttp.MinIOServerStatus); v == unavailable {
-				return errors.New(v)
-			}
-			return nil
-		}); err != nil {
-			continue
-		}
-		return r.Idx
-	}
-	return -1
-}
-
-// GetProxyEndpoints - get all endpoints that can be used to proxy list request.
-func GetProxyEndpoints(endpointServerPools EndpointServerPools) []ProxyEndpoint {
-	var proxyEps []ProxyEndpoint
-
-	proxyEpSet := set.NewStringSet()
-
-	for _, ep := range endpointServerPools {
-		for _, endpoint := range ep.Endpoints {
-			if endpoint.Type() != URLEndpointType {
-				continue
-			}
-
-			host := endpoint.Host
-			if proxyEpSet.Contains(host) {
-				continue
-			}
-			proxyEpSet.Add(host)
-
-			var tlsConfig *tls.Config
-			if globalIsSSL {
-				tlsConfig = &tls.Config{
-					ServerName: endpoint.Hostname(),
-					RootCAs:    globalRootCAs,
-				}
-			}
-
-			// allow transport to be HTTP/1.1 for proxying.
-			tr := newCustomHTTPProxyTransport(tlsConfig, rest.DefaultTimeout)()
-
-			proxyEps = append(proxyEps, ProxyEndpoint{
-				Endpoint:  endpoint,
-				Transport: tr,
-			})
-		}
-	}
-	return proxyEps
 }
 
 func updateDomainIPs(endPoints set.StringSet) {

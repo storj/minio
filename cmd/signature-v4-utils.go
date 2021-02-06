@@ -17,19 +17,14 @@
 package cmd
 
 import (
-	"bytes"
 	"crypto/hmac"
-	"encoding/hex"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 
-	xhttp "github.com/storj/minio/cmd/http"
-	"github.com/storj/minio/cmd/logger"
-	"github.com/storj/minio/pkg/auth"
 	"github.com/minio/sha256-simd"
+	xhttp "github.com/storj/minio/cmd/http"
+	"github.com/storj/minio/pkg/auth"
 )
 
 // http Header "x-amz-content-sha256" == "UNSIGNED-PAYLOAD" indicates that the
@@ -60,17 +55,6 @@ func skipContentSha256Cksum(r *http.Request) bool {
 
 // Returns SHA256 for calculating canonical-request.
 func getContentSha256Cksum(r *http.Request, stype serviceType) string {
-	if stype == serviceSTS {
-		payload, err := ioutil.ReadAll(io.LimitReader(r.Body, stsRequestBodyLimit))
-		if err != nil {
-			logger.CriticalIf(GlobalContext, err)
-		}
-		sum256 := sha256.New()
-		sum256.Write(payload)
-		r.Body = ioutil.NopCloser(bytes.NewReader(payload))
-		return hex.EncodeToString(sum256.Sum(nil))
-	}
-
 	var (
 		defaultSha256Cksum string
 		v                  []string

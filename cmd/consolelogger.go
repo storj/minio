@@ -41,12 +41,9 @@ type HTTPConsoleLoggerSys struct {
 }
 
 func mustGetNodeName(endpointServerPools EndpointServerPools) (nodeName string) {
-	host, err := xnet.ParseHost(GetLocalPeer(endpointServerPools))
+	_, err := xnet.ParseHost(GetLocalPeer(endpointServerPools))
 	if err != nil {
 		logger.FatalIf(err, "Unable to start console logging subsystem")
-	}
-	if globalIsDistErasure {
-		nodeName = host.Name
 	}
 	return nodeName
 }

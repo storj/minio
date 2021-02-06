@@ -204,31 +204,5 @@ func initConfig(objAPI ObjectLayer) error {
 		return errServerNotInitialized
 	}
 
-	if isFile(getConfigFile()) {
-		if err := migrateConfig(); err != nil {
-			return err
-		}
-	}
-
-	// Migrates ${HOME}/.minio/config.json or config.json.deprecated
-	// to '<export_path>/.minio.sys/config/config.json'
-	// ignore if the file doesn't exist.
-	// If etcd is set then migrates /config/config.json
-	// to '<export_path>/.minio.sys/config/config.json'
-	if err := migrateConfigToMinioSys(objAPI); err != nil {
-		return err
-	}
-
-	// Migrates backend '<export_path>/.minio.sys/config/config.json' to latest version.
-	if err := migrateMinioSysConfig(objAPI); err != nil {
-		return err
-	}
-
-	// Migrates backend '<export_path>/.minio.sys/config/config.json' to
-	// latest config format.
-	if err := migrateMinioSysConfigToKV(objAPI); err != nil {
-		return err
-	}
-
 	return loadConfig(objAPI)
 }

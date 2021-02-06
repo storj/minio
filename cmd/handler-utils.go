@@ -34,7 +34,6 @@ import (
 	"github.com/storj/minio/cmd/logger"
 	"github.com/storj/minio/pkg/auth"
 	"github.com/storj/minio/pkg/handlers"
-	"github.com/storj/minio/pkg/madmin"
 )
 
 const (
@@ -371,14 +370,8 @@ func httpTraceHdrs(f http.HandlerFunc) http.HandlerFunc {
 
 func collectAPIStats(api string, f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		globalHTTPStats.currentS3Requests.Inc(api)
-		defer globalHTTPStats.currentS3Requests.Dec(api)
-
-		statsWriter := logger.NewResponseWriter(w)
-
-		f.ServeHTTP(statsWriter, r)
-
-		globalHTTPStats.updateStats(api, r, statsWriter)
+		f.ServeHTTP(w, r)
+		return
 	}
 }
 
@@ -434,63 +427,19 @@ func errorResponseHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		return
 	}
-	version := extractAPIVersion(r)
-	switch {
-	case strings.HasPrefix(r.URL.Path, peerRESTPrefix):
-		desc := fmt.Sprintf("Expected 'peer' API version '%s', instead found '%s', please upgrade the servers",
-			peerRESTVersion, version)
-		writeErrorResponseString(r.Context(), w, APIError{
-			Code:           "XMinioPeerVersionMismatch",
-			Description:    desc,
-			HTTPStatusCode: http.StatusUpgradeRequired,
-		}, r.URL)
-	case strings.HasPrefix(r.URL.Path, storageRESTPrefix):
-		desc := fmt.Sprintf("Expected 'storage' API version '%s', instead found '%s', please upgrade the servers",
-			storageRESTVersion, version)
-		writeErrorResponseString(r.Context(), w, APIError{
-			Code:           "XMinioStorageVersionMismatch",
-			Description:    desc,
-			HTTPStatusCode: http.StatusUpgradeRequired,
-		}, r.URL)
-	case strings.HasPrefix(r.URL.Path, lockRESTPrefix):
-		desc := fmt.Sprintf("Expected 'lock' API version '%s', instead found '%s', please upgrade the servers",
-			lockRESTVersion, version)
-		writeErrorResponseString(r.Context(), w, APIError{
-			Code:           "XMinioLockVersionMismatch",
-			Description:    desc,
-			HTTPStatusCode: http.StatusUpgradeRequired,
-		}, r.URL)
-	case strings.HasPrefix(r.URL.Path, adminPathPrefix):
-		var desc string
-		if version == "v1" {
-			desc = fmt.Sprintf("Server expects client requests with 'admin' API version '%s', found '%s', please upgrade the client to latest releases", madmin.AdminAPIVersion, version)
-		} else if version == madmin.AdminAPIVersion {
-			desc = fmt.Sprintf("This 'admin' API is not supported by server in '%s'", getMinioMode())
-		} else {
-			desc = fmt.Sprintf("Unexpected client 'admin' API version found '%s', expected '%s', please downgrade the client to older releases", version, madmin.AdminAPIVersion)
-		}
-		writeErrorResponseJSON(r.Context(), w, APIError{
-			Code:           "XMinioAdminVersionMismatch",
-			Description:    desc,
-			HTTPStatusCode: http.StatusUpgradeRequired,
-		}, r.URL)
-	default:
-		desc := fmt.Sprintf("Unknown API request at %s", r.URL.Path)
-		writeErrorResponse(r.Context(), w, APIError{
-			Code:           "XMinioUnknownAPIRequest",
-			Description:    desc,
-			HTTPStatusCode: http.StatusBadRequest,
-		}, r.URL, guessIsBrowserReq(r))
-	}
+
+	desc := fmt.Sprintf("Unknown API request at %s", r.URL.Path)
+	writeErrorResponse(r.Context(), w, APIError{
+		Code:           "XMinioUnknownAPIRequest",
+		Description:    desc,
+		HTTPStatusCode: http.StatusBadRequest,
+	}, r.URL)
 }
 
 // gets host name for current node
 func getHostName(r *http.Request) (hostName string) {
-	if globalIsDistErasure {
-		hostName = GetLocalPeer(globalEndpoints)
-	} else {
-		hostName = r.Host
-	}
+	hostName = r.Host
+
 	return
 }
 

@@ -18,15 +18,12 @@ package cmd
 
 import (
 	"crypto/x509"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"math/rand"
 	"net"
-	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -34,7 +31,6 @@ import (
 	"github.com/minio/cli"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/storj/minio/cmd/config"
-	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/cmd/logger"
 	"github.com/storj/minio/pkg/auth"
 	"github.com/storj/minio/pkg/certs"
@@ -46,73 +42,11 @@ func init() {
 	logger.RegisterError(config.FmtError)
 
 	rand.Seed(time.Now().UTC().UnixNano())
-	globalDNSCache = xhttp.NewDNSCache(3*time.Second, 10*time.Second)
 
 	initGlobalContext()
-
-	globalReplicationState = newReplicationState()
-	globalTransitionState = newTransitionState()
-
-	gob.Register(StorageErr(""))
 }
 
 func verifyObjectLayerFeatures(name string, objAPI ObjectLayer) {
-	if (GlobalKMS != nil) && !objAPI.IsEncryptionSupported() {
-		logger.Fatal(errInvalidArgument,
-			"Encryption support is requested but '%s' does not support encryption", name)
-	}
-
-	if strings.HasPrefix(name, "gateway") {
-		if GlobalGatewaySSE.IsSet() && GlobalKMS == nil {
-			uiErr := config.ErrInvalidGWSSEEnvValue(nil).Msg("MINIO_GATEWAY_SSE set but KMS is not configured")
-			logger.Fatal(uiErr, "Unable to start gateway with SSE")
-		}
-	}
-
-	globalCompressConfigMu.Lock()
-	if globalCompressConfig.Enabled && !objAPI.IsCompressionSupported() {
-		logger.Fatal(errInvalidArgument,
-			"Compression support is requested but '%s' does not support compression", name)
-	}
-	globalCompressConfigMu.Unlock()
-}
-
-// Check for updates and print a notification message
-func checkUpdate(mode string) {
-	updateURL := minioReleaseInfoURL
-	if runtime.GOOS == globalWindowsOSName {
-		updateURL = minioReleaseWindowsInfoURL
-	}
-
-	u, err := url.Parse(updateURL)
-	if err != nil {
-		return
-	}
-
-	// Its OK to ignore any errors during doUpdate() here.
-	crTime, err := GetCurrentReleaseTime()
-	if err != nil {
-		return
-	}
-
-	_, lrTime, err := getLatestReleaseTime(u, 2*time.Second, mode)
-	if err != nil {
-		return
-	}
-
-	var older time.Duration
-	var downloadURL string
-	if lrTime.After(crTime) {
-		older = lrTime.Sub(crTime)
-		downloadURL = getDownloadURL(releaseTimeToReleaseTag(lrTime))
-	}
-
-	updateMsg := prepareUpdateMessage(downloadURL, older)
-	if updateMsg == "" {
-		return
-	}
-
-	logStartupMessage(prepareUpdateMessage("Run `mc admin update`", lrTime.Sub(crTime)))
 }
 
 func newConfigDirFromCtx(ctx *cli.Context, option string, getDefaultDir func() string) (*ConfigDir, bool) {
@@ -213,16 +147,6 @@ func handleCommonEnvVars() {
 	}
 	if wormEnabled {
 		logger.Fatal(errors.New("WORM is deprecated"), "global MINIO_WORM support is removed, please downgrade your server or migrate to https://github.com/storj/minio/tree/master/docs/retention")
-	}
-
-	globalBrowserEnabled, err = config.ParseBool(env.Get(config.EnvBrowser, config.EnableOn))
-	if err != nil {
-		logger.Fatal(config.ErrInvalidBrowserValue(err), "Invalid MINIO_BROWSER value in environment variable")
-	}
-
-	globalFSOSync, err = config.ParseBool(env.Get(config.EnvFSOSync, config.EnableOff))
-	if err != nil {
-		logger.Fatal(config.ErrInvalidFSOSyncValue(err), "Invalid MINIO_FS_OSYNC value in environment variable")
 	}
 
 	domains := env.Get(config.EnvDomain, "")

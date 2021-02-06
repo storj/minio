@@ -20,13 +20,11 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/storj/minio/cmd/config"
 	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/cmd/logger"
-	"github.com/storj/minio/pkg/env"
 	"github.com/storj/minio/pkg/hash"
 	xnet "github.com/storj/minio/pkg/net"
 
@@ -45,12 +43,6 @@ var (
 
 	// PathJoin function alias.
 	PathJoin = pathJoin
-
-	// ListObjects function alias.
-	ListObjects = listObjects
-
-	// FilterListEntries function alias.
-	FilterListEntries = filterListEntries
 
 	// IsStringEqual is string equal.
 	IsStringEqual = isStringEqual
@@ -340,27 +332,6 @@ func ComputeCompleteMultipartMD5(parts []CompletePart) string {
 	return getCompleteMultipartMD5(parts)
 }
 
-// parse gateway sse env variable
-func parseGatewaySSE(s string) (gatewaySSE, error) {
-	l := strings.Split(s, ";")
-	var gwSlice gatewaySSE
-	for _, val := range l {
-		v := strings.ToUpper(val)
-		switch v {
-		case "":
-			continue
-		case gatewaySSES3:
-			fallthrough
-		case gatewaySSEC:
-			gwSlice = append(gwSlice, v)
-			continue
-		default:
-			return nil, config.ErrInvalidGWSSEValue(nil).Msg("gateway SSE cannot be (%s) ", v)
-		}
-	}
-	return gwSlice, nil
-}
-
 // handle gateway env vars
 func gatewayHandleEnvVars() {
 	// Handle common env vars.
@@ -370,47 +341,4 @@ func gatewayHandleEnvVars() {
 		logger.Fatal(config.ErrInvalidCredentials(nil),
 			"Unable to validate credentials inherited from the shell environment")
 	}
-
-	gwsseVal := env.Get("MINIO_GATEWAY_SSE", "")
-	if gwsseVal != "" {
-		var err error
-		GlobalGatewaySSE, err = parseGatewaySSE(gwsseVal)
-		if err != nil {
-			logger.Fatal(err, "Unable to parse MINIO_GATEWAY_SSE value (`%s`)", gwsseVal)
-		}
-	}
-}
-
-// shouldMeterRequest checks whether incoming request should be added to prometheus gateway metrics
-func shouldMeterRequest(req *http.Request) bool {
-	return !(guessIsBrowserReq(req) || guessIsHealthCheckReq(req) || guessIsMetricsReq(req))
-}
-
-// MetricsTransport is a custom wrapper around Transport to track metrics
-type MetricsTransport struct {
-	Transport *http.Transport
-	Metrics   *Metrics
-}
-
-// RoundTrip implements the RoundTrip method for MetricsTransport
-func (m MetricsTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	metered := shouldMeterRequest(r)
-	if metered && (r.Method == http.MethodPost || r.Method == http.MethodPut) {
-		m.Metrics.IncRequests(r.Method)
-		if r.ContentLength > 0 {
-			m.Metrics.IncBytesSent(uint64(r.ContentLength))
-		}
-	}
-	// Make the request to the server.
-	resp, err := m.Transport.RoundTrip(r)
-	if err != nil {
-		return nil, err
-	}
-	if metered && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
-		m.Metrics.IncRequests(r.Method)
-		if resp.ContentLength > 0 {
-			m.Metrics.IncBytesReceived(uint64(resp.ContentLength))
-		}
-	}
-	return resp, nil
 }

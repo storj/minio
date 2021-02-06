@@ -127,54 +127,6 @@ func runPutObjectPartBenchmark(b *testing.B, obj ObjectLayer, partSize int) {
 	b.StopTimer()
 }
 
-// creates Erasure/FS backend setup, obtains the object layer and calls the runPutObjectPartBenchmark function.
-func benchmarkPutObjectPart(b *testing.B, instanceType string, objSize int) {
-	// create a temp Erasure/FS backend.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	objLayer, disks, err := prepareTestBackend(ctx, instanceType)
-	if err != nil {
-		b.Fatalf("Failed obtaining Temp Backend: <ERROR> %s", err)
-	}
-	// cleaning up the backend by removing all the directories and files created on function return.
-	defer removeRoots(disks)
-
-	// uses *testing.B and the object Layer to run the benchmark.
-	runPutObjectPartBenchmark(b, objLayer, objSize)
-}
-
-// creates Erasure/FS backend setup, obtains the object layer and calls the runPutObjectBenchmark function.
-func benchmarkPutObject(b *testing.B, instanceType string, objSize int) {
-	// create a temp Erasure/FS backend.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	objLayer, disks, err := prepareTestBackend(ctx, instanceType)
-	if err != nil {
-		b.Fatalf("Failed obtaining Temp Backend: <ERROR> %s", err)
-	}
-	// cleaning up the backend by removing all the directories and files created on function return.
-	defer removeRoots(disks)
-
-	// uses *testing.B and the object Layer to run the benchmark.
-	runPutObjectBenchmark(b, objLayer, objSize)
-}
-
-// creates Erasure/FS backend setup, obtains the object layer and runs parallel benchmark for put object.
-func benchmarkPutObjectParallel(b *testing.B, instanceType string, objSize int) {
-	// create a temp Erasure/FS backend.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	objLayer, disks, err := prepareTestBackend(ctx, instanceType)
-	if err != nil {
-		b.Fatalf("Failed obtaining Temp Backend: <ERROR> %s", err)
-	}
-	// cleaning up the backend by removing all the directories and files created on function return.
-	defer removeRoots(disks)
-
-	// uses *testing.B and the object Layer to run the benchmark.
-	runPutObjectBenchmarkParallel(b, objLayer, objSize)
-}
-
 // Benchmark utility functions for ObjectLayer.GetObject().
 // Creates Object layer setup ( MakeBucket, PutObject) and then runs the benchmark.
 func runGetObjectBenchmark(b *testing.B, obj ObjectLayer, objSize int) {
@@ -238,38 +190,6 @@ func getRandomByte() []byte {
 func generateBytesData(size int) []byte {
 	// repeat the random character chosen size
 	return bytes.Repeat(getRandomByte(), size)
-}
-
-// creates Erasure/FS backend setup, obtains the object layer and calls the runGetObjectBenchmark function.
-func benchmarkGetObject(b *testing.B, instanceType string, objSize int) {
-	// create a temp Erasure/FS backend.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	objLayer, disks, err := prepareTestBackend(ctx, instanceType)
-	if err != nil {
-		b.Fatalf("Failed obtaining Temp Backend: <ERROR> %s", err)
-	}
-	// cleaning up the backend by removing all the directories and files created.
-	defer removeRoots(disks)
-
-	//  uses *testing.B and the object Layer to run the benchmark.
-	runGetObjectBenchmark(b, objLayer, objSize)
-}
-
-// creates Erasure/FS backend setup, obtains the object layer and runs parallel benchmark for ObjectLayer.GetObject() .
-func benchmarkGetObjectParallel(b *testing.B, instanceType string, objSize int) {
-	// create a temp Erasure/FS backend.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	objLayer, disks, err := prepareTestBackend(ctx, instanceType)
-	if err != nil {
-		b.Fatalf("Failed obtaining Temp Backend: <ERROR> %s", err)
-	}
-	// cleaning up the backend by removing all the directories and files created.
-	defer removeRoots(disks)
-
-	//  uses *testing.B and the object Layer to run the benchmark.
-	runGetObjectBenchmarkParallel(b, objLayer, objSize)
 }
 
 // Parallel benchmark utility functions for ObjectLayer.PutObject().

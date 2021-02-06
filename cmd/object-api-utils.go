@@ -27,7 +27,6 @@ import (
 	"net/http"
 	"path"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -35,7 +34,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/klauspost/compress/s2"
-	"github.com/klauspost/readahead"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/storj/minio/cmd/config/compress"
 	"github.com/storj/minio/cmd/config/dns"
@@ -43,9 +41,7 @@ import (
 	"github.com/storj/minio/cmd/crypto"
 	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/cmd/logger"
-	"github.com/storj/minio/pkg/bucket/lifecycle"
 	"github.com/storj/minio/pkg/hash"
-	"github.com/storj/minio/pkg/ioutil"
 	"github.com/storj/minio/pkg/trie"
 	"github.com/storj/minio/pkg/wildcard"
 )
@@ -74,8 +70,7 @@ const (
 func isMinioMetaBucketName(bucket string) bool {
 	return bucket == minioMetaBucket ||
 		bucket == minioMetaMultipartBucket ||
-		bucket == minioMetaTmpBucket ||
-		bucket == dataUsageBucket
+		bucket == minioMetaTmpBucket
 }
 
 // IsValidBucketName verifies that a bucket name is in accordance with
@@ -407,28 +402,11 @@ func (o ObjectInfo) IsCompressedOK() (bool, error) {
 // GetActualETag - returns the actual etag of the stored object
 // decrypts SSE objects.
 func (o ObjectInfo) GetActualETag(h http.Header) string {
-	if !crypto.IsEncrypted(o.UserDefined) {
-		return o.ETag
-	}
-	return getDecryptedETag(h, o, false)
+	return o.ETag
 }
 
 // GetActualSize - returns the actual size of the stored object
 func (o ObjectInfo) GetActualSize() (int64, error) {
-	if crypto.IsEncrypted(o.UserDefined) {
-		return o.DecryptedSize()
-	}
-	if o.IsCompressed() {
-		sizeStr, ok := o.UserDefined[ReservedMetadataPrefix+"actual-size"]
-		if !ok {
-			return -1, errInvalidDecompressedSize
-		}
-		size, err := strconv.ParseInt(sizeStr, 10, 64)
-		if err != nil {
-			return -1, errInvalidDecompressedSize
-		}
-		return size, nil
-	}
 	return o.Size, nil
 }
 
@@ -436,38 +414,11 @@ func (o ObjectInfo) GetActualSize() (int64, error) {
 // Using compression and encryption together enables room for side channel attacks.
 // Eliminate non-compressible objects by extensions/content-types.
 func isCompressible(header http.Header, object string) bool {
-	globalCompressConfigMu.Lock()
-	cfg := globalCompressConfig
-	globalCompressConfigMu.Unlock()
-	if !cfg.Enabled || crypto.IsRequested(header) || excludeForCompression(header, object, cfg) {
-		return false
-	}
-	return true
+	return false
 }
 
 // Eliminate the non-compressible objects.
 func excludeForCompression(header http.Header, object string, cfg compress.Config) bool {
-	objStr := object
-	contentType := header.Get(xhttp.ContentType)
-	if !cfg.Enabled {
-		return true
-	}
-
-	// We strictly disable compression for standard extensions/content-types (`compressed`).
-	if hasStringSuffixInSlice(objStr, standardExcludeCompressExtensions) || hasPattern(standardExcludeCompressContentTypes, contentType) {
-		return true
-	}
-
-	// Filter compression includes.
-	if len(cfg.Extensions) == 0 || len(cfg.MimeTypes) == 0 {
-		return false
-	}
-
-	extensions := cfg.Extensions
-	mimeTypes := cfg.MimeTypes
-	if hasStringSuffixInSlice(objStr, extensions) || hasPattern(mimeTypes, contentType) {
-		return false
-	}
 	return true
 }
 
@@ -592,174 +543,28 @@ func NewGetObjectReader(rs *HTTPRangeSpec, oi ObjectInfo, opts ObjectOptions, cl
 		}
 	}()
 
-	isEncrypted := crypto.IsEncrypted(oi.UserDefined)
-	isCompressed, err := oi.IsCompressedOK()
+	off, length, err = rs.GetOffsetLength(oi.Size)
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	// if object is encrypted, transition content without decrypting.
-	if opts.TransitionStatus == lifecycle.TransitionPending && isEncrypted {
-		isEncrypted = false
+	fn = func(inputReader io.Reader, _ http.Header, pcfn CheckPreconditionFn, cFns ...func()) (r *GetObjectReader, err error) {
+		cFns = append(cleanUpFns, cFns...)
+		if opts.CheckPrecondFn != nil && opts.CheckPrecondFn(oi) {
+			// Call the cleanup funcs
+			for i := len(cFns) - 1; i >= 0; i-- {
+				cFns[i]()
+			}
+			return nil, PreConditionFailed{}
+		}
+		r = &GetObjectReader{
+			ObjInfo:    oi,
+			pReader:    inputReader,
+			cleanUpFns: cFns,
+			opts:       opts,
+		}
+		return r, nil
 	}
-	var skipLen int64
-	// Calculate range to read (different for
-	// e.g. encrypted/compressed objects)
-	switch {
-	case isEncrypted:
-		var seqNumber uint32
-		var partStart int
-		off, length, skipLen, seqNumber, partStart, err = oi.GetDecryptedRange(rs)
-		if err != nil {
-			return nil, 0, 0, err
-		}
-		var decSize int64
-		decSize, err = oi.DecryptedSize()
-		if err != nil {
-			return nil, 0, 0, err
-		}
-		var decRangeLength int64
-		decRangeLength, err = rs.GetLength(decSize)
-		if err != nil {
-			return nil, 0, 0, err
-		}
 
-		// We define a closure that performs decryption given
-		// a reader that returns the desired range of
-		// encrypted bytes. The header parameter is used to
-		// provide encryption parameters.
-		fn = func(inputReader io.Reader, h http.Header, pcfn CheckPreconditionFn, cFns ...func()) (r *GetObjectReader, err error) {
-			copySource := h.Get(crypto.SSECopyAlgorithm) != ""
-
-			cFns = append(cleanUpFns, cFns...)
-			// Attach decrypter on inputReader
-			var decReader io.Reader
-			decReader, err = DecryptBlocksRequestR(inputReader, h,
-				off, length, seqNumber, partStart, oi, copySource)
-			if err != nil {
-				// Call the cleanup funcs
-				for i := len(cFns) - 1; i >= 0; i-- {
-					cFns[i]()
-				}
-				return nil, err
-			}
-
-			if opts.CheckPrecondFn != nil && opts.CheckPrecondFn(oi) {
-				// Call the cleanup funcs
-				for i := len(cFns) - 1; i >= 0; i-- {
-					cFns[i]()
-				}
-				return nil, PreConditionFailed{}
-			}
-
-			oi.ETag = getDecryptedETag(h, oi, false)
-
-			// Apply the skipLen and limit on the
-			// decrypted stream
-			decReader = io.LimitReader(ioutil.NewSkipReader(decReader, skipLen), decRangeLength)
-
-			// Assemble the GetObjectReader
-			r = &GetObjectReader{
-				ObjInfo:    oi,
-				pReader:    decReader,
-				cleanUpFns: cFns,
-				opts:       opts,
-			}
-			return r, nil
-		}
-	case isCompressed:
-		// Read the decompressed size from the meta.json.
-		actualSize, err := oi.GetActualSize()
-		if err != nil {
-			return nil, 0, 0, err
-		}
-		off, length = int64(0), oi.Size
-		decOff, decLength := int64(0), actualSize
-		if rs != nil {
-			off, length, err = rs.GetOffsetLength(actualSize)
-			if err != nil {
-				return nil, 0, 0, err
-			}
-			// In case of range based queries on multiparts, the offset and length are reduced.
-			off, decOff = getCompressedOffsets(oi, off)
-			decLength = length
-			length = oi.Size - off
-
-			// For negative length we read everything.
-			if decLength < 0 {
-				decLength = actualSize - decOff
-			}
-
-			// Reply back invalid range if the input offset and length fall out of range.
-			if decOff > actualSize || decOff+decLength > actualSize {
-				return nil, 0, 0, errInvalidRange
-			}
-		}
-		fn = func(inputReader io.Reader, _ http.Header, pcfn CheckPreconditionFn, cFns ...func()) (r *GetObjectReader, err error) {
-			cFns = append(cleanUpFns, cFns...)
-			if opts.CheckPrecondFn != nil && opts.CheckPrecondFn(oi) {
-				// Call the cleanup funcs
-				for i := len(cFns) - 1; i >= 0; i-- {
-					cFns[i]()
-				}
-				return nil, PreConditionFailed{}
-			}
-			// Decompression reader.
-			s2Reader := s2.NewReader(inputReader)
-			// Apply the skipLen and limit on the decompressed stream.
-			err = s2Reader.Skip(decOff)
-			if err != nil {
-				// Call the cleanup funcs
-				for i := len(cFns) - 1; i >= 0; i-- {
-					cFns[i]()
-				}
-				return nil, err
-			}
-
-			decReader := io.LimitReader(s2Reader, decLength)
-			if decLength > compReadAheadSize {
-				rah, err := readahead.NewReaderSize(decReader, compReadAheadBuffers, compReadAheadBufSize)
-				if err == nil {
-					decReader = rah
-					cFns = append(cFns, func() {
-						rah.Close()
-					})
-				}
-			}
-			oi.Size = decLength
-
-			// Assemble the GetObjectReader
-			r = &GetObjectReader{
-				ObjInfo:    oi,
-				pReader:    decReader,
-				cleanUpFns: cFns,
-				opts:       opts,
-			}
-			return r, nil
-		}
-
-	default:
-		off, length, err = rs.GetOffsetLength(oi.Size)
-		if err != nil {
-			return nil, 0, 0, err
-		}
-		fn = func(inputReader io.Reader, _ http.Header, pcfn CheckPreconditionFn, cFns ...func()) (r *GetObjectReader, err error) {
-			cFns = append(cleanUpFns, cFns...)
-			if opts.CheckPrecondFn != nil && opts.CheckPrecondFn(oi) {
-				// Call the cleanup funcs
-				for i := len(cFns) - 1; i >= 0; i-- {
-					cFns[i]()
-				}
-				return nil, PreConditionFailed{}
-			}
-			r = &GetObjectReader{
-				ObjInfo:    oi,
-				pReader:    inputReader,
-				cleanUpFns: cFns,
-				opts:       opts,
-			}
-			return r, nil
-		}
-	}
 	return fn, off, length, nil
 }
 

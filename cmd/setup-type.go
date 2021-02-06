@@ -38,12 +38,6 @@ const (
 
 func (setupType SetupType) String() string {
 	switch setupType {
-	case FSSetupType:
-		return globalMinioModeFS
-	case ErasureSetupType:
-		return globalMinioModeErasure
-	case DistErasureSetupType:
-		return globalMinioModeDistErasure
 	case GatewaySetupType:
 		return globalMinioModeGatewayPrefix
 	}

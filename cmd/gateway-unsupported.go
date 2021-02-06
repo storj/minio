@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 
 	"github.com/storj/minio/cmd/logger"
 
@@ -33,18 +32,6 @@ import (
 
 // GatewayUnsupported list of unsupported call stubs for gateway.
 type GatewayUnsupported struct{}
-
-// CrawlAndGetDataUsage - crawl is not implemented for gateway
-func (a GatewayUnsupported) CrawlAndGetDataUsage(ctx context.Context, bf *bloomFilter, updates chan<- DataUsageInfo) error {
-	logger.CriticalIf(ctx, errors.New("not implemented"))
-	return NotImplemented{}
-}
-
-// NewNSLock is a dummy stub for gateway.
-func (a GatewayUnsupported) NewNSLock(bucket string, objects ...string) RWLocker {
-	logger.CriticalIf(context.Background(), errors.New("not implemented"))
-	return nil
-}
 
 // SetDriveCount no-op
 func (a GatewayUnsupported) SetDriveCount() int {
@@ -185,11 +172,6 @@ func (a GatewayUnsupported) Walk(ctx context.Context, bucket, prefix string, res
 	return NotImplemented{}
 }
 
-// HealObjects - Not implemented stub
-func (a GatewayUnsupported) HealObjects(ctx context.Context, bucket, prefix string, opts madmin.HealOpts, fn HealObjectFn) (e error) {
-	return NotImplemented{}
-}
-
 // CopyObject copies a blob from source container to destination container.
 func (a GatewayUnsupported) CopyObject(ctx context.Context, srcBucket string, srcObject string, destBucket string, destObject string,
 	srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (objInfo ObjectInfo, err error) {
@@ -243,9 +225,4 @@ func (a GatewayUnsupported) IsTaggingSupported() bool {
 // IsCompressionSupported returns whether compression is applicable for this layer.
 func (a GatewayUnsupported) IsCompressionSupported() bool {
 	return false
-}
-
-// Health - No Op.
-func (a GatewayUnsupported) Health(_ context.Context, _ HealthOptions) HealthResult {
-	return HealthResult{}
 }

@@ -17,14 +17,11 @@
 package cmd
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -325,51 +322,6 @@ func TestContains(t *testing.T) {
 	}
 }
 
-// Test jsonLoad.
-func TestJSONLoad(t *testing.T) {
-	format := newFormatFSV1()
-	b, err := json.Marshal(format)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var gotFormat formatFSV1
-	if err = jsonLoad(bytes.NewReader(b), &gotFormat); err != nil {
-		t.Fatal(err)
-	}
-	if *format != gotFormat {
-		t.Fatal("jsonLoad() failed to decode json")
-	}
-}
-
-// Test jsonSave.
-func TestJSONSave(t *testing.T) {
-	f, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(f.Name())
-
-	// Test to make sure formatFSSave overwrites and does not append.
-	format := newFormatFSV1()
-	if err = jsonSave(f, format); err != nil {
-		t.Fatal(err)
-	}
-	fi1, err := f.Stat()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = jsonSave(f, format); err != nil {
-		t.Fatal(err)
-	}
-	fi2, err := f.Stat()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if fi1.Size() != fi2.Size() {
-		t.Fatal("Size should not differs after jsonSave()", fi1.Size(), fi2.Size(), f.Name())
-	}
-}
-
 // Test ceilFrac
 func TestCeilFrac(t *testing.T) {
 	cases := []struct {
@@ -465,25 +417,4 @@ func TestLCP(t *testing.T) {
 			t.Fatalf("Test %d: Common prefix found: `%v`, expected: `%v`", i+1, foundPrefix, test.commonPrefix)
 		}
 	}
-}
-
-func TestGetMinioMode(t *testing.T) {
-	testMinioMode := func(expected string) {
-		if mode := getMinioMode(); mode != expected {
-			t.Fatalf("Expected %s got %s", expected, mode)
-		}
-	}
-	globalIsDistErasure = true
-	testMinioMode(globalMinioModeDistErasure)
-
-	globalIsDistErasure = false
-	globalIsErasure = true
-	testMinioMode(globalMinioModeErasure)
-
-	globalIsDistErasure, globalIsErasure = false, false
-	testMinioMode(globalMinioModeFS)
-
-	globalIsGateway, globalGatewayName = true, "azure"
-	testMinioMode(globalMinioModeGatewayPrefix + globalGatewayName)
-
 }

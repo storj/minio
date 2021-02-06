@@ -129,28 +129,6 @@ func toObjectErr(err error, params ...string) error {
 				Object: params[1],
 			}
 		}
-	case errErasureReadQuorum:
-		if len(params) == 1 {
-			err = InsufficientReadQuorum{
-				Bucket: params[0],
-			}
-		} else if len(params) >= 2 {
-			err = InsufficientReadQuorum{
-				Bucket: params[0],
-				Object: params[1],
-			}
-		}
-	case errErasureWriteQuorum:
-		if len(params) == 1 {
-			err = InsufficientWriteQuorum{
-				Bucket: params[0],
-			}
-		} else if len(params) >= 2 {
-			err = InsufficientWriteQuorum{
-				Bucket: params[0],
-				Object: params[1],
-			}
-		}
 	case io.ErrUnexpectedEOF, io.ErrShortWrite:
 		err = IncompleteBody{}
 	case context.Canceled, context.DeadlineExceeded:
@@ -178,30 +156,6 @@ type SlowDown struct{}
 
 func (e SlowDown) Error() string {
 	return "Please reduce your request rate"
-}
-
-// InsufficientReadQuorum storage cannot satisfy quorum for read operation.
-type InsufficientReadQuorum GenericError
-
-func (e InsufficientReadQuorum) Error() string {
-	return "Storage resources are insufficient for the read operation " + e.Bucket + "/" + e.Object
-}
-
-// Unwrap the error.
-func (e InsufficientReadQuorum) Unwrap() error {
-	return errErasureReadQuorum
-}
-
-// InsufficientWriteQuorum storage cannot satisfy quorum for write operation.
-type InsufficientWriteQuorum GenericError
-
-func (e InsufficientWriteQuorum) Error() string {
-	return "Storage resources are insufficient for the write operation " + e.Bucket + "/" + e.Object
-}
-
-// Unwrap the error.
-func (e InsufficientWriteQuorum) Unwrap() error {
-	return errErasureWriteQuorum
 }
 
 // GenericError - generic object layer error.

@@ -49,10 +49,6 @@ func handleSignals() {
 		// send signal to various go-routines that they need to quit.
 		cancelGlobalContext()
 
-		if globalNotificationSys != nil {
-			globalNotificationSys.RemoveAllRemoteTargets()
-		}
-
 		if httpServer := newHTTPServerFn(); httpServer != nil {
 			err = httpServer.Shutdown()
 			if !errors.Is(err, http.ErrServerClosed) {

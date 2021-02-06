@@ -36,7 +36,6 @@ import (
 	"github.com/storj/minio/pkg/bucket/lifecycle"
 	"github.com/storj/minio/pkg/bucket/replication"
 
-	objectlock "github.com/storj/minio/pkg/bucket/object/lock"
 	"github.com/storj/minio/pkg/bucket/policy"
 	"github.com/storj/minio/pkg/bucket/versioning"
 	"github.com/storj/minio/pkg/event"
@@ -1134,92 +1133,6 @@ var errorCodes = errorCodeMap{
 		Description:    "The JSON you provided was not well-formed or did not validate against our published format.",
 		HTTPStatusCode: http.StatusBadRequest,
 	},
-	ErrAdminNoSuchUser: {
-		Code:           "XMinioAdminNoSuchUser",
-		Description:    "The specified user does not exist.",
-		HTTPStatusCode: http.StatusNotFound,
-	},
-	ErrAdminNoSuchGroup: {
-		Code:           "XMinioAdminNoSuchGroup",
-		Description:    "The specified group does not exist.",
-		HTTPStatusCode: http.StatusNotFound,
-	},
-	ErrAdminGroupNotEmpty: {
-		Code:           "XMinioAdminGroupNotEmpty",
-		Description:    "The specified group is not empty - cannot remove it.",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminNoSuchPolicy: {
-		Code:           "XMinioAdminNoSuchPolicy",
-		Description:    "The canned policy does not exist.",
-		HTTPStatusCode: http.StatusNotFound,
-	},
-	ErrAdminInvalidArgument: {
-		Code:           "XMinioAdminInvalidArgument",
-		Description:    "Invalid arguments specified.",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminInvalidAccessKey: {
-		Code:           "XMinioAdminInvalidAccessKey",
-		Description:    "The access key is invalid.",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminInvalidSecretKey: {
-		Code:           "XMinioAdminInvalidSecretKey",
-		Description:    "The secret key is invalid.",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminConfigNoQuorum: {
-		Code:           "XMinioAdminConfigNoQuorum",
-		Description:    "Configuration update failed because server quorum was not met",
-		HTTPStatusCode: http.StatusServiceUnavailable,
-	},
-	ErrAdminConfigTooLarge: {
-		Code: "XMinioAdminConfigTooLarge",
-		Description: fmt.Sprintf("Configuration data provided exceeds the allowed maximum of %d bytes",
-			maxEConfigJSONSize),
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminConfigBadJSON: {
-		Code:           "XMinioAdminConfigBadJSON",
-		Description:    "JSON configuration provided is of incorrect format",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminConfigDuplicateKeys: {
-		Code:           "XMinioAdminConfigDuplicateKeys",
-		Description:    "JSON configuration provided has objects with duplicate keys",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminConfigNotificationTargetsFailed: {
-		Code:           "XMinioAdminNotificationTargetsTestFailed",
-		Description:    "Configuration update failed due an unsuccessful attempt to connect to one or more notification servers",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminProfilerNotEnabled: {
-		Code:           "XMinioAdminProfilerNotEnabled",
-		Description:    "Unable to perform the requested operation because profiling is not enabled",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminCredentialsMismatch: {
-		Code:           "XMinioAdminCredentialsMismatch",
-		Description:    "Credentials in config mismatch with server environment variables",
-		HTTPStatusCode: http.StatusServiceUnavailable,
-	},
-	ErrAdminBucketQuotaExceeded: {
-		Code:           "XMinioAdminBucketQuotaExceeded",
-		Description:    "Bucket quota exceeded",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrAdminNoSuchQuotaConfiguration: {
-		Code:           "XMinioAdminNoSuchQuotaConfiguration",
-		Description:    "The quota configuration does not exist",
-		HTTPStatusCode: http.StatusNotFound,
-	},
-	ErrAdminBucketQuotaDisabled: {
-		Code:           "XMinioAdminBucketQuotaDisabled",
-		Description:    "Quota specified but disk usage crawl is disabled on MinIO server",
-		HTTPStatusCode: http.StatusBadRequest,
-	},
 	ErrInsecureClientRequest: {
 		Code:           "XMinioInsecureClientRequest",
 		Description:    "Cannot respond to plain-text request from TLS-encrypted server",
@@ -1244,11 +1157,6 @@ var errorCodes = errorCodeMap{
 		Code:           "InvalidArgument",
 		Description:    "Your metadata headers are not supported.",
 		HTTPStatusCode: http.StatusBadRequest,
-	},
-	ErrObjectTampered: {
-		Code:           "XMinioObjectTampered",
-		Description:    errObjectTampered.Error(),
-		HTTPStatusCode: http.StatusPartialContent,
 	},
 	ErrMaximumExpires: {
 		Code:           "AuthorizationQueryParametersError",
@@ -1801,47 +1709,6 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 		apiErr = ErrAdminInvalidAccessKey
 	case auth.ErrInvalidSecretKeyLength:
 		apiErr = ErrAdminInvalidSecretKey
-	// SSE errors
-	case errInvalidEncryptionParameters:
-		apiErr = ErrInvalidEncryptionParameters
-	case crypto.ErrInvalidEncryptionMethod:
-		apiErr = ErrInvalidEncryptionMethod
-	case crypto.ErrInvalidCustomerAlgorithm:
-		apiErr = ErrInvalidSSECustomerAlgorithm
-	case crypto.ErrMissingCustomerKey:
-		apiErr = ErrMissingSSECustomerKey
-	case crypto.ErrMissingCustomerKeyMD5:
-		apiErr = ErrMissingSSECustomerKeyMD5
-	case crypto.ErrCustomerKeyMD5Mismatch:
-		apiErr = ErrSSECustomerKeyMD5Mismatch
-	case errObjectTampered:
-		apiErr = ErrObjectTampered
-	case errEncryptedObject:
-		apiErr = ErrSSEEncryptedObject
-	case errInvalidSSEParameters:
-		apiErr = ErrInvalidSSECustomerParameters
-	case crypto.ErrInvalidCustomerKey, crypto.ErrSecretKeyMismatch:
-		apiErr = ErrAccessDenied // no access without correct key
-	case crypto.ErrIncompatibleEncryptionMethod:
-		apiErr = ErrIncompatibleEncryptionMethod
-	case errKMSNotConfigured:
-		apiErr = ErrKMSNotConfigured
-	case crypto.ErrKMSAuthLogin:
-		apiErr = ErrKMSAuthFailure
-	case context.Canceled, context.DeadlineExceeded:
-		apiErr = ErrOperationTimedOut
-	case errDiskNotFound:
-		apiErr = ErrSlowDown
-	case objectlock.ErrInvalidRetentionDate:
-		apiErr = ErrInvalidRetentionDate
-	case objectlock.ErrPastObjectLockRetainDate:
-		apiErr = ErrPastObjectLockRetainDate
-	case objectlock.ErrUnknownWORMModeDirective:
-		apiErr = ErrUnknownWORMModeDirective
-	case objectlock.ErrObjectLockInvalidHeaders:
-		apiErr = ErrObjectLockInvalidHeaders
-	case objectlock.ErrMalformedXML:
-		apiErr = ErrMalformedXML
 	}
 
 	// Compression errors
@@ -1906,10 +1773,6 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 		apiErr = ErrNoSuchUpload
 	case InvalidPart:
 		apiErr = ErrInvalidPart
-	case InsufficientWriteQuorum:
-		apiErr = ErrSlowDown
-	case InsufficientReadQuorum:
-		apiErr = ErrSlowDown
 	case UnsupportedDelimiter:
 		apiErr = ErrNotImplemented
 	case InvalidMarkerPrefixCombination:

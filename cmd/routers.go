@@ -22,21 +22,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Composed function registering routers for only distributed Erasure setup.
-func registerDistErasureRouters(router *mux.Router, endpointServerPools EndpointServerPools) {
-	// Register storage REST router only if its a distributed setup.
-	registerStorageRESTHandlers(router, endpointServerPools)
-
-	// Register peer REST router only if its a distributed setup.
-	registerPeerRESTHandlers(router)
-
-	// Register bootstrap REST router for distributed setups.
-	registerBootstrapRESTHandlers(router)
-
-	// Register distributed namespace lock routers.
-	registerLockRESTHandlers(router)
-}
-
 // List of some generic handlers which are applied for all incoming requests.
 var globalHandlers = []MiddlewareFunc{
 	// add redirect handler to redirect
@@ -47,12 +32,8 @@ var globalHandlers = []MiddlewareFunc{
 	addCustomHeaders,
 	// set HTTP security headers such as Content-Security-Policy.
 	addSecurityHeaders,
-	// Forward path style requests to actual host in a bucket federated setup.
-	setBucketForwardingHandler,
 	// Validate all the incoming requests.
 	setRequestValidityHandler,
-	// Network statistics
-	setHTTPStatsHandler,
 	// Limits all requests size to a maximum fixed limit
 	setRequestSizeLimitHandler,
 	// Limits all header sizes to a maximum fixed limit
@@ -87,34 +68,6 @@ func configureServerHandler(endpointServerPools EndpointServerPools) (http.Handl
 	// Initialize router. `SkipClean(true)` stops gorilla/mux from
 	// normalizing URL path minio/minio#3256
 	router := mux.NewRouter().SkipClean(true).UseEncodedPath()
-
-	// Initialize distributed NS lock.
-	if globalIsDistErasure {
-		registerDistErasureRouters(router, endpointServerPools)
-	}
-
-	// Add STS router always.
-	registerSTSRouter(router)
-
-	// Only enable admin APIs if Storj auth is disabled
-	if !globalStorjAuthConfig.Enabled {
-		// Add Admin router, all APIs are enabled in server mode.
-		registerAdminRouter(router, true, true)
-
-	}
-
-	// Add healthcheck router
-	registerHealthCheckRouter(router)
-
-	// Add server metrics router
-	registerMetricsRouter(router)
-
-	// Register web router when its enabled.
-	if globalBrowserEnabled {
-		if err := registerWebRouter(router); err != nil {
-			return nil, err
-		}
-	}
 
 	// Add API router
 	registerAPIRouter(router)

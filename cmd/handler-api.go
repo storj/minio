@@ -22,8 +22,6 @@ import (
 	"time"
 
 	"github.com/storj/minio/cmd/config/api"
-	"github.com/storj/minio/cmd/logger"
-	"github.com/storj/minio/pkg/sys"
 )
 
 type apiConfig struct {
@@ -31,39 +29,22 @@ type apiConfig struct {
 
 	requestsDeadline time.Duration
 	requestsPool     chan struct{}
-	clusterDeadline  time.Duration
-	listQuorum       int
 	extendListLife   time.Duration
 	corsAllowOrigins []string
-	setDriveCount    int
 }
 
-func (t *apiConfig) init(cfg api.Config, setDriveCount int) {
+func (t *apiConfig) init(cfg api.Config) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	t.clusterDeadline = cfg.ClusterDeadline
 	t.corsAllowOrigins = cfg.CorsAllowOrigin
-	t.setDriveCount = setDriveCount
 
 	var apiRequestsMaxPerNode int
-	if cfg.RequestsMax <= 0 {
-		stats, err := sys.GetStats()
-		if err != nil {
-			logger.LogIf(GlobalContext, err)
-			// Default to 16 GiB, not critical.
-			stats.TotalRAM = 16 << 30
-		}
-		// max requests per node is calculated as
-		// total_ram / ram_per_request
-		// ram_per_request is 4MiB * setDriveCount + 2 * 10MiB (default erasure block size)
-		apiRequestsMaxPerNode = int(stats.TotalRAM / uint64(setDriveCount*readBlockSize+blockSizeV1*2))
-	} else {
-		apiRequestsMaxPerNode = cfg.RequestsMax
-		if len(globalEndpoints.Hostnames()) > 0 {
-			apiRequestsMaxPerNode /= len(globalEndpoints.Hostnames())
-		}
+	apiRequestsMaxPerNode = cfg.RequestsMax
+	if len(globalEndpoints.Hostnames()) > 0 {
+		apiRequestsMaxPerNode /= len(globalEndpoints.Hostnames())
 	}
+
 	if cap(t.requestsPool) < apiRequestsMaxPerNode {
 		// Only replace if needed.
 		// Existing requests will use the previous limit,
@@ -73,22 +54,7 @@ func (t *apiConfig) init(cfg api.Config, setDriveCount int) {
 		t.requestsPool = make(chan struct{}, apiRequestsMaxPerNode)
 	}
 	t.requestsDeadline = cfg.RequestsDeadline
-	t.listQuorum = cfg.GetListQuorum()
 	t.extendListLife = cfg.ExtendListLife
-}
-
-func (t *apiConfig) getListQuorum() int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	return t.listQuorum
-}
-
-func (t *apiConfig) getSetDriveCount() int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	return t.setDriveCount
 }
 
 func (t *apiConfig) getExtendListLife() time.Duration {
@@ -105,17 +71,6 @@ func (t *apiConfig) getCorsAllowOrigins() []string {
 	corsAllowOrigins := make([]string, len(t.corsAllowOrigins))
 	copy(corsAllowOrigins, t.corsAllowOrigins)
 	return corsAllowOrigins
-}
-
-func (t *apiConfig) getClusterDeadline() time.Duration {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	if t.clusterDeadline == 0 {
-		return 10 * time.Second
-	}
-
-	return t.clusterDeadline
 }
 
 func (t *apiConfig) getRequestsPool() (chan struct{}, time.Duration) {
@@ -149,7 +104,7 @@ func maxClients(f http.HandlerFunc) http.HandlerFunc {
 			// Send a http timeout message
 			writeErrorResponse(r.Context(), w,
 				errorCodes.ToAPIErr(ErrOperationMaxedOut),
-				r.URL, guessIsBrowserReq(r))
+				r.URL)
 			return
 		case <-r.Context().Done():
 			return

@@ -33,7 +33,6 @@ import (
 	"github.com/storj/minio/cmd/logger"
 	sse "github.com/storj/minio/pkg/bucket/encryption"
 	"github.com/storj/minio/pkg/bucket/lifecycle"
-	"github.com/storj/minio/pkg/event"
 	"github.com/storj/minio/pkg/hash"
 	"github.com/storj/minio/pkg/madmin"
 	"github.com/storj/minio/pkg/s3select"
@@ -49,16 +48,12 @@ type LifecycleSys struct{}
 
 // Get - gets lifecycle config associated to a given bucket name.
 func (sys *LifecycleSys) Get(bucketName string) (lc *lifecycle.Lifecycle, err error) {
-	if globalIsGateway {
-		objAPI := newObjectLayerFn()
-		if objAPI == nil {
-			return nil, errServerNotInitialized
-		}
-
-		return nil, BucketLifecycleNotFound{Bucket: bucketName}
+	objAPI := newObjectLayerFn()
+	if objAPI == nil {
+		return nil, errServerNotInitialized
 	}
 
-	return globalBucketMetadataSys.GetLifecycleConfig(bucketName)
+	return nil, BucketLifecycleNotFound{Bucket: bucketName}
 }
 
 // NewLifecycleSys - creates new lifecycle system.
@@ -148,60 +143,17 @@ func validateLifecycleTransition(ctx context.Context, bucket string, lfc *lifecy
 // validateTransitionDestination returns error if transition destination bucket missing or not configured
 // It also returns true if transition destination is same as this server.
 func validateTransitionDestination(ctx context.Context, bucket string, targetLabel string) (bool, string, error) {
-	tgt := globalBucketTargetSys.GetRemoteTargetWithLabel(ctx, bucket, targetLabel)
-	if tgt == nil {
-		return false, "", BucketRemoteTargetNotFound{Bucket: bucket}
-	}
-	arn, err := madmin.ParseARN(tgt.Arn)
-	if err != nil {
-		return false, "", BucketRemoteTargetNotFound{Bucket: bucket}
-	}
-	if arn.Type != madmin.ILMService {
-		return false, "", BucketRemoteArnTypeInvalid{}
-	}
-	clnt := globalBucketTargetSys.GetRemoteTargetClient(ctx, tgt.Arn)
-	if clnt == nil {
-		return false, "", BucketRemoteTargetNotFound{Bucket: bucket}
-	}
-	if found, _ := clnt.BucketExists(ctx, arn.Bucket); !found {
-		return false, "", BucketRemoteDestinationNotFound{Bucket: arn.Bucket}
-	}
-	sameTarget, _ := isLocalHost(clnt.EndpointURL().Hostname(), clnt.EndpointURL().Port(), globalMinioPort)
-	return sameTarget, arn.Bucket, nil
+	return false, "", NotImplemented{}
 }
 
 // transitionSC returns storage class label for this bucket
 func transitionSC(ctx context.Context, bucket string) string {
-	cfg, err := globalBucketMetadataSys.GetLifecycleConfig(bucket)
-	if err != nil {
-		return ""
-	}
-	for _, rule := range cfg.Rules {
-		if rule.Status == Disabled {
-			continue
-		}
-		if rule.Transition.StorageClass != "" {
-			return rule.Transition.StorageClass
-		}
-	}
 	return ""
 }
 
 // return true if ARN representing transition storage class is present in a active rule
 // for the lifecycle configured on this bucket
 func transitionSCInUse(ctx context.Context, lfc *lifecycle.Lifecycle, bucket, arnStr string) bool {
-	tgtLabel := globalBucketTargetSys.GetRemoteLabelWithArn(ctx, bucket, arnStr)
-	if tgtLabel == "" {
-		return false
-	}
-	for _, rule := range lfc.Rules {
-		if rule.Status == Disabled {
-			continue
-		}
-		if rule.Transition.StorageClass != "" && rule.Transition.StorageClass == tgtLabel {
-			return true
-		}
-	}
 	return false
 }
 
@@ -248,67 +200,7 @@ func putTransitionOpts(objInfo ObjectInfo) (putOpts miniogo.PutObjectOptions) {
 // 2. life cycle expiry date is met on the object.
 // 3. Object is removed through DELETE api call
 func deleteTransitionedObject(ctx context.Context, objectAPI ObjectLayer, bucket, object string, lcOpts lifecycle.ObjectOpts, action lifecycle.Action, isDeleteTierOnly bool) error {
-	if lcOpts.TransitionStatus == "" && !isDeleteTierOnly {
-		return nil
-	}
-	lc, err := globalLifecycleSys.Get(bucket)
-	if err != nil {
-		return err
-	}
-	arn := getLifecycleTransitionTargetArn(ctx, lc, bucket, lcOpts)
-	if arn == nil {
-		return fmt.Errorf("remote target not configured")
-	}
-	tgt := globalBucketTargetSys.GetRemoteTargetClient(ctx, arn.String())
-	if tgt == nil {
-		return fmt.Errorf("remote target not configured")
-	}
-
-	var opts ObjectOptions
-	opts.Versioned = globalBucketVersioningSys.Enabled(bucket)
-	opts.VersionID = lcOpts.VersionID
-	switch action {
-	case lifecycle.DeleteRestoredAction, lifecycle.DeleteRestoredVersionAction:
-		// delete locally restored copy of object or object version
-		// from the source, while leaving metadata behind. The data on
-		// transitioned tier lies untouched and still accessible
-		opts.TransitionStatus = lcOpts.TransitionStatus
-		_, err = objectAPI.DeleteObject(ctx, bucket, object, opts)
-		return err
-	case lifecycle.DeleteAction, lifecycle.DeleteVersionAction:
-		// When an object is past expiry, delete the data from transitioned tier and
-		// metadata from source
-		if err := tgt.RemoveObject(context.Background(), arn.Bucket, object, miniogo.RemoveObjectOptions{VersionID: lcOpts.VersionID}); err != nil {
-			logger.LogIf(ctx, err)
-		}
-
-		if isDeleteTierOnly {
-			return nil
-		}
-		_, err = objectAPI.DeleteObject(ctx, bucket, object, opts)
-		if err != nil {
-			return err
-		}
-		eventName := event.ObjectRemovedDelete
-		if lcOpts.DeleteMarker {
-			eventName = event.ObjectRemovedDeleteMarkerCreated
-		}
-		objInfo := ObjectInfo{
-			Name:         object,
-			VersionID:    lcOpts.VersionID,
-			DeleteMarker: lcOpts.DeleteMarker,
-		}
-		// Notify object deleted event.
-		sendEvent(eventArgs{
-			EventName:  eventName,
-			BucketName: bucket,
-			Object:     objInfo,
-			Host:       "Internal: [ILM-EXPIRY]",
-		})
-	}
-
-	// should never reach here
-	return nil
+	return NotImplemented{}
 }
 
 // transition object to target specified by the transition ARN. When an object is transitioned to another
@@ -316,118 +208,17 @@ func deleteTransitionedObject(ctx context.Context, objectAPI ObjectLayer, bucket
 // is moved to the transition tier. Note that in the case of encrypted objects, entire encrypted stream is moved
 // to the transition tier without decrypting or re-encrypting.
 func transitionObject(ctx context.Context, objectAPI ObjectLayer, objInfo ObjectInfo) error {
-	lc, err := globalLifecycleSys.Get(objInfo.Bucket)
-	if err != nil {
-		return err
-	}
-	lcOpts := lifecycle.ObjectOpts{
-		Name:     objInfo.Name,
-		UserTags: objInfo.UserTags,
-	}
-	arn := getLifecycleTransitionTargetArn(ctx, lc, objInfo.Bucket, lcOpts)
-	if arn == nil {
-		return fmt.Errorf("remote target not configured")
-	}
-	tgt := globalBucketTargetSys.GetRemoteTargetClient(ctx, arn.String())
-	if tgt == nil {
-		return fmt.Errorf("remote target not configured")
-	}
-
-	gr, err := objectAPI.GetObjectNInfo(ctx, objInfo.Bucket, objInfo.Name, nil, http.Header{}, readLock, ObjectOptions{
-		VersionID:        objInfo.VersionID,
-		TransitionStatus: lifecycle.TransitionPending,
-	})
-	if err != nil {
-		return err
-	}
-	oi := gr.ObjInfo
-
-	if oi.TransitionStatus == lifecycle.TransitionComplete {
-		return nil
-	}
-
-	putOpts := putTransitionOpts(oi)
-	if _, err = tgt.PutObject(ctx, arn.Bucket, oi.Name, gr, oi.Size, "", "", putOpts); err != nil {
-		return err
-	}
-	gr.Close()
-
-	var opts ObjectOptions
-	opts.Versioned = globalBucketVersioningSys.Enabled(oi.Bucket)
-	opts.VersionID = oi.VersionID
-	opts.TransitionStatus = lifecycle.TransitionComplete
-	eventName := event.ObjectTransitionComplete
-
-	_, err = objectAPI.DeleteObject(ctx, oi.Bucket, oi.Name, opts)
-	if err != nil {
-		eventName = event.ObjectTransitionFailed
-	}
-	// Notify object deleted event.
-	sendEvent(eventArgs{
-		EventName:  eventName,
-		BucketName: oi.Bucket,
-		Object: ObjectInfo{
-			Name:      oi.Name,
-			VersionID: opts.VersionID,
-		},
-		Host: "Internal: [ILM-Transition]",
-	})
-	return err
+	return NotImplemented{}
 }
 
 // getLifecycleTransitionTargetArn returns transition ARN for storage class specified in the config.
 func getLifecycleTransitionTargetArn(ctx context.Context, lc *lifecycle.Lifecycle, bucket string, obj lifecycle.ObjectOpts) *madmin.ARN {
-	for _, rule := range lc.FilterActionableRules(obj) {
-		if rule.Transition.StorageClass != "" {
-			return globalBucketTargetSys.GetRemoteArnWithLabel(ctx, bucket, rule.Transition.StorageClass)
-		}
-	}
 	return nil
 }
 
 // getTransitionedObjectReader returns a reader from the transitioned tier.
 func getTransitionedObjectReader(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, oi ObjectInfo, opts ObjectOptions) (gr *GetObjectReader, err error) {
-	var lc *lifecycle.Lifecycle
-	lc, err = globalLifecycleSys.Get(bucket)
-	if err != nil {
-		return nil, err
-	}
-
-	arn := getLifecycleTransitionTargetArn(ctx, lc, bucket, lifecycle.ObjectOpts{
-		Name:         object,
-		UserTags:     oi.UserTags,
-		ModTime:      oi.ModTime,
-		VersionID:    oi.VersionID,
-		DeleteMarker: oi.DeleteMarker,
-		IsLatest:     oi.IsLatest,
-	})
-	if arn == nil {
-		return nil, fmt.Errorf("remote target not configured")
-	}
-	tgt := globalBucketTargetSys.GetRemoteTargetClient(ctx, arn.String())
-	if tgt == nil {
-		return nil, fmt.Errorf("remote target not configured")
-	}
-	fn, off, length, err := NewGetObjectReader(rs, oi, opts)
-	if err != nil {
-		return nil, ErrorRespToObjectError(err, bucket, object)
-	}
-	gopts := miniogo.GetObjectOptions{VersionID: opts.VersionID}
-
-	// get correct offsets for encrypted object
-	if off >= 0 && length >= 0 {
-		if err := gopts.SetRange(off, off+length-1); err != nil {
-			return nil, ErrorRespToObjectError(err, bucket, object)
-		}
-	}
-
-	reader, _, _, err := tgt.GetObject(ctx, arn.Bucket, object, gopts)
-	if err != nil {
-		return nil, err
-	}
-	closeReader := func() { reader.Close() }
-
-	return fn(reader, h, opts.CheckPrecondFn, closeReader)
+	return nil, NotImplemented{}
 }
 
 // RestoreRequestType represents type of restore.

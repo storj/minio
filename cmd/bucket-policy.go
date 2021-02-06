@@ -37,7 +37,7 @@ type PolicySys struct{}
 
 // Get returns stored bucket policy
 func (sys *PolicySys) Get(bucket string) (*policy.Policy, error) {
-	return globalBucketMetadataSys.GetPolicyConfig(bucket)
+	return nil, NotImplemented{}
 }
 
 // IsAllowed - checks given policy args is allowed to continue the Rest API.
@@ -149,12 +149,7 @@ func getConditionValues(r *http.Request, lc string, username string, claims map[
 	for k, v := range claims {
 		vStr, ok := v.(string)
 		if ok {
-			// Special case for AD/LDAP STS users
-			if k == ldapUser {
-				args["user"] = []string{vStr}
-			} else {
-				args[k] = []string{vStr}
-			}
+			args[k] = []string{vStr}
 		}
 	}
 

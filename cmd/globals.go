@@ -18,27 +18,17 @@ package cmd
 
 import (
 	"crypto/x509"
-	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/storj/minio/pkg/bucket/bandwidth"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/storj/minio/cmd/config/cache"
-	"github.com/storj/minio/cmd/config/compress"
-	"github.com/storj/minio/cmd/config/dns"
-	xldap "github.com/storj/minio/cmd/config/identity/ldap"
-	"github.com/storj/minio/cmd/config/identity/openid"
 	"github.com/storj/minio/cmd/config/identity/storjauth"
-	"github.com/storj/minio/cmd/config/policy/opa"
 	"github.com/storj/minio/cmd/config/storageclass"
-	"github.com/storj/minio/cmd/crypto"
 	xhttp "github.com/storj/minio/cmd/http"
 	"github.com/storj/minio/pkg/auth"
-	etcd "go.etcd.io/etcd/clientv3"
 
 	"github.com/storj/minio/pkg/certs"
 	"github.com/storj/minio/pkg/event"
@@ -63,9 +53,6 @@ const (
 	globalMinioDefaultStorageClass = "STANDARD"
 	globalWindowsOSName            = "windows"
 	globalMacOSName                = "darwin"
-	globalMinioModeFS              = "mode-server-fs"
-	globalMinioModeErasure         = "mode-server-xl"
-	globalMinioModeDistErasure     = "mode-server-distributed-xl"
 	globalMinioModeGatewayPrefix   = "mode-gateway-"
 	globalDirSuffix                = "__XLDIR__"
 	globalDirSuffixWithSlash       = globalDirSuffix + slashSeparator
@@ -114,20 +101,11 @@ var globalCLIContext = struct {
 }{}
 
 var (
-	// Indicates if the running minio server is distributed setup.
-	globalIsDistErasure = false
-
-	// Indicates if the running minio server is an erasure-code backend.
-	globalIsErasure = false
-
 	// Indicates if the running minio is in gateway mode.
 	globalIsGateway = false
 
 	// Name of gateway server, e.g S3, GCS, Azure, etc
 	globalGatewayName = ""
-
-	// This flag is set to 'true' by default
-	globalBrowserEnabled = true
 
 	// This flag is set to 'true' when MINIO_UPDATE env is set to 'off'. Default is false.
 	globalInplaceUpdateDisabled = false
@@ -147,26 +125,19 @@ var (
 	// globalConfigSys server config system.
 	globalConfigSys *ConfigSys
 
-	globalNotificationSys  *NotificationSys
 	globalConfigTargetList *event.TargetList
 	// globalEnvTargetList has list of targets configured via env.
 	globalEnvTargetList *event.TargetList
 
-	globalBucketMetadataSys *BucketMetadataSys
-	globalBucketMonitor     *bandwidth.Monitor
-	globalPolicySys         *PolicySys
-	globalIAMSys            *IAMSys
+	globalBucketMonitor *bandwidth.Monitor
+	globalPolicySys     *PolicySys
+	globalIAMSys        *IAMSys
 
-	globalLifecycleSys       *LifecycleSys
-	globalBucketSSEConfigSys *BucketSSEConfigSys
-	globalBucketTargetSys    *BucketTargetSys
 	// globalAPIConfig controls S3 API requests throttling,
 	// healthcheck readiness deadlines and cors settings.
-	globalAPIConfig = apiConfig{listQuorum: 3}
+	globalAPIConfig = apiConfig{}
 
 	globalStorageClass    storageclass.Config
-	globalLDAPConfig      xldap.Config
-	globalOpenIDConfig    openid.Config
 	globalStorjAuthConfig storjauth.Config
 
 	// CA root certificates, a nil value means system certs pool will be used
@@ -194,12 +165,6 @@ var (
 
 	globalEndpoints EndpointServerPools
 
-	// Global server's network statistics
-	globalConnStats = newConnStats()
-
-	// Global HTTP request statisitics
-	globalHTTPStats = newHTTPStats()
-
 	// Time when the server is started
 	globalBootTime = UTCNow()
 
@@ -219,70 +184,11 @@ var (
 	globalOperationTimeout       = newDynamicTimeout(10*time.Minute, 5*time.Minute) // default timeout for general ops
 	globalDeleteOperationTimeout = newDynamicTimeout(5*time.Minute, 1*time.Minute)  // default time for delete ops
 
-	globalBucketObjectLockSys *BucketObjectLockSys
-	globalBucketQuotaSys      *BucketQuotaSys
 	globalBucketVersioningSys *BucketVersioningSys
-
-	// Disk cache drives
-	globalCacheConfig cache.Config
-
-	// Initialized KMS configuration for disk cache
-	globalCacheKMS crypto.KMS
-
-	// Allocated etcd endpoint for config and bucket DNS.
-	globalEtcdClient *etcd.Client
-
-	// Is set to true when Bucket federation is requested
-	// and is 'true' when etcdConfig.PathPrefix is empty
-	globalBucketFederation bool
-
-	// Allocated DNS config wrapper over etcd client.
-	globalDNSConfig dns.Store
-
-	// GlobalKMS initialized KMS configuration
-	GlobalKMS crypto.KMS
-
-	// Auto-Encryption, if enabled, turns any non-SSE-C request
-	// into an SSE-S3 request. If enabled a valid, non-empty KMS
-	// configuration must be present.
-	globalAutoEncryption bool
-
-	// Is compression enabled?
-	globalCompressConfigMu sync.Mutex
-	globalCompressConfig   compress.Config
-
-	// Some standard object extensions which we strictly dis-allow for compression.
-	standardExcludeCompressExtensions = []string{".gz", ".bz2", ".rar", ".zip", ".7z", ".xz", ".mp4", ".mkv", ".mov"}
-
-	// Some standard content-types which we strictly dis-allow for compression.
-	standardExcludeCompressContentTypes = []string{"video/*", "audio/*", "application/zip", "application/x-gzip", "application/x-zip-compressed", " application/x-compress", "application/x-spoon"}
-
-	// Authorization validators list.
-	globalOpenIDValidators *openid.Validators
-
-	// OPA policy system.
-	globalPolicyOPA *opa.Opa
 
 	// Deployment ID - unique per deployment
 	globalDeploymentID string
 
-	// GlobalGatewaySSE sse options
-	GlobalGatewaySSE gatewaySSE
-
-	globalAllHealState *allHealState
-
-	// The always present healing routine ready to heal objects
-	globalBackgroundHealRoutine *healRoutine
-	globalBackgroundHealState   *allHealState
-
-	// If writes to FS backend should be O_SYNC.
-	globalFSOSync bool
-
-	globalProxyEndpoints []ProxyEndpoint
-
-	globalInternodeTransport http.RoundTripper
-
-	globalDNSCache *xhttp.DNSCache
 	// Add new variable global values here.
 )
 

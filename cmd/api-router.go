@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"net"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -38,12 +37,6 @@ func newObjectLayerFn() ObjectLayer {
 	return globalObjectAPI
 }
 
-func newCachedObjectLayerFn() CacheObjectLayer {
-	globalObjLayerMutex.Lock()
-	defer globalObjLayerMutex.Unlock()
-	return globalCacheObjectAPI
-}
-
 func setObjectLayer(o ObjectLayer) {
 	globalObjLayerMutex.Lock()
 	globalObjectAPI = o
@@ -53,7 +46,6 @@ func setObjectLayer(o ObjectLayer) {
 // objectAPIHandler implements and provides http handlers for S3 API.
 type objectAPIHandlers struct {
 	ObjectAPI func() ObjectLayer
-	CacheAPI  func() CacheObjectLayer
 }
 
 // getHost tries its best to return the request host.
@@ -74,7 +66,6 @@ func registerAPIRouter(router *mux.Router) {
 	// Initialize API.
 	api := objectAPIHandlers{
 		ObjectAPI: newObjectLayerFn,
-		CacheAPI:  newCachedObjectLayerFn,
 	}
 
 	// API Router
@@ -82,28 +73,7 @@ func registerAPIRouter(router *mux.Router) {
 
 	var routers []*mux.Router
 	for _, domainName := range globalDomainNames {
-		if IsKubernetes() {
-			routers = append(routers, apiRouter.MatcherFunc(func(r *http.Request, match *mux.RouteMatch) bool {
-				host, _, err := net.SplitHostPort(getHost(r))
-				if err != nil {
-					host = r.Host
-				}
-				// Make sure to skip matching minio.<domain>` this is
-				// specifically meant for operator/k8s deployment
-				// The reason we need to skip this is for a special
-				// usecase where we need to make sure that
-				// minio.<namespace>.svc.<cluster_domain> is ignored
-				// by the bucketDNS style to ensure that path style
-				// is available and honored at this domain.
-				//
-				// All other `<bucket>.<namespace>.svc.<cluster_domain>`
-				// makes sure that buckets are routed through this matcher
-				// to match for `<bucket>`
-				return host != minioReservedBucket+"."+domainName
-			}).Host("{bucket:.+}."+domainName).Subrouter())
-		} else {
-			routers = append(routers, apiRouter.Host("{bucket:.+}."+domainName).Subrouter())
-		}
+		routers = append(routers, apiRouter.Host("{bucket:.+}."+domainName).Subrouter())
 	}
 	routers = append(routers, apiRouter.PathPrefix("/{bucket}").Subrouter())
 
@@ -132,12 +102,6 @@ func registerAPIRouter(router *mux.Router) {
 		// AbortMultipartUpload
 		bucket.Methods(http.MethodDelete).Path("/{object:.+}").HandlerFunc(
 			maxClients(collectAPIStats("abortmultipartupload", httpTraceAll(api.AbortMultipartUploadHandler)))).Queries("uploadId", "{uploadId:.*}")
-		// GetObjectACL - this is a dummy call.
-		bucket.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
-			maxClients(collectAPIStats("getobjectacl", httpTraceHdrs(api.GetObjectACLHandler)))).Queries("acl", "")
-		// PutObjectACL - this is a dummy call.
-		bucket.Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(
-			maxClients(collectAPIStats("putobjectacl", httpTraceHdrs(api.PutObjectACLHandler)))).Queries("acl", "")
 		// GetObjectTagging
 		bucket.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
 			maxClients(collectAPIStats("getobjecttagging", httpTraceHdrs(api.GetObjectTaggingHandler)))).Queries("tagging", "")
@@ -150,24 +114,12 @@ func registerAPIRouter(router *mux.Router) {
 		// SelectObjectContent
 		bucket.Methods(http.MethodPost).Path("/{object:.+}").HandlerFunc(
 			maxClients(collectAPIStats("selectobjectcontent", httpTraceHdrs(api.SelectObjectContentHandler)))).Queries("select", "").Queries("select-type", "2")
-		// GetObjectRetention
-		bucket.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
-			maxClients(collectAPIStats("getobjectretention", httpTraceAll(api.GetObjectRetentionHandler)))).Queries("retention", "")
-		// GetObjectLegalHold
-		bucket.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
-			maxClients(collectAPIStats("getobjectlegalhold", httpTraceAll(api.GetObjectLegalHoldHandler)))).Queries("legal-hold", "")
 		// GetObject
 		bucket.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
 			maxClients(collectAPIStats("getobject", httpTraceHdrs(api.GetObjectHandler))))
 		// CopyObject
 		bucket.Methods(http.MethodPut).Path("/{object:.+}").HeadersRegexp(xhttp.AmzCopySource, ".*?(\\/|%2F).*?").
 			HandlerFunc(maxClients(collectAPIStats("copyobject", httpTraceAll(api.CopyObjectHandler))))
-		// PutObjectRetention
-		bucket.Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(
-			maxClients(collectAPIStats("putobjectretention", httpTraceAll(api.PutObjectRetentionHandler)))).Queries("retention", "")
-		// PutObjectLegalHold
-		bucket.Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(
-			maxClients(collectAPIStats("putobjectlegalhold", httpTraceAll(api.PutObjectLegalHoldHandler)))).Queries("legal-hold", "")
 
 		// PutObject
 		bucket.Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(
@@ -177,68 +129,6 @@ func registerAPIRouter(router *mux.Router) {
 			maxClients(collectAPIStats("deleteobject", httpTraceAll(api.DeleteObjectHandler))))
 
 		/// Bucket operations
-		// GetBucketLocation
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketlocation", httpTraceAll(api.GetBucketLocationHandler)))).Queries("location", "")
-		// GetBucketPolicy
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketpolicy", httpTraceAll(api.GetBucketPolicyHandler)))).Queries("policy", "")
-		// GetBucketLifecycle
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketlifecycle", httpTraceAll(api.GetBucketLifecycleHandler)))).Queries("lifecycle", "")
-		// GetBucketEncryption
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketencryption", httpTraceAll(api.GetBucketEncryptionHandler)))).Queries("encryption", "")
-		// GetBucketObjectLockConfig
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketobjectlockconfiguration", httpTraceAll(api.GetBucketObjectLockConfigHandler)))).Queries("object-lock", "")
-		// GetBucketReplicationConfig
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketreplicationconfiguration", httpTraceAll(api.GetBucketReplicationConfigHandler)))).Queries("replication", "")
-
-		// GetBucketVersioning
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketversioning", httpTraceAll(api.GetBucketVersioningHandler)))).Queries("versioning", "")
-		// GetBucketNotification
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketnotification", httpTraceAll(api.GetBucketNotificationHandler)))).Queries("notification", "")
-		// ListenNotification
-		bucket.Methods(http.MethodGet).HandlerFunc(collectAPIStats("listennotification", httpTraceAll(api.ListenNotificationHandler))).Queries("events", "{events:.*}")
-
-		// Dummy Bucket Calls
-		// GetBucketACL -- this is a dummy call.
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketacl", httpTraceAll(api.GetBucketACLHandler)))).Queries("acl", "")
-		// PutBucketACL -- this is a dummy call.
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbucketacl", httpTraceAll(api.PutBucketACLHandler)))).Queries("acl", "")
-		// GetBucketCors - this is a dummy call.
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketcors", httpTraceAll(api.GetBucketCorsHandler)))).Queries("cors", "")
-		// GetBucketWebsiteHandler - this is a dummy call.
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketwebsite", httpTraceAll(api.GetBucketWebsiteHandler)))).Queries("website", "")
-		// GetBucketAccelerateHandler - this is a dummy call.
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketaccelerate", httpTraceAll(api.GetBucketAccelerateHandler)))).Queries("accelerate", "")
-		// GetBucketRequestPaymentHandler - this is a dummy call.
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketrequestpayment", httpTraceAll(api.GetBucketRequestPaymentHandler)))).Queries("requestPayment", "")
-		// GetBucketLoggingHandler - this is a dummy call.
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketlogging", httpTraceAll(api.GetBucketLoggingHandler)))).Queries("logging", "")
-		// GetBucketLifecycleHandler - this is a dummy call.
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbucketlifecycle", httpTraceAll(api.GetBucketLifecycleHandler)))).Queries("lifecycle", "")
-		// GetBucketTaggingHandler
-		bucket.Methods(http.MethodGet).HandlerFunc(
-			maxClients(collectAPIStats("getbuckettagging", httpTraceAll(api.GetBucketTaggingHandler)))).Queries("tagging", "")
-		//DeleteBucketWebsiteHandler
-		bucket.Methods(http.MethodDelete).HandlerFunc(
-			maxClients(collectAPIStats("deletebucketwebsite", httpTraceAll(api.DeleteBucketWebsiteHandler)))).Queries("website", "")
-		// DeleteBucketTaggingHandler
-		bucket.Methods(http.MethodDelete).HandlerFunc(
-			maxClients(collectAPIStats("deletebuckettagging", httpTraceAll(api.DeleteBucketTaggingHandler)))).Queries("tagging", "")
 
 		// ListMultipartUploads
 		bucket.Methods(http.MethodGet).HandlerFunc(
@@ -255,34 +145,7 @@ func registerAPIRouter(router *mux.Router) {
 		// ListObjectsV1 (Legacy)
 		bucket.Methods(http.MethodGet).HandlerFunc(
 			maxClients(collectAPIStats("listobjectsv1", httpTraceAll(api.ListObjectsV1Handler))))
-		// PutBucketLifecycle
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbucketlifecycle", httpTraceAll(api.PutBucketLifecycleHandler)))).Queries("lifecycle", "")
-		// PutBucketReplicationConfig
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbucketreplicationconfiguration", httpTraceAll(api.PutBucketReplicationConfigHandler)))).Queries("replication", "")
-		// GetObjectRetention
 
-		// PutBucketEncryption
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbucketencryption", httpTraceAll(api.PutBucketEncryptionHandler)))).Queries("encryption", "")
-
-		// PutBucketPolicy
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbucketpolicy", httpTraceAll(api.PutBucketPolicyHandler)))).Queries("policy", "")
-
-		// PutBucketObjectLockConfig
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbucketobjectlockconfig", httpTraceAll(api.PutBucketObjectLockConfigHandler)))).Queries("object-lock", "")
-		// PutBucketTaggingHandler
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbuckettagging", httpTraceAll(api.PutBucketTaggingHandler)))).Queries("tagging", "")
-		// PutBucketVersioning
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbucketversioning", httpTraceAll(api.PutBucketVersioningHandler)))).Queries("versioning", "")
-		// PutBucketNotification
-		bucket.Methods(http.MethodPut).HandlerFunc(
-			maxClients(collectAPIStats("putbucketnotification", httpTraceAll(api.PutBucketNotificationHandler)))).Queries("notification", "")
 		// PutBucket
 		bucket.Methods(http.MethodPut).HandlerFunc(
 			maxClients(collectAPIStats("putbucket", httpTraceAll(api.PutBucketHandler))))
@@ -295,31 +158,12 @@ func registerAPIRouter(router *mux.Router) {
 		// DeleteMultipleObjects
 		bucket.Methods(http.MethodPost).HandlerFunc(
 			maxClients(collectAPIStats("deletemultipleobjects", httpTraceAll(api.DeleteMultipleObjectsHandler)))).Queries("delete", "")
-		// DeleteBucketPolicy
-		bucket.Methods(http.MethodDelete).HandlerFunc(
-			maxClients(collectAPIStats("deletebucketpolicy", httpTraceAll(api.DeleteBucketPolicyHandler)))).Queries("policy", "")
-		// DeleteBucketReplication
-		bucket.Methods(http.MethodDelete).HandlerFunc(
-			maxClients(collectAPIStats("deletebucketreplicationconfiguration", httpTraceAll(api.DeleteBucketReplicationConfigHandler)))).Queries("replication", "")
-		// DeleteBucketLifecycle
-		bucket.Methods(http.MethodDelete).HandlerFunc(
-			maxClients(collectAPIStats("deletebucketlifecycle", httpTraceAll(api.DeleteBucketLifecycleHandler)))).Queries("lifecycle", "")
-		// DeleteBucketEncryption
-		bucket.Methods(http.MethodDelete).HandlerFunc(
-			maxClients(collectAPIStats("deletebucketencryption", httpTraceAll(api.DeleteBucketEncryptionHandler)))).Queries("encryption", "")
 		// DeleteBucket
 		bucket.Methods(http.MethodDelete).HandlerFunc(
 			maxClients(collectAPIStats("deletebucket", httpTraceAll(api.DeleteBucketHandler))))
-		// PostRestoreObject
-		bucket.Methods(http.MethodPost).Path("/{object:.+}").HandlerFunc(
-			maxClients(collectAPIStats("restoreobject", httpTraceAll(api.PostRestoreObjectHandler)))).Queries("restore", "")
 	}
 
 	/// Root operation
-
-	// ListenNotification
-	apiRouter.Methods(http.MethodGet).Path(SlashSeparator).HandlerFunc(
-		collectAPIStats("listennotification", httpTraceAll(api.ListenNotificationHandler))).Queries("events", "{events:.*}")
 
 	// ListBuckets
 	apiRouter.Methods(http.MethodGet).Path(SlashSeparator).HandlerFunc(
