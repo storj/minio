@@ -419,6 +419,14 @@ func (sys *IAMSys) doIAMConfigMigration(ctx context.Context) error {
 	return sys.store.migrateBackendFormat(ctx)
 }
 
+// InitStorjStore initializes a storj IAM store without equiring globalStorjAuthConfig to be set.
+func InitStorjStore(objAPI ObjectLayer) {
+	iamSys := NewIAMSys()
+	iamSys.store = newIAMStorjAuthStore(objAPI)
+	iamSys.usersSysType = StorjAuthSysType
+	globalIAMSys = iamSys
+}
+
 // InitStore initializes IAM stores
 func (sys *IAMSys) InitStore(objAPI ObjectLayer) {
 	sys.Lock()
