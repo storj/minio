@@ -35,7 +35,6 @@ import (
 	"github.com/storj/minio/cmd/config"
 	"github.com/storj/minio/cmd/logger"
 	"github.com/storj/minio/pkg/env"
-	"github.com/storj/minio/pkg/mountinfo"
 	xnet "github.com/storj/minio/pkg/net"
 )
 
@@ -414,18 +413,7 @@ func NewEndpoints(args ...string) (endpoints Endpoints, err error) {
 
 // Checks if there are any cross device mounts.
 func checkCrossDeviceMounts(endpoints Endpoints) (err error) {
-	var absPaths []string
-	for _, endpoint := range endpoints {
-		if endpoint.IsLocal {
-			var absPath string
-			absPath, err = filepath.Abs(endpoint.Path)
-			if err != nil {
-				return err
-			}
-			absPaths = append(absPaths, absPath)
-		}
-	}
-	return mountinfo.CheckCrossDevice(absPaths)
+	return nil
 }
 
 // CreateEndpoints - validates and creates new endpoints for given args.

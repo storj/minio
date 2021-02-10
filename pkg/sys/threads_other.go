@@ -1,5 +1,7 @@
+// +build !linux
+
 /*
- * MinIO Cloud Storage, (C) 2018 MinIO, Inc.
+ * MinIO Cloud Storage, (C) 2017 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +16,11 @@
  * limitations under the License.
  */
 
-package certs
+package sys
 
-import (
-	"github.com/rjeczalik/notify"
-)
+import "errors"
 
-// isWriteEvent checks if the event returned is a write event
-func isWriteEvent(event notify.Event) bool {
-	for _, ev := range eventWrite {
-		if event&ev != 0 {
-			return true
-		}
-	}
-	return false
+// GetMaxThreads returns the maximum number of threads that the system can create.
+func GetMaxThreads() (int, error) {
+	return 0, errors.New("getting max threads is not supported")
 }

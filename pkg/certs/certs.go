@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/rjeczalik/notify"
 )
@@ -96,7 +95,6 @@ func NewManager(ctx context.Context, certFile, keyFile string, loadX509KeyPair L
 	if err := manager.AddCertificate(certFile, keyFile); err != nil {
 		return nil, err
 	}
-	go manager.watchFileEvents()
 	return manager, nil
 }
 
@@ -162,85 +160,7 @@ func (m *Manager) AddCertificate(certFile, keyFile string) (err error) {
 	}
 	m.certificates[p] = &certificate
 
-	if certFileIsLink && keyFileIsLink {
-		go m.watchSymlinks(certFile, keyFile)
-	} else {
-		// Windows doesn't allow for watching file changes but instead allows
-		// for directory changes only, while we can still watch for changes
-		// on files on other platforms. Watch parent directory on all platforms
-		// for simplicity.
-		if err = notify.Watch(filepath.Dir(certFile), m.events, eventWrite...); err != nil {
-			return err
-		}
-		if err = notify.Watch(filepath.Dir(keyFile), m.events, eventWrite...); err != nil {
-			return err
-		}
-	}
 	return nil
-}
-
-// watchSymlinks starts an endless loop reloading the
-// certFile and keyFile periodically.
-func (m *Manager) watchSymlinks(certFile, keyFile string) {
-	for {
-		select {
-		case <-m.ctx.Done():
-			return // Once stopped exits this routine.
-		case <-time.After(24 * time.Hour):
-			certificate, err := m.loadX509KeyPair(certFile, keyFile)
-			if err != nil {
-				continue
-			}
-			if certificate.Leaf == nil { // This is a performance optimisation
-				certificate.Leaf, err = x509.ParseCertificate(certificate.Certificate[0])
-				if err != nil {
-					continue
-				}
-			}
-
-			p := pair{
-				CertFile: certFile,
-				KeyFile:  keyFile,
-			}
-			m.lock.Lock()
-			m.certificates[p] = &certificate
-			m.lock.Unlock()
-		}
-	}
-}
-
-// watchFileEvents starts an endless loop waiting for file systems events.
-// Once an event occurs it reloads the private key and certificate that
-// has changed, if any.
-func (m *Manager) watchFileEvents() {
-	for {
-		select {
-		case <-m.ctx.Done():
-			return
-		case event := <-m.events:
-			if !isWriteEvent(event.Event()) {
-				continue
-			}
-
-			for pair := range m.certificates {
-				if p := event.Path(); pair.KeyFile == p || pair.CertFile == p {
-					certificate, err := m.loadX509KeyPair(pair.CertFile, pair.KeyFile)
-					if err != nil {
-						continue
-					}
-					if certificate.Leaf == nil { // This is performance optimisation
-						certificate.Leaf, err = x509.ParseCertificate(certificate.Certificate[0])
-						if err != nil {
-							continue
-						}
-					}
-					m.lock.Lock()
-					m.certificates[pair] = &certificate
-					m.lock.Unlock()
-				}
-			}
-		}
-	}
 }
 
 // GetCertificate returns a TLS certificate based on the client hello.
