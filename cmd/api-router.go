@@ -37,6 +37,11 @@ func newObjectLayerFn() ObjectLayer {
 	return globalObjectAPI
 }
 
+// SetObjectLayer exports setObjectLayer.
+func SetObjectLayer(o ObjectLayer) {
+	setObjectLayer(o)
+}
+
 func setObjectLayer(o ObjectLayer) {
 	globalObjLayerMutex.Lock()
 	globalObjectAPI = o
