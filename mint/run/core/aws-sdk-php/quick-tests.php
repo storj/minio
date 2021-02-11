@@ -848,104 +848,6 @@ function are_statements_equal($expected, $got) {
     return TRUE;
     
 }
- /**
-  *  testBucketPolicy tests GET/PUT Bucket policy S3 APIs
-  *
-  * @param $s3Client AWS\S3\S3Client object
-  *
-  * @param $params associative array containing bucket and object names
-  *
-  * @return void
-  */
-function testBucketPolicy($s3Client, $params) {
-    $bucket = $params['Bucket'];
-
-    $downloadPolicy = sprintf('{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetBucketLocation","s3:ListBucket","s3:GetObject"],"Resource":["arn:aws:s3:::%s","arn:aws:s3:::%s/*"]}]}', $bucket, $bucket);
-
-    $result = $s3Client->putBucketPolicy([
-        'Bucket' => $bucket,
-        'Policy' => $downloadPolicy
-    ]);
-    if (getstatuscode($result) != HTTP_NOCONTENT)
-        throw new Exception('putBucketPolicy API failed for ' .
-                            $bucket);
-    $result = $s3Client->getBucketPolicy(['Bucket' => $bucket]);
-    if (getstatuscode($result) != HTTP_OK)
-        throw new Exception('putBucketPolicy API failed for ' .
-                            $bucket);
-
-    if ($result['Policy'] != $downloadPolicy)
-        if (!are_statements_equal($result['Policy'], $downloadPolicy))  
-            throw new Exception('bucket policy we got is not we set');  
-        
-
-    // Delete the bucket, make the bucket (again) and check if policy is none
-    // Ref: https://github.com/storj/minio/issues/4714
-    $result = $s3Client->deleteBucket(['Bucket' => $bucket]);
-    if (getstatuscode($result) != HTTP_NOCONTENT)
-        throw new Exception('deleteBucket API failed for ' .
-                            $bucket);
-
-    try {
-        $s3Client->getBucketPolicy(['Bucket' => $bucket]);
-    } catch (AWSException $e) {
-        switch ($e->getAwsErrorCode()) {
-        case 'NoSuchBucket':
-            break;
-        }
-    }
-
-    // Sleep is needed for Minio Gateway for Azure, ref:
-    // https://docs.microsoft.com/en-us/rest/api/storageservices/Delete-Container#remarks
-    sleep(40);
-
-    $s3Client->createBucket(['Bucket' => $bucket]);
-
-    $params = [
-        '404' => ['Bucket' => $bucket]
-    ];
-    runExceptionalTests($s3Client, 'getBucketPolicy', 'getStatusCode', $params);
-
-    try {
-        $MINT_DATA_DIR = $GLOBALS['MINT_DATA_DIR'];
-        // Create an object to test anonymous GET object
-        $object = 'test-anon';
-        if (!file_exists($MINT_DATA_DIR . '/' . FILE_1_KB))
-            throw new Exception('File not found ' . $MINT_DATA_DIR . '/' . FILE_1_KB);
-
-        $stream = Psr7\stream_for(fopen($MINT_DATA_DIR . '/' . FILE_1_KB, 'r'));
-        $result = $s3Client->putObject([
-                'Bucket' => $bucket,
-                'Key' => $object,
-                'Body' => $stream,
-        ]);
-        if (getstatuscode($result) != HTTP_OK)
-            throw new Exception('createBucket API failed for ' .
-                                $bucket);
-
-        $anonConfig = new ClientConfig("", "", $GLOBALS['endpoint'], $GLOBALS['secure'], $GLOBALS['region']);
-        $anonymousClient = new S3Client([
-            'credentials' => false,
-            'endpoint' => $anonConfig->endpoint,
-            'use_path_style_endpoint' => true,
-            'region' => $anonConfig->region,
-            'version' => '2006-03-01'
-        ]);
-        runExceptionalTests($anonymousClient, 'getObject', 'getStatusCode', [
-            '403' => [
-                'Bucket' => $bucket,
-                'Key' => $object,
-            ]
-        ]);
-
-    } finally {
-        // close data file
-        if (!is_null($stream))
-            $stream->close();
-        $s3Client->deleteObject(['Bucket' => $bucket, 'Key' => $object]);
-    }
-
-}
 
  /**
   * cleanupSetup removes all buckets and objects created during the
@@ -1123,7 +1025,6 @@ try {
     runTest($s3Client, 'testMultipartUpload', "createMultipartUpload ( array \$params = [] )", $testParams);
     runTest($s3Client, 'testMultipartUploadFailure', "uploadPart ( array \$params = [] )", $testParams);
     runTest($s3Client, 'testAbortMultipartUpload', "abortMultipartupload ( array \$params = [] )", $testParams);
-    runTest($s3Client, 'testBucketPolicy', "getBucketPolicy ( array \$params = [] )", ['Bucket' => $emptyBucket]);
 }
 finally {
     cleanupSetup($s3Client, $objects);
