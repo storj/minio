@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
@@ -396,12 +397,19 @@ func (sys *IAMSys) doIAMConfigMigration(ctx context.Context) error {
 	return sys.store.migrateBackendFormat(ctx)
 }
 
-// InitStorjStore initializes a storj IAM store without equiring globalStorjAuthConfig to be set.
-func InitStorjStore(objAPI ObjectLayer) {
+// InitCustomStore initializes an IAM store, shortcutting much of minio's startup.
+func InitCustomStore(store IAMStorageAPI, sysType UsersSysType) {
 	iamSys := NewIAMSys()
-	iamSys.store = newIAMStorjAuthStore(objAPI)
-	iamSys.usersSysType = StorjAuthSysType
+	iamSys.store = store
+	iamSys.usersSysType = sysType
 	globalIAMSys = iamSys
+}
+
+func getenv(key, def string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return def
 }
 
 // InitStore initializes IAM stores
@@ -409,7 +417,9 @@ func (sys *IAMSys) InitStore(objAPI ObjectLayer) {
 	sys.Lock()
 	defer sys.Unlock()
 
-	sys.store = newIAMStorjAuthStore(objAPI)
+	authURL := getenv("MINIO_STORJ_AUTH_URL", "http://127.0.0.1:8000")
+	authToken := getenv("MINIO_STORJ_AUTH_TOKEN", "")
+	sys.store = NewIAMStorjAuthStore(objAPI, authURL, authToken)
 	sys.usersSysType = StorjAuthSysType
 }
 

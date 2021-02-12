@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"sync"
 	"time"
@@ -16,13 +15,6 @@ import (
 	iampolicy "github.com/storj/minio/pkg/iam/policy"
 )
 
-func getenv(key, def string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
-	}
-	return def
-}
-
 // IAMStorjAuthStore implements IAMStorageAPI
 type IAMStorjAuthStore struct {
 	mu        sync.RWMutex
@@ -31,12 +23,12 @@ type IAMStorjAuthStore struct {
 	authToken string
 }
 
-func newIAMStorjAuthStore(objAPI ObjectLayer) *IAMStorjAuthStore {
+// NewIAMStorjAuthStore creates a Storj-specific Minio IAM store.
+func NewIAMStorjAuthStore(objAPI ObjectLayer, authURL, authToken string) *IAMStorjAuthStore {
 	return &IAMStorjAuthStore{
 		transport: NewGatewayHTTPTransport(),
-		// TODO: is there a better way to configure this?
-		authURL:   getenv("MINIO_STORJ_AUTH_URL", "http://127.0.0.1:8000"),
-		authToken: getenv("MINIO_STORJ_AUTH_TOKEN", ""),
+		authURL:   authURL,
+		authToken: authToken,
 	}
 }
 
