@@ -161,7 +161,6 @@ type V4 struct {
 
 // valid returns true if the signature has all necessary fields.
 func (v4 *V4) valid() bool {
-	fmt.Printf("oye %+v\n", v4)
 	if v4.Credential == nil {
 		return false
 	}
@@ -382,7 +381,6 @@ func ParseV4(r *http.Request) (*V4, error) {
 	if err2 == nil {
 		return v4, nil
 	}
-	fmt.Println(err2)
 
 	return nil, ParseV4Error.Wrap(errs.Combine(err1, err2))
 }

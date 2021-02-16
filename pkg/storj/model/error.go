@@ -2,7 +2,7 @@ package model
 
 import (
 	"encoding/xml"
-	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -12,6 +12,10 @@ import (
 type Error struct {
 	Err    error
 	Status int
+}
+
+func (e *Error) Error() string {
+	return e.Err.Error()
 }
 
 // ErrorResponse model
@@ -33,7 +37,7 @@ type ErrorResponser interface {
 }
 
 func (e Error) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("ERROR", e)
+	log.Println("ERROR", e)
 
 	status := 500
 	if e.Status != 0 {
