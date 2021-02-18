@@ -90,6 +90,16 @@ func newConfigDirFromCtx(ctx *cli.Context, option string, getDefaultDir func() s
 	return &ConfigDir{path: dirAbs}, dirSet
 }
 
+// SetGlobalCLI offers an alternative to handleCommonCmdArgs to set global CLI context options.
+// This is needed by Storj to (at least) ensure that ETags are not random.
+func SetGlobalCLI(json, quiet, anonymous bool, addr string, strictS3Compat bool) {
+	globalCLIContext.JSON = json
+	globalCLIContext.Quiet = quiet
+	globalCLIContext.Anonymous = anonymous
+	globalCLIContext.Addr = addr
+	globalCLIContext.StrictS3Compat = strictS3Compat
+}
+
 func handleCommonCmdArgs(ctx *cli.Context) {
 
 	// Get "json" flag from command line argument and
