@@ -150,6 +150,11 @@ func handleCommonCmdArgs(ctx *cli.Context) {
 	logger.FatalIf(mkdirAllIgnorePerm(globalCertsCADir.Get()), "Unable to create certs CA directory at %s", globalCertsCADir.Get())
 }
 
+// HandleCommonEnvVars exports handleCommonEnvVars.
+func HandleCommonEnvVars() {
+	handleCommonEnvVars()
+}
+
 func handleCommonEnvVars() {
 	wormEnabled, err := config.LookupWorm()
 	if err != nil {
