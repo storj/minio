@@ -538,13 +538,13 @@ func (s securityHeaderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	s.handler.ServeHTTP(w, r)
 }
 
-// criticalErrorHandler handles critical server failures caused by
+// CriticalErrorHandler handles critical server failures caused by
 // `panic(logger.ErrCritical)` as done by `logger.CriticalIf`.
 //
 // It should be always the first / highest HTTP handler.
-type criticalErrorHandler struct{ handler http.Handler }
+type CriticalErrorHandler struct{ Handler http.Handler }
 
-func (h criticalErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h CriticalErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err == logger.ErrCritical { // handle
 			writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInternalError), r.URL)
@@ -553,7 +553,7 @@ func (h criticalErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			panic(err) // forward other panic calls
 		}
 	}()
-	h.handler.ServeHTTP(w, r)
+	h.Handler.ServeHTTP(w, r)
 }
 
 func setSSETLSHandler(h http.Handler) http.Handler { return sseTLSHandler{h} }
