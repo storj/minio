@@ -22,7 +22,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	xhttp "github.com/storj/minio/cmd/http"
-	"github.com/storj/minio/pkg/wildcard"
 )
 
 func newHTTPServerFn() *xhttp.Server {
@@ -215,12 +214,8 @@ func corsHandler(handler http.Handler) http.Handler {
 
 	return cors.New(cors.Options{
 		AllowOriginFunc: func(origin string) bool {
-			for _, allowedOrigin := range globalAPIConfig.getCorsAllowOrigins() {
-				if wildcard.MatchSimple(allowedOrigin, origin) {
-					return true
-				}
-			}
-			return false
+			// TODO: Make this configurable.
+			return true
 		},
 		AllowedMethods: []string{
 			http.MethodGet,
