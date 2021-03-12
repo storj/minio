@@ -133,6 +133,9 @@ func registerAPIRouter(router *mux.Router) {
 			maxClients(collectAPIStats("deleteobject", httpTraceAll(api.DeleteObjectHandler))))
 
 		/// Bucket operations
+		// GetBucketLocation
+		bucket.Methods(http.MethodGet).HandlerFunc(
+			maxClients(collectAPIStats("getbucketlocation", httpTraceAll(api.GetBucketLocationHandler)))).Queries("location", "")
 
 		// ListMultipartUploads
 		bucket.Methods(http.MethodGet).HandlerFunc(
