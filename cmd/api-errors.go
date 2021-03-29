@@ -366,6 +366,9 @@ const (
 	ErrAccountNotEligible
 	ErrServiceAccountNotFound
 	ErrPostPolicyConditionInvalidFormat
+
+	// Storj extended errors.
+	ErrProjectUsageLimits
 )
 
 type errorCodeMap map[APIErrorCode]APIError
@@ -1087,6 +1090,13 @@ var errorCodes = errorCodeMap{
 		HTTPStatusCode: http.StatusBadRequest,
 	},
 
+	/// Storj extensions.
+	ErrProjectUsageLimits: {
+		Code:           "XStorjProjectLimits",
+		Description:    "You have reached your Storj project upload limit on the Satellite.",
+		HTTPStatusCode: http.StatusInsufficientStorage,
+	},
+
 	/// MinIO extensions.
 	ErrStorageFull: {
 		Code:           "XMinioStorageFull",
@@ -1726,6 +1736,12 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 	// ErrNoSuchBucket in such a case.
 	if err == dns.ErrNoEntriesFound {
 		return ErrNoSuchBucket
+	}
+
+	// Storj errors
+	switch err.(type) {
+	case ProjectUsageLimit:
+		return ErrProjectUsageLimits
 	}
 
 	switch err.(type) {

@@ -35,6 +35,7 @@ func toObjectErr(err error, params ...string) error {
 		}
 	}
 	switch err {
+
 	case errVolumeNotFound:
 		if len(params) >= 1 {
 			err = BucketNotFound{Bucket: params[0]}
@@ -135,6 +136,13 @@ func toObjectErr(err error, params ...string) error {
 		err = IncompleteBody{}
 	}
 	return err
+}
+
+// ProjectUsageLimit storage Satellite project usage limit.
+type ProjectUsageLimit struct{}
+
+func (e ProjectUsageLimit) Error() string {
+	return "You have reached your Storj project upload limit on the Satellite."
 }
 
 // SignatureDoesNotMatch - when content md5 does not match with what was sent from client.

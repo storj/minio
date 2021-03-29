@@ -49,6 +49,8 @@ var toAPIErrorTests = []struct {
 	{err: NotImplemented{}, errCode: ErrNotImplemented},
 	{err: errSignatureMismatch, errCode: ErrSignatureDoesNotMatch},
 
+	{err: ProjectUsageLimit{}, errCode: ErrProjectUsageLimits},
+
 	{err: nil, errCode: ErrNone},
 	{err: errors.New("Custom error"), errCode: ErrInternalError}, // Case where err type is unknown.
 }
