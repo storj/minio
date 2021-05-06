@@ -48,7 +48,6 @@ require (
 	github.com/nats-io/nats.go v1.10.0
 	github.com/nats-io/nkeys v0.2.0 // indirect
 	github.com/nats-io/stan.go v0.7.0
-	github.com/ncw/directio v1.0.5
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/philhofer/fwd v1.1.1 // indirect
