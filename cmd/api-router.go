@@ -52,6 +52,8 @@ type objectAPIHandlers struct {
 	ObjectAPI func() ObjectLayer
 }
 
+type ObjectAPIHandlers = objectAPIHandlers
+
 // getHost tries its best to return the request host.
 // According to section 14.23 of RFC 2616 the Host header
 // can include the port number if the default value of 80 is not used.
