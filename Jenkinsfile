@@ -16,6 +16,9 @@ timeout(time: 26, unit: 'MINUTES') {
 				stage('Build') {
 					checkout scm
 				}
+				stage('Verification') {
+					sh 'go vet ./...'
+				}
 			}
 			catch(err) {
 				throw err
