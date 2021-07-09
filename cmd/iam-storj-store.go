@@ -87,6 +87,7 @@ func (iamOS *IAMStorjAuthStore) loadUser(ctx context.Context, user string, userT
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+iamOS.authToken)
+	req.Header.Set("Forwarded", "for="+logger.GetReqInfo(ctx).RemoteHost)
 
 	httpClient := &http.Client{Transport: iamOS.transport}
 	resp, err := httpClient.Do(req)
