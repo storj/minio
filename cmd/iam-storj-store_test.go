@@ -44,6 +44,24 @@ func TestLoadUserTimeout(t *testing.T) {
 	}
 }
 
+func TestLoadUserRetry(t *testing.T) {
+	firstAttempt := true
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if firstAttempt {
+			firstAttempt = false
+			return // writing nothing will cause an http.Client error
+		}
+		_, err := w.Write([]byte(`{"public":true, "secret_key":"", "access_grant":""}`))
+		require.NoError(t, err)
+	}))
+
+	store := GetTestAuthStore(ts.URL, "token", 2*time.Second)
+	blankCredentialMap := make(map[string]auth.Credentials)
+	err := store.loadUser(context.Background(), "fakeUser", regularUser, blankCredentialMap)
+	require.NoError(t, err)
+	require.False(t, firstAttempt)
+}
+
 func GetTestAuthStore(authURL, authToken string, timeout time.Duration) *IAMStorjAuthStore {
 	return &IAMStorjAuthStore{
 		transport: newGatewayHTTPTransport(timeout),

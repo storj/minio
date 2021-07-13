@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"path"
@@ -82,7 +82,7 @@ func (iamOS *IAMStorjAuthStore) loadUser(ctx context.Context, user string, userT
 	}
 
 	reqURL.Path = path.Join(reqURL.Path, "/v1/access", user)
-	req, err := http.NewRequest("GET", reqURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL.String(), nil)
 	if err != nil {
 		return err
 	}
@@ -90,16 +90,7 @@ func (iamOS *IAMStorjAuthStore) loadUser(ctx context.Context, user string, userT
 	req.Header.Set("Forwarded", "for="+logger.GetReqInfo(ctx).RemoteHost)
 
 	httpClient := &http.Client{Transport: iamOS.transport}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// TODO: should we cache negative acknowledgement of not found?
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("invalid status code")
-	}
+	delay := ExponentialBackoff{Min: 100 * time.Millisecond, Max: 5 * time.Second}
 
 	var response struct {
 		AccessGrant string `json:"access_grant"`
@@ -107,22 +98,59 @@ func (iamOS *IAMStorjAuthStore) loadUser(ctx context.Context, user string, userT
 		Public      bool   `json:"public"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	for {
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			if !delay.Maxed() {
+				if err := delay.Wait(ctx); err != nil {
+					return ctx.Err()
+				}
+				continue
+			}
+			return err
+		}
+
+		// Use an anonymous function for deferring the response close before the
+		// next retry and not pilling it up when the method returns.
+		retry, err := func() (retry bool, _ error) {
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode == http.StatusInternalServerError {
+				return true, nil // auth only returns this for unexpected issues
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				return false, fmt.Errorf("invalid status code: %d", resp.StatusCode)
+			}
+
+			if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+				if !delay.Maxed() {
+					return true, nil
+				}
+				return false, err
+			}
+			return false, nil
+		}()
+
+		if retry {
+			if err := delay.Wait(ctx); err != nil {
+				return ctx.Err()
+			}
+			continue
+		}
+		if err == nil {
+			// TODO: We need to eventually remove values from this map.
+			// Using IAMStorjAuthStore.watch()?  Using Credentials.Expiration?
+			m[user] = auth.Credentials{
+				AccessKey:   user,
+				AccessGrant: response.AccessGrant,
+				SecretKey:   response.SecretKey,
+				Status:      "on",
+			}
+		}
 		return err
 	}
 
-	// TODO: i forget if we're supposed to reject requests that have Public set to true
-
-	// TODO: we need to eventually remove values from this map, but when? how do we have
-	//       access to it? do we need to hold locks to mutate it? if so, which ones?
-	m[user] = auth.Credentials{
-		AccessKey:   user,
-		AccessGrant: response.AccessGrant,
-		SecretKey:   response.SecretKey,
-		Status:      "on",
-	}
-
-	return nil
 }
 
 func (iamOS *IAMStorjAuthStore) loadUsers(ctx context.Context, userType IAMUserType, m map[string]auth.Credentials) error {
@@ -192,4 +220,58 @@ func (iamOS *IAMStorjAuthStore) watch(ctx context.Context, sys *IAMSys) {
 			logger.LogIf(ctx, iamOS.loadAll(ctx, sys))
 		}
 	}
+}
+
+// ExponentialBackoff keeps track of how long we should sleep between
+// failing attempts.  It is duplicated from
+// https://github.com/storj/linksharing/blob/main/sharing/utils.go
+type ExponentialBackoff struct {
+	delay time.Duration
+	Max   time.Duration
+	Min   time.Duration
+}
+
+func (e *ExponentialBackoff) init() {
+	if e.Max == 0 {
+		// maximum delay - pulled from net/http.Server.Serve
+		e.Max = time.Second
+	}
+	if e.Min == 0 {
+		// minimum delay - pulled from net/http.Server.Serve
+		e.Min = 5 * time.Millisecond
+	}
+}
+
+// Wait should be called when there is a failure. Each time it is called
+// it will sleep an exponentially longer time, up to a max.
+func (e *ExponentialBackoff) Wait(ctx context.Context) error {
+	e.init()
+	if e.delay == 0 {
+		e.delay = e.Min
+	} else {
+		e.delay *= 2
+	}
+	if e.delay > e.Max {
+		e.delay = e.Max
+	}
+
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	t := time.NewTimer(e.delay)
+	defer t.Stop()
+
+	select {
+	case <-t.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Maxed returns true if the wait time has maxed out.
+func (e *ExponentialBackoff) Maxed() bool {
+	e.init()
+	return e.delay == e.Max
 }
