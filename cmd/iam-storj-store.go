@@ -71,10 +71,14 @@ func (iamOS *IAMStorjAuthStore) loadPolicyDocs(ctx context.Context, m map[string
 	return nil
 }
 
-func (iamOS *IAMStorjAuthStore) loadUser(ctx context.Context, user string, userType IAMUserType, m map[string]auth.Credentials) error {
+func (iamOS *IAMStorjAuthStore) loadUser(ctx context.Context, user string, userType IAMUserType, m map[string]auth.Credentials) (err error) {
 	if _, ok := m[user]; ok {
 		return nil
 	}
+
+	defer func() {
+		logger.LogIf(ctx, err)
+	}()
 
 	reqURL, err := url.Parse(iamOS.authURL)
 	if err != nil {
@@ -150,7 +154,6 @@ func (iamOS *IAMStorjAuthStore) loadUser(ctx context.Context, user string, userT
 		}
 		return err
 	}
-
 }
 
 func (iamOS *IAMStorjAuthStore) loadUsers(ctx context.Context, userType IAMUserType, m map[string]auth.Credentials) error {
