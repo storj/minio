@@ -35,7 +35,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/minio/cmd/config/dns"
@@ -879,7 +878,7 @@ func (api objectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 	}
 
 	// Verify policy signature.
-	cred, errCode := doesPolicySignatureMatch(formValues)
+	cred, errCode := doesPolicySignatureMatch(ctx, formValues)
 	if errCode != ErrNone {
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
 		return

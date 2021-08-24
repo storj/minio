@@ -26,6 +26,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
@@ -39,6 +40,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/set"
 	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/auth"
 )
 
@@ -150,12 +152,12 @@ func getSignature(signingKey []byte, stringToSign string) string {
 }
 
 // Check to see if Policy is signed correctly.
-func doesPolicySignatureMatch(formValues http.Header) (auth.Credentials, APIErrorCode) {
+func doesPolicySignatureMatch(ctx context.Context, formValues http.Header) (auth.Credentials, APIErrorCode) {
 	// For SignV2 - Signature field will be valid
 	if _, ok := formValues["Signature"]; ok {
 		return doesPolicySignatureV2Match(formValues)
 	}
-	return doesPolicySignatureV4Match(formValues)
+	return doesPolicySignatureV4Match(ctx, formValues)
 }
 
 // compareSignatureV4 returns true if and only if both signatures
@@ -170,7 +172,7 @@ func compareSignatureV4(sig1, sig2 string) bool {
 // doesPolicySignatureMatch - Verify query headers with post policy
 //     - http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-HTTPPOSTConstructPolicy.html
 // returns ErrNone if the signature matches.
-func doesPolicySignatureV4Match(formValues http.Header) (auth.Credentials, APIErrorCode) {
+func doesPolicySignatureV4Match(ctx context.Context, formValues http.Header) (auth.Credentials, APIErrorCode) {
 	// Server region.
 	region := globalServerRegion
 
@@ -194,6 +196,12 @@ func doesPolicySignatureV4Match(formValues http.Header) (auth.Credentials, APIEr
 	// Verify signature.
 	if !compareSignatureV4(newSignature, formValues.Get(xhttp.AmzSignature)) {
 		return cred, ErrSignatureDoesNotMatch
+	}
+	if cred.AccessKey != "" {
+		logger.GetReqInfo(ctx).AccessKey = cred.AccessKey
+	}
+	if cred.AccessGrant != "" {
+		logger.GetReqInfo(ctx).AccessGrant = cred.AccessGrant
 	}
 
 	// Success.
