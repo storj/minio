@@ -830,7 +830,7 @@ func (api objectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 	}
 
 	// Verify policy signature.
-	errCode := doesPolicySignatureMatch(formValues)
+	errCode := doesPolicySignatureMatch(ctx, formValues)
 	if errCode != ErrNone {
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
 		return
