@@ -1055,7 +1055,7 @@ func main() {
 	testListObjects(s3Client)
 	testSelectObject(s3Client)
 	testCreateBucketError(s3Client)
-	//testListMultipartUploads(s3Client)
+	testListMultipartUploads(s3Client)
 	if secure == "1" {
 		testSSECopyObject(s3Client)
 	}
