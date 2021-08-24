@@ -1882,11 +1882,6 @@ func (sys *IAMSys) IsAllowed(args iampolicy.Args) bool {
 		return true
 	}
 
-	// Policies don't apply when authorization is disabled.
-	if globalStorjAuthConfig {
-		return true
-	}
-
 	// If the credential is temporary, perform STS related checks.
 	ok, err := sys.IsTempUser(args.AccountName)
 	if err != nil {

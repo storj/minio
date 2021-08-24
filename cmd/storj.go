@@ -4,12 +4,16 @@
 package cmd
 
 import (
+	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
-)
 
-var globalStorjAuthConfig bool
+	"github.com/minio/minio/cmd/config/policy/opa"
+	xhttp "github.com/minio/minio/cmd/http"
+	xnet "github.com/minio/minio/pkg/net"
+)
 
 // CriticalErrorHandler exports CriticalErrorHandler
 // Used in pkg/server/server.go
@@ -49,6 +53,15 @@ func RegisterAPIRouter(router *mux.Router) {
 
 //todo:  set globalAPIConfig.getCorsAllowOrigins() or merge b0adac24cc4ee29413fb49f6f2ef783a95437249
 
+type allowAllOPA struct{}
+
+func (s allowAllOPA) RoundTrip(r *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       ioutil.NopCloser(strings.NewReader(`{"result":true}`)),
+	}, nil
+}
+
 // StartMinio is a possible alternative to everything else above
 func StartMinio(address, AuthURL, AuthToken string, gatewayLayer ObjectLayer) {
 	// wire up domain names for Minio
@@ -62,14 +75,15 @@ func StartMinio(address, AuthURL, AuthToken string, gatewayLayer ObjectLayer) {
 
 	store := NewIAMStorjAuthStore(gatewayLayer, AuthURL, AuthToken)
 	setObjectLayer(gatewayLayer)
-
 	iamSys := NewIAMSys()
 	iamSys.store = store
 	iamSys.usersSysType = "StorjAuthSys"
 	globalIAMSys = iamSys
 
+	// force globalIAMSys.IsAllowed() to always return true
+	globalPolicyOPA = opa.New(opa.Args{URL: &xnet.URL{Scheme: "http"}, AuthToken: " ", Transport: allowAllOPA{}, CloseRespFn: xhttp.DrainBody})
+
 	globalIsGateway = true
-	globalStorjAuthConfig = true
 	globalNotificationSys = NewNotificationSys(globalEndpoints)
 	globalBucketQuotaSys = NewBucketQuotaSys()
 }
