@@ -42,6 +42,10 @@ COPY mint/run/core/awscli ./run/core/awscli
 COPY mint/build/awscli ./build/awscli
 RUN ./build/awscli/install.sh
 
+COPY mint/run/core/healthcheck ./run/core/healthcheck
+COPY mint/build/healthcheck ./build/healthcheck
+RUN ./build/healthcheck/install.sh
+
 COPY mint/run/core/mc ./run/core/mc
 COPY mint/build/mc ./build/mc
 RUN ./build/mc/install.sh
@@ -49,6 +53,10 @@ RUN ./build/mc/install.sh
 COPY mint/run/core/minio-dotnet ./run/core/minio-dotnet
 COPY mint/build/minio-dotnet ./build/minio-dotnet
 RUN ./build/minio-dotnet/install.sh
+
+COPY mint/run/core/minio-go ./run/core/minio-go
+COPY mint/build/minio-go ./build/minio-go
+RUN ./build/minio-go/install.sh
 
 COPY mint/run/core/minio-java ./run/core/minio-java
 COPY mint/build/minio-java ./build/minio-java
