@@ -1766,8 +1766,7 @@ main() {
     test_upload_object && \
     test_lookup_object_prefix && \
     test_list_objects && \
-    # 0byte multi-part upload fails with "uplink: stream: input data reader was empty" error
-    # test_multipart_upload_0byte && \
+    test_multipart_upload_0byte && \
     test_multipart_upload && \
     test_max_key_list && \
     test_copy_object && \
