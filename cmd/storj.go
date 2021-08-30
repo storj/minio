@@ -51,8 +51,6 @@ func RegisterAPIRouter(router *mux.Router) {
 	registerAPIRouter(router)
 }
 
-//todo:  set globalAPIConfig.getCorsAllowOrigins() or merge b0adac24cc4ee29413fb49f6f2ef783a95437249
-
 type allowAllOPA struct{}
 
 func (s allowAllOPA) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -63,9 +61,13 @@ func (s allowAllOPA) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 // StartMinio is a possible alternative to everything else above
-func StartMinio(address, AuthURL, AuthToken string, gatewayLayer ObjectLayer) {
+func StartMinio(address, AuthURL, AuthToken string, gatewayLayer ObjectLayer, corsOrigins []string) {
 	// wire up domain names for Minio
 	handleCommonEnvVars()
+
+	// allow CORS to work, required for the website
+	globalAPIConfig.corsAllowOrigins = corsOrigins
+
 	// make Minio not use random ETags
 	globalCLIContext.JSON = false
 	globalCLIContext.Quiet = true
