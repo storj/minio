@@ -1766,7 +1766,8 @@ main() {
     test_upload_object && \
     test_lookup_object_prefix && \
     test_list_objects && \
-    test_multipart_upload_0byte && \
+    # todo: uncomment once https://review.dev.storj.io/c/storj/gateway-mt/+/5585 merged
+    # test_multipart_upload_0byte && \
     test_multipart_upload && \
     test_max_key_list && \
     test_copy_object && \
