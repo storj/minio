@@ -227,7 +227,7 @@ func (iamOS *IAMStorjAuthStore) watch(ctx context.Context, sys *IAMSys) {
 
 // ExponentialBackoff keeps track of how long we should sleep between
 // failing attempts.  It is duplicated from
-// https://github.com/storj/linksharing/blob/main/sharing/utils.go
+// https://github.com/storj/gateway-mt/blob/main/pkg/backoff/backoff.go
 type ExponentialBackoff struct {
 	delay time.Duration
 	Max   time.Duration
