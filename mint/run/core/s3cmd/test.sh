@@ -318,8 +318,7 @@ function run_test()
     test_put_object_multipart
     test_get_object
     test_get_object_multipart
-    # does not work because the bucket list sort is different
-    #test_sync_list_objects
+    test_sync_list_objects
 
     teardown
 }

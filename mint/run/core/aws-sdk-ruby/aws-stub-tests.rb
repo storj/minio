@@ -861,5 +861,4 @@ aws.copyObjectTest(data_dir, file_name1)
 aws.copyObjectTest(data_dir, file_name1, file_new_name)
 aws.presignedGetObjectTest(data_dir, file_name1)
 aws.presignedPutObjectTest(data_dir, file_name1)
-# Reenable after https://storjlabs.atlassian.net/browse/GMT-204 (explanation: https://storjlabs.atlassian.net/browse/GMT-442?focusedCommentId=26189).
-# aws.presignedPostObjectTest(data_dir, file_name1, 60, 3*1024*1024)
+aws.presignedPostObjectTest(data_dir, file_name1, 60, 3*1024*1024)

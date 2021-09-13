@@ -854,12 +854,6 @@ function test_upload_object_10() {
     fi
 
     if [ $rv -eq 0 ]; then
-        function="delete_bucket"
-        out=$(delete_bucket "$bucket_name")
-        rv=$?
-    fi
-
-    if [ $rv -eq 0 ]; then
         log_success "$(get_duration "$start_time")" "${test_function}"
     else
         # clean up and log error
@@ -944,70 +938,6 @@ function test_multipart_upload_10() {
         # clean up and log error
         ${AWS} s3 rb s3://"${bucket_name}" --force > /dev/null 2>&1
         rm -f /tmp/multipart
-        log_failure "$(get_duration "$start_time")" "${function}" "${out}"
-    fi
-
-    return $rv
-}
-
-# Tests lifecycle of a bucket.
-function test_bucket_lifecycle() {
-    # log start time
-    start_time=$(get_time)
-
-    echo "{ \"Rules\": [ { \"Expiration\": { \"Days\": 365 },\"ID\": \"Bucketlifecycle test\", \"Filter\": { \"Prefix\": \"\" }, \"Status\": \"Enabled\" } ] }" >> /tmp/lifecycle.json
-
-    function="make_bucket"
-    bucket_name=$(make_bucket)
-    rv=$?
-
-    # if make bucket succeeds put bucket lifecycle
-    if [ $rv -eq 0 ]; then
-        function="${AWS} s3api put-bucket-lifecycle-configuration --bucket ${bucket_name} --lifecycle-configuration file:///tmp/lifecycle.json"
-        out=$($function 2>&1)
-        rv=$?
-    else
-        # if make bucket fails, $bucket_name has the error output
-        out="${bucket_name}"
-    fi
-
-    if [ $rv -ne 0 ]; then
-        # if this functionality is not implemented return right away.
-        if echo "$out" | grep -q "NotImplemented"; then
-            ${AWS} s3 rb s3://"${bucket_name}" --force > /dev/null 2>&1
-            return 0
-        fi
-    fi
-
-    # if put bucket lifecycle succeeds get bucket lifecycle
-    if [ $rv -eq 0 ]; then
-        function="${AWS} s3api get-bucket-lifecycle-configuration --bucket ${bucket_name}"
-        out=$($function 2>&1)
-        rv=$?
-    fi
-
-    # if get bucket lifecycle succeeds delete bucket lifecycle
-    if [ $rv -eq 0 ]; then
-        function="${AWS} s3api delete-bucket-lifecycle --bucket ${bucket_name}"
-        out=$($function 2>&1)
-        rv=$?
-    fi
-
-    # delete lifecycle.json
-    rm -f /tmp/lifecycle.json
-
-    # delete bucket
-    if [ $rv -eq 0 ]; then
-        function="delete_bucket"
-        out=$(delete_bucket "$bucket_name")
-        rv=$?
-    fi
-
-    if [ $rv -eq 0 ]; then
-        log_success "$(get_duration "$start_time")" "test_bucket_lifecycle"
-    else
-        # clean up and log error
-        ${AWS} s3 rb s3://"${bucket_name}" --force > /dev/null 2>&1
         log_failure "$(get_duration "$start_time")" "${function}" "${out}"
     fi
 
@@ -1608,17 +1538,18 @@ function test_serverside_encryption_error() {
 #             return 0
 #         fi
 #     fi
+
 #     # if make bucket succeeds set object lock configuration
 #     if [ $rv -eq 0 ]; then
 #         function="${AWS} s3api put-object-lock-configuration --bucket ${bucket_name} --object-lock-configuration ObjectLockEnabled=Enabled"
 #         out=$($function 2>&1)
 #         rv=$?
 # 	if [ $rv -ne 0 ]; then
-#           # if this functionality is not implemented return right away.
-#           if echo "$out" | grep -q "NotImplemented"; then
+#             # if this functionality is not implemented return right away.
+#             if echo "$out" | grep -q "NotImplemented"; then
 # 		${AWS} s3 rb s3://"${bucket_name}" --force > /dev/null 2>&1
 # 		return 0
-#           fi
+#             fi
 # 	fi
 #     else
 #         # if make bucket fails, $bucket_name has the error output
@@ -1775,7 +1706,6 @@ main() {
     test_presigned_object && \
     test_upload_object_10 && \
     test_multipart_upload_10 && \
-    test_bucket_lifecycle && \
     test_serverside_encryption && \
     test_serverside_encryption_get_range && \
     test_serverside_encryption_multipart && \

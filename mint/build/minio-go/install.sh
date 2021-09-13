@@ -15,9 +15,7 @@
 #  limitations under the License.
 #
 
-# Storj currently just wants to hardcode the version to make Mint tests work
-# MINIO_GO_VERSION=$(curl --retry 10 -Ls -o /dev/null -w "%{url_effective}" https://github.com/minio/minio-go/releases/latest | sed "s/https:\/\/github.com\/minio\/minio-go\/releases\/tag\///")
-MINIO_GO_VERSION="v7.0.6"
+MINIO_GO_VERSION=$(curl --retry 10 -Ls -o /dev/null -w "%{url_effective}" https://github.com/minio/minio-go/releases/latest | sed "s/https:\/\/github.com\/minio\/minio-go\/releases\/tag\///")
 if [ -z "$MINIO_GO_VERSION" ]; then
     echo "unable to get minio-go version from github"
     exit 1

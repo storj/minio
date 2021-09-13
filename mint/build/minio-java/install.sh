@@ -16,7 +16,11 @@
 #
 
 SPOTBUGS_VERSION="4.1.2" ## needed since 8.0.2 release
-MINIO_JAVA_VERSION="8.0.3"
+MINIO_JAVA_VERSION=$(curl --retry 10 -s "https://repo1.maven.org/maven2/io/minio/minio/maven-metadata.xml" | sed -n "/<latest>/{s/<.[^>]*>//g;p;q}" | sed "s/  *//g")
+if [ -z "$MINIO_JAVA_VERSION" ]; then
+    echo "unable to get latest minio-java version from maven"
+    exit 1
+fi
 
 test_run_dir="$MINT_RUN_CORE_DIR/minio-java"
 git clone --quiet https://github.com/minio/minio-java.git "$test_run_dir/minio-java.git"
