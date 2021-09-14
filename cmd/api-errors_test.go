@@ -62,8 +62,6 @@ var toAPIErrorTests = []struct {
 	{err: crypto.ErrCustomerKeyMD5Mismatch, errCode: ErrSSECustomerKeyMD5Mismatch},
 	{err: errObjectTampered, errCode: ErrObjectTampered},
 
-	{err: ProjectUsageLimit{}, errCode: ErrProjectUsageLimits},
-
 	{err: nil, errCode: ErrNone},
 	{err: errors.New("Custom error"), errCode: ErrInternalError}, // Case where err type is unknown.
 }

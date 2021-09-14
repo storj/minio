@@ -367,9 +367,6 @@ const (
 	ErrAccountNotEligible
 	ErrServiceAccountNotFound
 	ErrPostPolicyConditionInvalidFormat
-
-	// Storj extended errors.
-	ErrProjectUsageLimits
 )
 
 type errorCodeMap map[APIErrorCode]APIError
@@ -1089,13 +1086,6 @@ var errorCodes = errorCodeMap{
 		Code:           "XAmzContentSHA256Mismatch",
 		Description:    "The provided 'x-amz-content-sha256' header does not match what was computed.",
 		HTTPStatusCode: http.StatusBadRequest,
-	},
-
-	/// Storj extensions.
-	ErrProjectUsageLimits: {
-		Code:           "XStorjProjectLimits",
-		Description:    "You have reached your Storj project upload limit on the Satellite.",
-		HTTPStatusCode: http.StatusInsufficientStorage,
 	},
 
 	/// MinIO extensions.
@@ -1869,12 +1859,6 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 	// ErrNoSuchBucket in such a case.
 	if err == dns.ErrNoEntriesFound {
 		return ErrNoSuchBucket
-	}
-
-	// Storj errors
-	switch err.(type) {
-	case ProjectUsageLimit:
-		return ErrProjectUsageLimits
 	}
 
 	switch err.(type) {
