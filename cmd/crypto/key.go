@@ -24,9 +24,10 @@ import (
 	"io"
 	"path"
 
-	"github.com/minio/minio/cmd/logger"
 	sha256 "github.com/minio/sha256-simd"
 	"github.com/minio/sio"
+
+	"storj.io/minio/cmd/logger"
 )
 
 // ObjectKey is a 256 bit secret key used to encrypt the object.

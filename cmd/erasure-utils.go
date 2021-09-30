@@ -22,7 +22,8 @@ import (
 	"io"
 
 	"github.com/klauspost/reedsolomon"
-	"github.com/minio/minio/cmd/logger"
+
+	"storj.io/minio/cmd/logger"
 )
 
 // getDataBlockLen - get length of data blocks from encoded blocks.

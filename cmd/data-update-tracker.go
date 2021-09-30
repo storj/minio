@@ -31,11 +31,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/color"
-	"github.com/minio/minio/pkg/env"
 	"github.com/willf/bloom"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/color"
+	"storj.io/minio/pkg/env"
 )
 
 const (

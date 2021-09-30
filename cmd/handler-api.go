@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio/cmd/config/api"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/sys"
+	"storj.io/minio/cmd/config/api"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/sys"
 )
 
 type apiConfig struct {

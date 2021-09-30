@@ -23,8 +23,9 @@ import (
 	"testing"
 
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/bucket/policy/condition"
+
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/bucket/policy/condition"
 )
 
 func TestGetPoliciesFromClaims(t *testing.T) {

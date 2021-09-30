@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/minio/minio/pkg/color"
+	"storj.io/minio/pkg/color"
 )
 
 // Tests update notifier string builder.

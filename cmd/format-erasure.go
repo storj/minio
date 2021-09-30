@@ -27,11 +27,12 @@ import (
 	"sync"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/minio/minio/cmd/config/storageclass"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/color"
-	"github.com/minio/minio/pkg/sync/errgroup"
 	sha256 "github.com/minio/sha256-simd"
+
+	"storj.io/minio/cmd/config/storageclass"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/color"
+	"storj.io/minio/pkg/sync/errgroup"
 )
 
 const (

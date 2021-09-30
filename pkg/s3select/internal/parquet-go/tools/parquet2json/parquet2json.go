@@ -25,7 +25,8 @@ import (
 	"strings"
 
 	"github.com/minio/minio-go/v7/pkg/set"
-	parquet "github.com/minio/minio/pkg/s3select/internal/parquet-go"
+
+	parquet "storj.io/minio/pkg/s3select/internal/parquet-go"
 )
 
 func getReader(name string, offset int64, length int64) (io.ReadCloser, error) {

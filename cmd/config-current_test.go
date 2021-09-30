@@ -21,7 +21,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/minio/minio/cmd/config"
+	"storj.io/minio/cmd/config"
 )
 
 func TestServerConfig(t *testing.T) {

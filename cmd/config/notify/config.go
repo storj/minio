@@ -17,7 +17,7 @@
 package notify
 
 import (
-	"github.com/minio/minio/pkg/event/target"
+	"storj.io/minio/pkg/event/target"
 )
 
 // Config - notification target configuration structure, holds

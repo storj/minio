@@ -24,8 +24,9 @@ import (
 
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/madmin"
+
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/madmin"
 )
 
 // CheckPreconditionFn returns true if precondition check failed.

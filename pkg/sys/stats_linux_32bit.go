@@ -1,3 +1,4 @@
+//go:build (linux && arm) || (linux && 386)
 // +build linux,arm linux,386
 
 /*
@@ -22,7 +23,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/minio/minio/pkg/cgroup"
+	"storj.io/minio/pkg/cgroup"
 )
 
 // Get the final system memory limit chosen by the user.

@@ -1,3 +1,4 @@
+//go:build linux || darwin || dragonfly || freebsd || netbsd || openbsd || rumprun
 // +build linux darwin dragonfly freebsd netbsd openbsd rumprun
 
 /*

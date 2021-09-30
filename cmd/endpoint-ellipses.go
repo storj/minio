@@ -23,9 +23,10 @@ import (
 	"strings"
 
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/ellipses"
-	"github.com/minio/minio/pkg/env"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/pkg/ellipses"
+	"storj.io/minio/pkg/env"
 )
 
 // This file implements and supports ellipses pattern for

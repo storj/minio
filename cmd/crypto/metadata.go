@@ -19,8 +19,8 @@ import (
 	"encoding/base64"
 	"errors"
 
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
 )
 
 // IsMultiPart returns true if the object metadata indicates

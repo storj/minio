@@ -25,9 +25,10 @@ import (
 	"strings"
 
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/logger"
-	xnet "github.com/minio/minio/pkg/net"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/cmd/logger"
+	xnet "storj.io/minio/pkg/net"
 )
 
 // IPv4 addresses of local host.

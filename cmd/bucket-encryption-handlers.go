@@ -23,8 +23,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/bucket/policy"
+
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/bucket/policy"
 )
 
 const (

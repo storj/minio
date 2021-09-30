@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minio/minio/pkg/certs"
+	"storj.io/minio/pkg/certs"
 )
 
 func TestNewServer(t *testing.T) {

@@ -28,14 +28,15 @@ import (
 	miniogo "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/minio/cmd/crypto"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/bucket/bandwidth"
-	"github.com/minio/minio/pkg/bucket/replication"
-	"github.com/minio/minio/pkg/event"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/madmin"
+
+	"storj.io/minio/cmd/crypto"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/bucket/bandwidth"
+	"storj.io/minio/pkg/bucket/replication"
+	"storj.io/minio/pkg/event"
+	iampolicy "storj.io/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/madmin"
 )
 
 // gets replication config associated to a given bucket name.

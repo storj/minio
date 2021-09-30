@@ -20,7 +20,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/minio/minio/cmd/logger"
+	"storj.io/minio/cmd/logger"
 )
 
 var isMultipartTests = []struct {

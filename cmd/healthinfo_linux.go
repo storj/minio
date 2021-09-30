@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 /*
@@ -25,10 +26,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/minio/minio/pkg/madmin"
-	"github.com/minio/minio/pkg/smart"
 	diskhw "github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/host"
+
+	"storj.io/minio/pkg/madmin"
+	"storj.io/minio/pkg/smart"
 )
 
 func getLocalOsInfo(ctx context.Context, r *http.Request) madmin.ServerOsInfo {

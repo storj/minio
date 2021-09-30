@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in https://golang.org/LICENSE
 
+//go:build gofuzz
 // +build gofuzz
 
 package csv

@@ -29,17 +29,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/config/heal"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/bucket/lifecycle"
-	"github.com/minio/minio/pkg/bucket/replication"
-	"github.com/minio/minio/pkg/color"
-	"github.com/minio/minio/pkg/env"
-	"github.com/minio/minio/pkg/event"
-	"github.com/minio/minio/pkg/hash"
-	"github.com/minio/minio/pkg/madmin"
 	"github.com/willf/bloom"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/cmd/config/heal"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/bucket/lifecycle"
+	"storj.io/minio/pkg/bucket/replication"
+	"storj.io/minio/pkg/color"
+	"storj.io/minio/pkg/env"
+	"storj.io/minio/pkg/event"
+	"storj.io/minio/pkg/hash"
+	"storj.io/minio/pkg/madmin"
 )
 
 const (

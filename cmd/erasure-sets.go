@@ -32,11 +32,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/bpool"
-	"github.com/minio/minio/pkg/dsync"
-	"github.com/minio/minio/pkg/madmin"
-	"github.com/minio/minio/pkg/sync/errgroup"
+
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/bpool"
+	"storj.io/minio/pkg/dsync"
+	"storj.io/minio/pkg/madmin"
+	"storj.io/minio/pkg/sync/errgroup"
 )
 
 // setsDsyncLockers is encapsulated type for Close()

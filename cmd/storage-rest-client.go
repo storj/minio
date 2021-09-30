@@ -31,12 +31,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio/cmd/http"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/cmd/rest"
-	xnet "github.com/minio/minio/pkg/net"
 	"github.com/tinylib/msgp/msgp"
+
+	"storj.io/minio/cmd/http"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/cmd/rest"
+	xnet "storj.io/minio/pkg/net"
 )
 
 func isNetworkError(err error) bool {

@@ -29,12 +29,13 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/cmd/logger"
-	b "github.com/minio/minio/pkg/bucket/bandwidth"
-	"github.com/minio/minio/pkg/event"
-	"github.com/minio/minio/pkg/madmin"
-	trace "github.com/minio/minio/pkg/trace"
 	"github.com/tinylib/msgp/msgp"
+
+	"storj.io/minio/cmd/logger"
+	b "storj.io/minio/pkg/bucket/bandwidth"
+	"storj.io/minio/pkg/event"
+	"storj.io/minio/pkg/madmin"
+	trace "storj.io/minio/pkg/trace"
 )
 
 // To abstract a node over network.

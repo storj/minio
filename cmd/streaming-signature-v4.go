@@ -30,7 +30,8 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/minio/minio/pkg/auth"
+
+	"storj.io/minio/pkg/auth"
 )
 
 // Streaming AWS Signature Version '4' constants.

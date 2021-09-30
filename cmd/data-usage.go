@@ -22,8 +22,9 @@ import (
 	"encoding/json"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/hash"
+
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/hash"
 )
 
 const (

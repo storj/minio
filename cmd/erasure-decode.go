@@ -23,7 +23,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/minio/minio/cmd/logger"
+	"storj.io/minio/cmd/logger"
 )
 
 var errHealRequired = errors.New("heal required")

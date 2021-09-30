@@ -24,16 +24,17 @@ import (
 	"sync"
 
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/minio/cmd/logger"
-	bucketsse "github.com/minio/minio/pkg/bucket/encryption"
-	"github.com/minio/minio/pkg/bucket/lifecycle"
-	objectlock "github.com/minio/minio/pkg/bucket/object/lock"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/bucket/replication"
-	"github.com/minio/minio/pkg/bucket/versioning"
-	"github.com/minio/minio/pkg/event"
-	"github.com/minio/minio/pkg/madmin"
-	"github.com/minio/minio/pkg/sync/errgroup"
+
+	"storj.io/minio/cmd/logger"
+	bucketsse "storj.io/minio/pkg/bucket/encryption"
+	"storj.io/minio/pkg/bucket/lifecycle"
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/bucket/replication"
+	"storj.io/minio/pkg/bucket/versioning"
+	"storj.io/minio/pkg/event"
+	"storj.io/minio/pkg/madmin"
+	"storj.io/minio/pkg/sync/errgroup"
 )
 
 // BucketMetadataSys captures all bucket metadata for a given cluster.

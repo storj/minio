@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/minio/minio/pkg/madmin"
+	"storj.io/minio/pkg/madmin"
 )
 
 // validates functionality provided to find most common

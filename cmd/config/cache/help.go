@@ -16,7 +16,7 @@
 
 package cache
 
-import "github.com/minio/minio/cmd/config"
+import "storj.io/minio/cmd/config"
 
 // Help template for caching feature.
 var (

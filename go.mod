@@ -1,4 +1,4 @@
-module github.com/minio/minio
+module storj.io/minio
 
 go 1.14
 

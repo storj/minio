@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"strconv"
 
-	xhttp "github.com/minio/minio/cmd/http"
+	xhttp "storj.io/minio/cmd/http"
 )
 
 const unavailable = "offline"

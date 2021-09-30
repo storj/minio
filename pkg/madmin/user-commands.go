@@ -25,8 +25,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio/pkg/auth"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/auth"
+	iampolicy "storj.io/minio/pkg/iam/policy"
 )
 
 // AccountAccess contains information about

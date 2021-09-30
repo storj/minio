@@ -19,7 +19,7 @@ package cmd
 import (
 	"net/http"
 
-	"github.com/minio/minio/pkg/madmin"
+	"storj.io/minio/pkg/madmin"
 )
 
 // getLocalServerProperty - returns madmin.ServerProperties for only the

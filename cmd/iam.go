@@ -30,11 +30,12 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/madmin"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	iampolicy "storj.io/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/madmin"
 )
 
 // UsersSysType - defines the type of users and groups system that is

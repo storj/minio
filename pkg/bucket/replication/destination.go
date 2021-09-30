@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio/minio/pkg/wildcard"
+	"storj.io/minio/pkg/wildcard"
 )
 
 // DestinationARNPrefix - destination ARN prefix as per AWS S3 specification.

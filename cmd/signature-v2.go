@@ -28,9 +28,9 @@ import (
 	"strconv"
 	"strings"
 
-	xhttp "github.com/minio/minio/cmd/http"
+	xhttp "storj.io/minio/cmd/http"
 
-	"github.com/minio/minio/pkg/auth"
+	"storj.io/minio/pkg/auth"
 )
 
 // Whitelist resource list that will be used in query string for signature-V2 calculation.

@@ -35,20 +35,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/minio/pkg/env"
+	"storj.io/minio/pkg/env"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/cli"
 	miniogopolicy "github.com/minio/minio-go/v7/pkg/policy"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/bucket/policy/condition"
 	sha256 "github.com/minio/sha256-simd"
 
-	minio "github.com/minio/minio/cmd"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/bucket/policy/condition"
+
+	minio "storj.io/minio/cmd"
 )
 
 var (

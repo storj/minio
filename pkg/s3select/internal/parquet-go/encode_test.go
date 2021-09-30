@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"storj.io/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
 )
 
 func TestBoolsToBytes(t *testing.T) {
