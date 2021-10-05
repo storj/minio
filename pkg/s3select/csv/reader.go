@@ -25,8 +25,8 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	csv "storj.io/minio/pkg/csvparser"
-	"storj.io/minio/pkg/s3select/sql"
+	csv "github.com/minio/minio/pkg/csvparser"
+	"github.com/minio/minio/pkg/s3select/sql"
 )
 
 // Reader - CSV record reader for S3Select.

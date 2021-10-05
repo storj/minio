@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"storj.io/minio/pkg/dsync"
+	"github.com/minio/minio/pkg/dsync"
 )
 
 // lockRequesterInfo stores various info from the client for each lock that is requested.

@@ -16,7 +16,7 @@
 
 package cmd
 
-import "storj.io/minio/pkg/bucket/versioning"
+import "github.com/minio/minio/pkg/bucket/versioning"
 
 // BucketVersioningSys - policy subsystem.
 type BucketVersioningSys struct{}

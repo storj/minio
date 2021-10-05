@@ -22,7 +22,7 @@ import (
 	"sync"
 	"testing"
 
-	"storj.io/minio/pkg/dsync"
+	"github.com/minio/minio/pkg/dsync"
 )
 
 // Helper function to create a lock server for testing

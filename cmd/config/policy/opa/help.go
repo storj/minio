@@ -16,7 +16,7 @@
 
 package opa
 
-import "storj.io/minio/cmd/config"
+import "github.com/minio/minio/cmd/config"
 
 // Help template for OPA policy feature.
 var (

@@ -26,7 +26,7 @@ import (
 	"net/url"
 	"strings"
 
-	"storj.io/minio/pkg/auth"
+	"github.com/minio/minio/pkg/auth"
 )
 
 // ServiceType represents service type

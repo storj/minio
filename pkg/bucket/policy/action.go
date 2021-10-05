@@ -19,7 +19,7 @@ package policy
 import (
 	"encoding/json"
 
-	"storj.io/minio/pkg/bucket/policy/condition"
+	"github.com/minio/minio/pkg/bucket/policy/condition"
 )
 
 // Action - policy action.

@@ -26,8 +26,8 @@ import (
 	"strings"
 	"time"
 
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/cmd/logger"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/cmd/logger"
 )
 
 // Target implements logger.Target and sends the json

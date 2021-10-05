@@ -35,16 +35,15 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/tags"
-
-	"storj.io/minio/cmd/config"
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/bucket/policy"
-	"storj.io/minio/pkg/color"
-	"storj.io/minio/pkg/lock"
-	"storj.io/minio/pkg/madmin"
-	"storj.io/minio/pkg/mimedb"
-	"storj.io/minio/pkg/mountinfo"
+	"github.com/minio/minio/cmd/config"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/bucket/policy"
+	"github.com/minio/minio/pkg/color"
+	"github.com/minio/minio/pkg/lock"
+	"github.com/minio/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/mimedb"
+	"github.com/minio/minio/pkg/mountinfo"
 )
 
 // Default etag is used for pre-existing objects.

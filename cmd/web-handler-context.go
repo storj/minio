@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/handlers"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/handlers"
 )
 
 const (

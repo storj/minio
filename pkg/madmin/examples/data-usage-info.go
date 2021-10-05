@@ -1,4 +1,3 @@
-//go:build ignore
 // +build ignore
 
 /*
@@ -24,7 +23,7 @@ import (
 	"context"
 	"log"
 
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 func main() {

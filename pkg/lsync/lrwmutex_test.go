@@ -28,7 +28,7 @@ import (
 
 	"runtime"
 
-	. "storj.io/minio/pkg/lsync"
+	. "github.com/minio/minio/pkg/lsync"
 )
 
 func testSimpleWriteLock(t *testing.T, duration time.Duration) (locked bool) {

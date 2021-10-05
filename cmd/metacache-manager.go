@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"storj.io/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger"
 )
 
 // localMetacacheMgr is the *local* manager for this peer.

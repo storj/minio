@@ -20,9 +20,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
 	"github.com/tidwall/gjson"
-
-	"storj.io/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
 )
 
 func resultToBool(result gjson.Result) (value interface{}, err error) {

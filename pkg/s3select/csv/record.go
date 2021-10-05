@@ -23,9 +23,8 @@ import (
 	"io"
 
 	"github.com/bcicen/jstream"
-
-	csv "storj.io/minio/pkg/csvparser"
-	"storj.io/minio/pkg/s3select/sql"
+	csv "github.com/minio/minio/pkg/csvparser"
+	"github.com/minio/minio/pkg/s3select/sql"
 )
 
 // Record - is a CSV record.

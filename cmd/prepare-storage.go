@@ -28,10 +28,9 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/sync/errgroup"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/sync/errgroup"
 )
 
 var printEndpointError = func() func(Endpoint, error, bool) {

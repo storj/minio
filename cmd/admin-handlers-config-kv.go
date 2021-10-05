@@ -26,19 +26,18 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/cmd/config/cache"
-	"storj.io/minio/cmd/config/etcd"
-	xldap "storj.io/minio/cmd/config/identity/ldap"
-	"storj.io/minio/cmd/config/identity/openid"
-	"storj.io/minio/cmd/config/policy/opa"
-	"storj.io/minio/cmd/config/storageclass"
-	"storj.io/minio/cmd/crypto"
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/auth"
-	iampolicy "storj.io/minio/pkg/iam/policy"
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/cmd/config/cache"
+	"github.com/minio/minio/cmd/config/etcd"
+	xldap "github.com/minio/minio/cmd/config/identity/ldap"
+	"github.com/minio/minio/cmd/config/identity/openid"
+	"github.com/minio/minio/cmd/config/policy/opa"
+	"github.com/minio/minio/cmd/config/storageclass"
+	"github.com/minio/minio/cmd/crypto"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/auth"
+	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 func validateAdminReqConfigKV(ctx context.Context, w http.ResponseWriter, r *http.Request) (auth.Credentials, ObjectLayer) {

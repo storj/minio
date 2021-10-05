@@ -22,9 +22,8 @@ import (
 
 	miniogopolicy "github.com/minio/minio-go/v7/pkg/policy"
 	"github.com/minio/minio-go/v7/pkg/set"
-
-	"storj.io/minio/pkg/bucket/policy"
-	"storj.io/minio/pkg/bucket/policy/condition"
+	"github.com/minio/minio/pkg/bucket/policy"
+	"github.com/minio/minio/pkg/bucket/policy/condition"
 )
 
 func TestPolicySysIsAllowed(t *testing.T) {

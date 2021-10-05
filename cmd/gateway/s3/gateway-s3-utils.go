@@ -17,7 +17,7 @@
 package s3
 
 import (
-	minio "storj.io/minio/cmd"
+	minio "github.com/minio/minio/cmd"
 )
 
 // List of header keys to be filtered, usually

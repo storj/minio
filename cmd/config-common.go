@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 
-	"storj.io/minio/pkg/hash"
+	"github.com/minio/minio/pkg/hash"
 )
 
 var errConfigNotFound = errors.New("config file not found")

@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"storj.io/minio/pkg/ellipses"
+	"github.com/minio/minio/pkg/ellipses"
 )
 
 // Tests create endpoints with ellipses and without.

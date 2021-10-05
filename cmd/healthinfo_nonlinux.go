@@ -1,4 +1,3 @@
-//go:build !linux
 // +build !linux
 
 /*
@@ -25,7 +24,7 @@ import (
 	"net/http"
 	"runtime"
 
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 func getLocalDiskHwInfo(ctx context.Context, r *http.Request) madmin.ServerDiskHwInfo {

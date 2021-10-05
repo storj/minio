@@ -22,7 +22,7 @@ import (
 
 	"sync"
 
-	"storj.io/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger"
 )
 
 // Writes in parallel to writers

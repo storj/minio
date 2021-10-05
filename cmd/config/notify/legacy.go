@@ -21,8 +21,8 @@ import (
 	"strconv"
 	"strings"
 
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/pkg/event/target"
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/pkg/event/target"
 )
 
 // SetNotifyKafka - helper for config migration from older config.

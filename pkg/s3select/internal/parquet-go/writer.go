@@ -23,10 +23,9 @@ import (
 	"io"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
-
-	"storj.io/minio/pkg/s3select/internal/parquet-go/data"
-	"storj.io/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
-	"storj.io/minio/pkg/s3select/internal/parquet-go/schema"
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/data"
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/schema"
 )
 
 const (

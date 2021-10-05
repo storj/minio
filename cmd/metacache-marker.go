@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"storj.io/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger"
 )
 
 // markerTagVersion is the marker version.

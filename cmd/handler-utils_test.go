@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"storj.io/minio/cmd/config"
+	"github.com/minio/minio/cmd/config"
 )
 
 // Tests validate bucket LocationConstraint.

@@ -21,8 +21,7 @@ import (
 	"sync"
 
 	"github.com/klauspost/reedsolomon"
-
-	"storj.io/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger"
 )
 
 // Erasure - erasure encoding details.

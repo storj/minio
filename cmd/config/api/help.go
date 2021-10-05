@@ -16,7 +16,7 @@
 
 package api
 
-import "storj.io/minio/cmd/config"
+import "github.com/minio/minio/cmd/config"
 
 // Help template for storageclass feature.
 var (

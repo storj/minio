@@ -23,7 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"storj.io/minio/pkg/auth"
+	"github.com/minio/minio/pkg/auth"
 )
 
 // Test S3 Bucket lifecycle APIs with wrong credentials

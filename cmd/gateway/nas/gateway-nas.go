@@ -20,9 +20,8 @@ import (
 	"context"
 
 	"github.com/minio/cli"
-
-	minio "storj.io/minio/cmd"
-	"storj.io/minio/pkg/auth"
+	minio "github.com/minio/minio/cmd"
+	"github.com/minio/minio/pkg/auth"
 )
 
 func init() {

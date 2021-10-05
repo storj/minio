@@ -26,9 +26,8 @@ import (
 	"unicode/utf8"
 
 	jsoniter "github.com/json-iterator/go"
-
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 const (

@@ -33,9 +33,8 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v7/pkg/set"
-
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/pkg/bucket/policy"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/pkg/bucket/policy"
 )
 
 // API suite container common to both FS and Erasure.

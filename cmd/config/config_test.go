@@ -20,7 +20,7 @@ package config
 import (
 	"testing"
 
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 func TestKVFields(t *testing.T) {

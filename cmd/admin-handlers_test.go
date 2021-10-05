@@ -29,9 +29,8 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-
-	"storj.io/minio/pkg/auth"
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/auth"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 // adminErasureTestBed - encapsulates subsystems that need to be setup for

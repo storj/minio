@@ -25,10 +25,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/pkg/env"
 	ldap "gopkg.in/ldap.v3"
-
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/pkg/env"
 )
 
 const (

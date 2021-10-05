@@ -1,4 +1,3 @@
-//go:build linux && s390x
 // +build linux,s390x
 
 /*

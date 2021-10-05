@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"log"
 
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 func main() {

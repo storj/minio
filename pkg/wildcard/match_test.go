@@ -19,7 +19,7 @@ package wildcard_test
 import (
 	"testing"
 
-	"storj.io/minio/pkg/wildcard"
+	"github.com/minio/minio/pkg/wildcard"
 )
 
 // TestMatch - Tests validate the logic of wild card matching.

@@ -24,26 +24,24 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/set"
-
-	"storj.io/minio/pkg/bucket/bandwidth"
+	"github.com/minio/minio/pkg/bucket/bandwidth"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/minio/minio/cmd/config/cache"
+	"github.com/minio/minio/cmd/config/compress"
+	"github.com/minio/minio/cmd/config/dns"
+	xldap "github.com/minio/minio/cmd/config/identity/ldap"
+	"github.com/minio/minio/cmd/config/identity/openid"
+	"github.com/minio/minio/cmd/config/policy/opa"
+	"github.com/minio/minio/cmd/config/storageclass"
+	"github.com/minio/minio/cmd/crypto"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/pkg/auth"
 	etcd "go.etcd.io/etcd/clientv3"
 
-	"storj.io/minio/cmd/config/cache"
-	"storj.io/minio/cmd/config/compress"
-	"storj.io/minio/cmd/config/dns"
-	xldap "storj.io/minio/cmd/config/identity/ldap"
-	"storj.io/minio/cmd/config/identity/openid"
-	"storj.io/minio/cmd/config/policy/opa"
-	"storj.io/minio/cmd/config/storageclass"
-	"storj.io/minio/cmd/crypto"
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/pkg/auth"
-
-	"storj.io/minio/pkg/certs"
-	"storj.io/minio/pkg/event"
-	"storj.io/minio/pkg/pubsub"
+	"github.com/minio/minio/pkg/certs"
+	"github.com/minio/minio/pkg/event"
+	"github.com/minio/minio/pkg/pubsub"
 )
 
 // minio configuration related constants.

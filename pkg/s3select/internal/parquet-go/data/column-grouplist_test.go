@@ -20,8 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"storj.io/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
-	"storj.io/minio/pkg/s3select/internal/parquet-go/schema"
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/schema"
 )
 
 func TestPopulateGroupList(t *testing.T) {

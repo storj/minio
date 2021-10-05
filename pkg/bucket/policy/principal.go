@@ -20,8 +20,7 @@ import (
 	"encoding/json"
 
 	"github.com/minio/minio-go/v7/pkg/set"
-
-	"storj.io/minio/pkg/wildcard"
+	"github.com/minio/minio/pkg/wildcard"
 )
 
 // Principal - policy principal.

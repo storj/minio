@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/pkg/ellipses"
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/pkg/ellipses"
 )
 
 // Config represents cache config settings

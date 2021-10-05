@@ -1,4 +1,3 @@
-//go:build linux || darwin || netbsd || solaris
 // +build linux darwin netbsd solaris
 
 /*

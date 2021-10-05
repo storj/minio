@@ -24,7 +24,7 @@ import (
 	"hash"
 	"io"
 
-	"storj.io/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger"
 )
 
 type errHashMismatch struct {

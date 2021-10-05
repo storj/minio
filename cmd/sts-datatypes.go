@@ -19,7 +19,7 @@ package cmd
 import (
 	"encoding/xml"
 
-	"storj.io/minio/pkg/auth"
+	"github.com/minio/minio/pkg/auth"
 )
 
 // AssumedRoleUser - The identifiers for the temporary security credentials that

@@ -27,8 +27,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"storj.io/minio/pkg/event"
-	xnet "storj.io/minio/pkg/net"
+	"github.com/minio/minio/pkg/event"
+	xnet "github.com/minio/minio/pkg/net"
 
 	sarama "github.com/Shopify/sarama"
 	saramatls "github.com/Shopify/sarama/tools/tls"

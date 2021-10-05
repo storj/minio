@@ -1,4 +1,3 @@
-//go:build go1.14
 // +build go1.14
 
 /*
@@ -28,10 +27,10 @@ package main // import "github.com/minio/minio"
 import (
 	"os"
 
-	minio "storj.io/minio/cmd"
+	minio "github.com/minio/minio/cmd"
 
 	// Import gateway
-	_ "storj.io/minio/cmd/gateway"
+	_ "github.com/minio/minio/cmd/gateway"
 )
 
 func main() {

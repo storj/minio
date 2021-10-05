@@ -16,7 +16,7 @@
 
 package logger
 
-import "storj.io/minio/cmd/config"
+import "github.com/minio/minio/cmd/config"
 
 // Help template for logger http and audit
 var (

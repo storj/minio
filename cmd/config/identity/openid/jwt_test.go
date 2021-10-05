@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	xnet "storj.io/minio/pkg/net"
+	xnet "github.com/minio/minio/pkg/net"
 )
 
 func TestUpdateClaimsExpiry(t *testing.T) {

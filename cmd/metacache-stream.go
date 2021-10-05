@@ -27,9 +27,8 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/klauspost/compress/s2"
+	"github.com/minio/minio/cmd/logger"
 	"github.com/tinylib/msgp/msgp"
-
-	"storj.io/minio/cmd/logger"
 )
 
 // metadata stream format:

@@ -25,7 +25,7 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 
-	"storj.io/minio/pkg/env"
+	"github.com/minio/minio/pkg/env"
 )
 
 // EnvCertPassword is the environment variable which contains the password used

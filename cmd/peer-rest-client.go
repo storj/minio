@@ -32,17 +32,16 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/minio/minio/cmd/http"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/cmd/rest"
+	"github.com/minio/minio/pkg/bandwidth"
+	"github.com/minio/minio/pkg/event"
+	"github.com/minio/minio/pkg/madmin"
+	xnet "github.com/minio/minio/pkg/net"
+	"github.com/minio/minio/pkg/trace"
 	"github.com/tinylib/msgp/msgp"
-
-	"storj.io/minio/cmd/http"
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/cmd/rest"
-	"storj.io/minio/pkg/bandwidth"
-	"storj.io/minio/pkg/event"
-	"storj.io/minio/pkg/madmin"
-	xnet "storj.io/minio/pkg/net"
-	"storj.io/minio/pkg/trace"
 )
 
 // client to talk to peer Nodes.

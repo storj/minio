@@ -29,12 +29,11 @@ import (
 	"time"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
-
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/pkg/auth"
-	"storj.io/minio/pkg/env"
-	iampolicy "storj.io/minio/pkg/iam/policy"
-	xnet "storj.io/minio/pkg/net"
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/pkg/auth"
+	"github.com/minio/minio/pkg/env"
+	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	xnet "github.com/minio/minio/pkg/net"
 )
 
 // Config - OpenID Config

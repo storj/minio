@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"storj.io/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
 )
 
 func TestRLEEncodeInt32s(t *testing.T) {

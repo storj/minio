@@ -28,8 +28,7 @@ import (
 	"github.com/dustin/go-humanize"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-
-	minio "storj.io/minio/cmd"
+	minio "github.com/minio/minio/cmd"
 )
 
 func TestParseStorageEndpoint(t *testing.T) {

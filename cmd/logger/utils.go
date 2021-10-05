@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"runtime"
 
-	"storj.io/minio/pkg/color"
+	"github.com/minio/minio/pkg/color"
 )
 
 var ansiRE = regexp.MustCompile("(\x1b[^m]*m)")

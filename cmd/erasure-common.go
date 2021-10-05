@@ -21,7 +21,7 @@ import (
 	"path"
 	"sync"
 
-	"storj.io/minio/pkg/sync/errgroup"
+	"github.com/minio/minio/pkg/sync/errgroup"
 )
 
 func (er erasureObjects) getLoadBalancedLocalDisks() (newDisks []StorageAPI) {

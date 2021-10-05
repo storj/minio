@@ -25,8 +25,7 @@ import (
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
-
-	"storj.io/minio/cmd/config/storageclass"
+	"github.com/minio/minio/cmd/config/storageclass"
 )
 
 func TestRepeatPutObjectPart(t *testing.T) {

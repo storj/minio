@@ -20,7 +20,7 @@ import (
 	"errors"
 	"io"
 
-	bucketsse "storj.io/minio/pkg/bucket/encryption"
+	bucketsse "github.com/minio/minio/pkg/bucket/encryption"
 )
 
 // BucketSSEConfigSys - in-memory cache of bucket encryption config

@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/pkg/env"
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/pkg/env"
 )
 
 // API sub-system constants

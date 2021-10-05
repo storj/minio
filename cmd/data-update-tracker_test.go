@@ -28,8 +28,8 @@ import (
 	"sync"
 	"testing"
 
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/cmd/logger/message/log"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger/message/log"
 )
 
 type testLoggerI interface {

@@ -21,8 +21,8 @@ import (
 	"errors"
 	"hash/crc32"
 
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/sync/errgroup"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/sync/errgroup"
 )
 
 // Returns number of errors that occurred the most (incl. nil) and the

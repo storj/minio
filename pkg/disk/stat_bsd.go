@@ -1,4 +1,3 @@
-//go:build darwin || freebsd || dragonfly
 // +build darwin freebsd dragonfly
 
 /*

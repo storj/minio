@@ -17,7 +17,7 @@
 package opa
 
 import (
-	"storj.io/minio/cmd/config"
+	"github.com/minio/minio/cmd/config"
 )
 
 // Legacy OPA envs

@@ -35,19 +35,18 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/cmd/crypto"
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/cmd/logger/message/log"
-	"storj.io/minio/pkg/auth"
-	"storj.io/minio/pkg/bandwidth"
-	"storj.io/minio/pkg/handlers"
-	iampolicy "storj.io/minio/pkg/iam/policy"
-	"storj.io/minio/pkg/madmin"
-	xnet "storj.io/minio/pkg/net"
-	trace "storj.io/minio/pkg/trace"
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/cmd/crypto"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger/message/log"
+	"github.com/minio/minio/pkg/auth"
+	"github.com/minio/minio/pkg/bandwidth"
+	"github.com/minio/minio/pkg/handlers"
+	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"github.com/minio/minio/pkg/madmin"
+	xnet "github.com/minio/minio/pkg/net"
+	trace "github.com/minio/minio/pkg/trace"
 )
 
 const (

@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 // commonTime returns a maximally occurring time from a list of time.

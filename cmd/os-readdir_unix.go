@@ -1,4 +1,3 @@
-//go:build (linux && !appengine) || darwin || freebsd || netbsd || openbsd
 // +build linux,!appengine darwin freebsd netbsd openbsd
 
 /*

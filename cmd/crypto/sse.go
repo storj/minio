@@ -21,10 +21,9 @@ import (
 	"net/http"
 	"path"
 
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/ioutil"
 	"github.com/minio/sio"
-
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/ioutil"
 )
 
 const (

@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"storj.io/minio/pkg/bucket/policy/condition"
+	"github.com/minio/minio/pkg/bucket/policy/condition"
 )
 
 // Statement - policy statement.

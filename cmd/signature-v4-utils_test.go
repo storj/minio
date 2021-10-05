@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"testing"
 
-	"storj.io/minio/cmd/crypto"
+	"github.com/minio/minio/cmd/crypto"
 )
 
 // TestSkipContentSha256Cksum - Test validate the logic which decides whether

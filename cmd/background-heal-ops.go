@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 // healTask represents what to heal along with options

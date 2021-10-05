@@ -1,4 +1,3 @@
-//go:build (linux || darwin) && !appengine
 // +build linux darwin
 // +build !appengine
 

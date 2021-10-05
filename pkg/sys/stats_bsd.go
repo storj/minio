@@ -1,4 +1,3 @@
-//go:build openbsd || freebsd || dragonfly
 // +build openbsd freebsd dragonfly
 
 /*

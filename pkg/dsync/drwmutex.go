@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"storj.io/minio/pkg/console"
+	"github.com/minio/minio/pkg/console"
 )
 
 // Indicator if logging is enabled.

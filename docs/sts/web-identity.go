@@ -1,4 +1,3 @@
-//go:build ignore
 // +build ignore
 
 /*
@@ -38,8 +37,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-
-	"storj.io/minio/pkg/auth"
+	"github.com/minio/minio/pkg/auth"
 )
 
 // AssumedRoleUser - The identifiers for the temporary security credentials that

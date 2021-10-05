@@ -16,7 +16,7 @@
 
 package ldap
 
-import "storj.io/minio/cmd/config"
+import "github.com/minio/minio/cmd/config"
 
 // Help template for LDAP identity feature.
 var (

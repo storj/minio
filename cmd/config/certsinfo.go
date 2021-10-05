@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"strings"
 
-	color "storj.io/minio/pkg/color"
+	color "github.com/minio/minio/pkg/color"
 )
 
 // Extra ASN1 OIDs that we may need to handle

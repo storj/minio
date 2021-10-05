@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"storj.io/minio/pkg/bandwidth"
+	"github.com/minio/minio/pkg/bandwidth"
 )
 
 const (

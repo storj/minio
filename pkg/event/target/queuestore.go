@@ -25,8 +25,8 @@ import (
 	"sort"
 	"sync"
 
-	"storj.io/minio/pkg/event"
-	"storj.io/minio/pkg/sys"
+	"github.com/minio/minio/pkg/event"
+	"github.com/minio/minio/pkg/sys"
 )
 
 const (

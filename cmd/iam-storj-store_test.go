@@ -8,9 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/minio/minio/pkg/auth"
 	"github.com/stretchr/testify/require"
-
-	"storj.io/minio/pkg/auth"
 )
 
 func TestLoadUserBadURL(t *testing.T) {

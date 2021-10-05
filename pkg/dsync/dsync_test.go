@@ -32,8 +32,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	. "storj.io/minio/pkg/dsync"
+	. "github.com/minio/minio/pkg/dsync"
 )
 
 var ds *Dsync

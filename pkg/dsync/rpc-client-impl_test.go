@@ -21,7 +21,7 @@ import (
 	"net/rpc"
 	"sync"
 
-	. "storj.io/minio/pkg/dsync"
+	. "github.com/minio/minio/pkg/dsync"
 )
 
 // ReconnectRPCClient is a wrapper type for rpc.Client which provides reconnect on first failure.

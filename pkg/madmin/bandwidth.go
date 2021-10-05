@@ -24,7 +24,7 @@ import (
 	"net/url"
 	"strings"
 
-	"storj.io/minio/pkg/bandwidth"
+	"github.com/minio/minio/pkg/bandwidth"
 )
 
 // Report includes the bandwidth report or the error encountered.

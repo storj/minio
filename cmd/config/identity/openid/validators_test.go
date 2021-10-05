@@ -21,7 +21,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	xnet "storj.io/minio/pkg/net"
+	xnet "github.com/minio/minio/pkg/net"
 )
 
 type errorValidator struct{}

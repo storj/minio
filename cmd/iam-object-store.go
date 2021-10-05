@@ -28,10 +28,10 @@ import (
 
 	jwtgo "github.com/dgrijalva/jwt-go"
 
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/auth"
-	iampolicy "storj.io/minio/pkg/iam/policy"
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/auth"
+	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 // IAMObjectStore implements IAMStorageAPI

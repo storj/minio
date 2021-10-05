@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"storj.io/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger"
 )
 
 // listPath will return the requested entries.

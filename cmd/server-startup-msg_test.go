@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 // Tests if we generate storage info.

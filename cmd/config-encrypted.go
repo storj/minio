@@ -23,12 +23,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/auth"
+	"github.com/minio/minio/pkg/madmin"
 	etcd "go.etcd.io/etcd/clientv3"
-
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/auth"
-	"storj.io/minio/pkg/madmin"
 )
 
 func handleEncryptedConfigBackend(objAPI ObjectLayer) error {

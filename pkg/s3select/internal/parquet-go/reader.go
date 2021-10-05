@@ -23,8 +23,7 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/minio/minio-go/v7/pkg/set"
-
-	"storj.io/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
 )
 
 // GetReaderFunc - function type returning io.ReadCloser for requested offset/length.

@@ -21,9 +21,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	xnet "github.com/minio/minio/pkg/net"
 	natsserver "github.com/nats-io/nats-server/v2/test"
-
-	xnet "storj.io/minio/pkg/net"
 )
 
 func TestNatsConnTLSCustomCA(t *testing.T) {

@@ -23,12 +23,12 @@ import (
 	"strings"
 	"time"
 
-	"storj.io/minio/cmd/config"
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/env"
-	"storj.io/minio/pkg/hash"
-	xnet "storj.io/minio/pkg/net"
+	"github.com/minio/minio/cmd/config"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/env"
+	"github.com/minio/minio/pkg/hash"
+	xnet "github.com/minio/minio/pkg/net"
 
 	minio "github.com/minio/minio-go/v7"
 )

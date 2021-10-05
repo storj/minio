@@ -17,8 +17,8 @@
 package iampolicy
 
 import (
-	"storj.io/minio/pkg/bucket/policy/condition"
-	"storj.io/minio/pkg/wildcard"
+	"github.com/minio/minio/pkg/bucket/policy/condition"
+	"github.com/minio/minio/pkg/wildcard"
 )
 
 // Action - policy action.

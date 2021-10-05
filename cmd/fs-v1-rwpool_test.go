@@ -21,7 +21,7 @@ import (
 	"runtime"
 	"testing"
 
-	"storj.io/minio/pkg/lock"
+	"github.com/minio/minio/pkg/lock"
 )
 
 // Tests long path calls.

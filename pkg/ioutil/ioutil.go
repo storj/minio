@@ -23,8 +23,7 @@ import (
 	"os"
 
 	humanize "github.com/dustin/go-humanize"
-
-	"storj.io/minio/pkg/disk"
+	"github.com/minio/minio/pkg/disk"
 )
 
 // defaultAppendBufferSize - Default buffer size for the AppendFile

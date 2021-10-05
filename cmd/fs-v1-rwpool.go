@@ -21,8 +21,8 @@ import (
 	pathutil "path"
 	"sync"
 
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/lock"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/lock"
 )
 
 // fsIOPool represents a protected list to keep track of all

@@ -24,10 +24,9 @@ import (
 	"io"
 	"sort"
 
+	"github.com/minio/minio/cmd/logger"
 	sha256 "github.com/minio/sha256-simd"
 	"github.com/minio/sio"
-
-	"storj.io/minio/cmd/logger"
 )
 
 // Context is a list of key-value pairs cryptographically

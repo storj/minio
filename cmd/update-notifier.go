@@ -25,8 +25,7 @@ import (
 
 	"github.com/cheggaaa/pb"
 	humanize "github.com/dustin/go-humanize"
-
-	"storj.io/minio/pkg/color"
+	"github.com/minio/minio/pkg/color"
 )
 
 // prepareUpdateMessage - prepares the update message, only if a

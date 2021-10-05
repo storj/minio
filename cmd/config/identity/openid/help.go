@@ -16,7 +16,7 @@
 
 package openid
 
-import "storj.io/minio/cmd/config"
+import "github.com/minio/minio/cmd/config"
 
 // Help template for OpenID identity feature.
 var (

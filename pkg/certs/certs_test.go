@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"storj.io/minio/pkg/certs"
+	"github.com/minio/minio/pkg/certs"
 )
 
 func updateCerts(crt, key string) {

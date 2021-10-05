@@ -24,12 +24,12 @@ import (
 	"sync"
 	"time"
 
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/bpool"
-	"storj.io/minio/pkg/color"
-	"storj.io/minio/pkg/dsync"
-	"storj.io/minio/pkg/madmin"
-	"storj.io/minio/pkg/sync/errgroup"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/bpool"
+	"github.com/minio/minio/pkg/color"
+	"github.com/minio/minio/pkg/dsync"
+	"github.com/minio/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/sync/errgroup"
 )
 
 // OfflineDisk represents an unavailable disk.

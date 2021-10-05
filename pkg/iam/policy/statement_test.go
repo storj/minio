@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"testing"
 
-	"storj.io/minio/pkg/bucket/policy"
-	"storj.io/minio/pkg/bucket/policy/condition"
+	"github.com/minio/minio/pkg/bucket/policy"
+	"github.com/minio/minio/pkg/bucket/policy/condition"
 )
 
 func TestStatementIsAllowed(t *testing.T) {

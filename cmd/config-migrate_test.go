@@ -22,7 +22,7 @@ import (
 	"os"
 	"testing"
 
-	"storj.io/minio/cmd/config"
+	"github.com/minio/minio/cmd/config"
 )
 
 // Test if config v1 is purged

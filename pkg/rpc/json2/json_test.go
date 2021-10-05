@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"storj.io/minio/pkg/rpc"
+	"github.com/minio/minio/pkg/rpc"
 )
 
 // ResponseRecorder is an implementation of http.ResponseWriter that

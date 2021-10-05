@@ -22,10 +22,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-
-	"storj.io/minio/cmd/logger"
-	policy "storj.io/minio/pkg/bucket/policy"
-	"storj.io/minio/pkg/event"
+	"github.com/minio/minio/cmd/logger"
+	policy "github.com/minio/minio/pkg/bucket/policy"
+	"github.com/minio/minio/pkg/event"
 )
 
 func (api objectAPIHandlers) ListenNotificationHandler(w http.ResponseWriter, r *http.Request) {

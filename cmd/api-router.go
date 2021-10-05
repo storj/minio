@@ -21,10 +21,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/pkg/wildcard"
 	"github.com/rs/cors"
-
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/pkg/wildcard"
 )
 
 func newHTTPServerFn() *xhttp.Server {

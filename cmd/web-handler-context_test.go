@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"testing"
 
-	"storj.io/minio/cmd/logger"
+	"github.com/minio/minio/cmd/logger"
 )
 
 func TestKeyValueMap(t *testing.T) {

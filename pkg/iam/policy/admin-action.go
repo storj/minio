@@ -17,7 +17,7 @@
 package iampolicy
 
 import (
-	"storj.io/minio/pkg/bucket/policy/condition"
+	"github.com/minio/minio/pkg/bucket/policy/condition"
 )
 
 // AdminAction - admin policy action.

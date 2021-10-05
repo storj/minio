@@ -16,7 +16,7 @@
 
 package etcd
 
-import "storj.io/minio/cmd/config"
+import "github.com/minio/minio/cmd/config"
 
 // etcd config documented in default config
 var (

@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"testing"
 
-	minio "storj.io/minio/cmd"
+	minio "github.com/minio/minio/cmd"
 )
 
 // Tests for GW metadata format validity.

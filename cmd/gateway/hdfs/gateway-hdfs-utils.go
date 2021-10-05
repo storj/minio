@@ -20,8 +20,7 @@ import (
 	"strings"
 
 	"github.com/minio/minio-go/v7/pkg/s3utils"
-
-	minio "storj.io/minio/cmd"
+	minio "github.com/minio/minio/cmd"
 )
 
 const (

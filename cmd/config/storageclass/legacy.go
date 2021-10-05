@@ -17,7 +17,7 @@
 package storageclass
 
 import (
-	"storj.io/minio/cmd/config"
+	"github.com/minio/minio/cmd/config"
 )
 
 // SetStorageClass - One time migration code needed, for migrating from older config to new for StorageClass.

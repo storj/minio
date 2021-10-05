@@ -17,7 +17,7 @@
 package data
 
 import (
-	"storj.io/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
 )
 
 // ColumnChunk ...

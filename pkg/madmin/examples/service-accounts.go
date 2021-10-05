@@ -1,4 +1,3 @@
-//go:build ignore
 // +build ignore
 
 /*
@@ -25,10 +24,10 @@ import (
 	"fmt"
 	"log"
 
-	"storj.io/minio/pkg/bucket/policy"
-	"storj.io/minio/pkg/bucket/policy/condition"
-	iampolicy "storj.io/minio/pkg/iam/policy"
-	"storj.io/minio/pkg/madmin"
+	"github.com/minio/minio/pkg/bucket/policy"
+	"github.com/minio/minio/pkg/bucket/policy/condition"
+	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 func main() {

@@ -27,13 +27,12 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/tags"
-
-	xhttp "storj.io/minio/cmd/http"
-	"storj.io/minio/cmd/logger"
-	"storj.io/minio/pkg/bucket/lifecycle"
-	"storj.io/minio/pkg/bucket/replication"
-	"storj.io/minio/pkg/mimedb"
-	"storj.io/minio/pkg/sync/errgroup"
+	xhttp "github.com/minio/minio/cmd/http"
+	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/pkg/bucket/lifecycle"
+	"github.com/minio/minio/pkg/bucket/replication"
+	"github.com/minio/minio/pkg/mimedb"
+	"github.com/minio/minio/pkg/sync/errgroup"
 )
 
 // list all errors which can be ignored in object operations.

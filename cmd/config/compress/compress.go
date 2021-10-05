@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"storj.io/minio/cmd/config"
-	"storj.io/minio/pkg/env"
+	"github.com/minio/minio/cmd/config"
+	"github.com/minio/minio/pkg/env"
 )
 
 // Config represents the compression settings.
