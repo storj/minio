@@ -35,29 +35,34 @@ type apiConfig struct {
 	listQuorum       int
 	extendListLife   time.Duration
 	corsAllowOrigins []string
-	setDriveCount    int
+	// total drives per erasure set across pools.
+	totalDriveCount    int
+	replicationWorkers int
 }
 
-func (t *apiConfig) init(cfg api.Config, setDriveCount int) {
+func (t *apiConfig) init(cfg api.Config, setDriveCounts []int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	t.clusterDeadline = cfg.ClusterDeadline
 	t.corsAllowOrigins = cfg.CorsAllowOrigin
-	t.setDriveCount = setDriveCount
+	for _, setDriveCount := range setDriveCounts {
+		t.totalDriveCount += setDriveCount
+	}
 
 	var apiRequestsMaxPerNode int
 	if cfg.RequestsMax <= 0 {
 		stats, err := sys.GetStats()
 		if err != nil {
 			logger.LogIf(GlobalContext, err)
-			// Default to 16 GiB, not critical.
-			stats.TotalRAM = 16 << 30
+			// Default to 8 GiB, not critical.
+			stats.TotalRAM = 8 << 30
 		}
 		// max requests per node is calculated as
 		// total_ram / ram_per_request
-		// ram_per_request is 4MiB * setDriveCount + 2 * 10MiB (default erasure block size)
-		apiRequestsMaxPerNode = int(stats.TotalRAM / uint64(setDriveCount*readBlockSize+blockSizeV1*2))
+		// ram_per_request is (2MiB+128KiB) * driveCount \
+		//    + 2 * 10MiB (default erasure block size v1) + 2 * 1MiB (default erasure block size v2)
+		apiRequestsMaxPerNode = int(stats.TotalRAM / uint64(t.totalDriveCount*(blockSizeLarge+blockSizeSmall)+int(blockSizeV1*2+blockSizeV2*2)))
 	} else {
 		apiRequestsMaxPerNode = cfg.RequestsMax
 		if len(globalEndpoints.Hostnames()) > 0 {
@@ -75,6 +80,11 @@ func (t *apiConfig) init(cfg api.Config, setDriveCount int) {
 	t.requestsDeadline = cfg.RequestsDeadline
 	t.listQuorum = cfg.GetListQuorum()
 	t.extendListLife = cfg.ExtendListLife
+	if globalReplicationPool != nil &&
+		cfg.ReplicationWorkers != t.replicationWorkers {
+		globalReplicationPool.Resize(cfg.ReplicationWorkers)
+	}
+	t.replicationWorkers = cfg.ReplicationWorkers
 }
 
 func (t *apiConfig) getListQuorum() int {
@@ -82,13 +92,6 @@ func (t *apiConfig) getListQuorum() int {
 	defer t.mu.RUnlock()
 
 	return t.listQuorum
-}
-
-func (t *apiConfig) getSetDriveCount() int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
-	return t.setDriveCount
 }
 
 func (t *apiConfig) getExtendListLife() time.Duration {
@@ -138,21 +141,33 @@ func maxClients(f http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		globalHTTPStats.addRequestsInQueue(1)
+
 		deadlineTimer := time.NewTimer(deadline)
 		defer deadlineTimer.Stop()
 
 		select {
 		case pool <- struct{}{}:
 			defer func() { <-pool }()
+			globalHTTPStats.addRequestsInQueue(-1)
 			f.ServeHTTP(w, r)
 		case <-deadlineTimer.C:
 			// Send a http timeout message
 			writeErrorResponse(r.Context(), w,
 				errorCodes.ToAPIErr(ErrOperationMaxedOut),
 				r.URL, guessIsBrowserReq(r))
+			globalHTTPStats.addRequestsInQueue(-1)
 			return
 		case <-r.Context().Done():
+			globalHTTPStats.addRequestsInQueue(-1)
 			return
 		}
 	}
+}
+
+func (t *apiConfig) getReplicationWorkers() int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	return t.replicationWorkers
 }

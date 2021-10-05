@@ -41,6 +41,8 @@ const (
 	ObjectCreatedPut
 	ObjectCreatedPutRetention
 	ObjectCreatedPutLegalHold
+	ObjectCreatedPutTagging
+	ObjectCreatedDeleteTagging
 	ObjectRemovedAll
 	ObjectRemovedDelete
 	ObjectRemovedDeleteMarkerCreated
@@ -77,7 +79,7 @@ func (name Name) Expand() []Name {
 			ObjectCreatedCompleteMultipartUpload, ObjectCreatedCopy,
 			ObjectCreatedPost, ObjectCreatedPut,
 			ObjectCreatedPutRetention, ObjectCreatedPutLegalHold,
-			ObjectReplicationComplete, ObjectReplicationFailed,
+			ObjectCreatedPutTagging, ObjectCreatedDeleteTagging,
 		}
 	case ObjectRemovedAll:
 		return []Name{
@@ -134,6 +136,10 @@ func (name Name) String() string {
 		return "s3:ObjectCreated:Post"
 	case ObjectCreatedPut:
 		return "s3:ObjectCreated:Put"
+	case ObjectCreatedPutTagging:
+		return "s3:ObjectCreated:PutTagging"
+	case ObjectCreatedDeleteTagging:
+		return "s3:ObjectCreated:DeleteTagging"
 	case ObjectCreatedPutRetention:
 		return "s3:ObjectCreated:PutRetention"
 	case ObjectCreatedPutLegalHold:
@@ -244,6 +250,10 @@ func ParseName(s string) (Name, error) {
 		return ObjectCreatedPutRetention, nil
 	case "s3:ObjectCreated:PutLegalHold":
 		return ObjectCreatedPutLegalHold, nil
+	case "s3:ObjectCreated:PutTagging":
+		return ObjectCreatedPutTagging, nil
+	case "s3:ObjectCreated:DeleteTagging":
+		return ObjectCreatedDeleteTagging, nil
 	case "s3:ObjectRemoved:*":
 		return ObjectRemovedAll, nil
 	case "s3:ObjectRemoved:Delete":

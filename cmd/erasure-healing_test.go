@@ -160,7 +160,7 @@ func TestHealObjectCorrupted(t *testing.T) {
 	defer removeRoots(fsDirs)
 
 	// Everything is fine, should return nil
-	objLayer, _, err := initObjectLayer(ctx, mustGetZoneEndpoints(fsDirs...))
+	objLayer, _, err := initObjectLayer(ctx, mustGetPoolEndpoints(fsDirs...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestHealObjectCorrupted(t *testing.T) {
 		t.Fatalf("Failed to heal object - %v", err)
 	}
 
-	fileInfos, errs := readAllFileInfo(ctx, erasureDisks, bucket, object, "")
+	fileInfos, errs := readAllFileInfo(ctx, erasureDisks, bucket, object, "", false)
 	fi, err := getLatestFileInfo(ctx, fileInfos, errs)
 	if err != nil {
 		t.Fatalf("Failed to getLatestFileInfo - %v", err)
@@ -239,7 +239,7 @@ func TestHealObjectCorrupted(t *testing.T) {
 		t.Errorf("Expected nil but received %v", err)
 	}
 
-	fileInfos, errs = readAllFileInfo(ctx, erasureDisks, bucket, object, "")
+	fileInfos, errs = readAllFileInfo(ctx, erasureDisks, bucket, object, "", false)
 	nfi, err := getLatestFileInfo(ctx, fileInfos, errs)
 	if err != nil {
 		t.Fatalf("Failed to getLatestFileInfo - %v", err)
@@ -265,7 +265,7 @@ func TestHealObjectCorrupted(t *testing.T) {
 		t.Errorf("Expected nil but received %v", err)
 	}
 
-	fileInfos, errs = readAllFileInfo(ctx, erasureDisks, bucket, object, "")
+	fileInfos, errs = readAllFileInfo(ctx, erasureDisks, bucket, object, "", false)
 	nfi, err = getLatestFileInfo(ctx, fileInfos, errs)
 	if err != nil {
 		t.Fatalf("Failed to getLatestFileInfo - %v", err)
@@ -277,8 +277,8 @@ func TestHealObjectCorrupted(t *testing.T) {
 
 	// Test 4: checks if HealObject returns an error when xl.meta is not found
 	// in more than read quorum number of disks, to create a corrupted situation.
-	for i := 0; i <= len(er.getDisks())/2; i++ {
-		er.getDisks()[i].Delete(context.Background(), bucket, pathJoin(object, xlStorageFormatFile), false)
+	for i := 0; i <= nfi.Erasure.DataBlocks; i++ {
+		erasureDisks[i].Delete(context.Background(), bucket, pathJoin(object, xlStorageFormatFile), false)
 	}
 
 	// Try healing now, expect to receive errFileNotFound.
@@ -310,7 +310,7 @@ func TestHealObjectErasure(t *testing.T) {
 	defer removeRoots(fsDirs)
 
 	// Everything is fine, should return nil
-	obj, _, err := initObjectLayer(ctx, mustGetZoneEndpoints(fsDirs...))
+	obj, _, err := initObjectLayer(ctx, mustGetPoolEndpoints(fsDirs...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +400,7 @@ func TestHealEmptyDirectoryErasure(t *testing.T) {
 	defer removeRoots(fsDirs)
 
 	// Everything is fine, should return nil
-	obj, _, err := initObjectLayer(ctx, mustGetZoneEndpoints(fsDirs...))
+	obj, _, err := initObjectLayer(ctx, mustGetPoolEndpoints(fsDirs...))
 	if err != nil {
 		t.Fatal(err)
 	}

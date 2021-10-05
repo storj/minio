@@ -88,6 +88,8 @@ const (
 	AmzObjectLockLegalHold        = "X-Amz-Object-Lock-Legal-Hold"
 	AmzObjectLockBypassGovernance = "X-Amz-Bypass-Governance-Retention"
 	AmzBucketReplicationStatus    = "X-Amz-Replication-Status"
+	AmzSnowballExtract            = "X-Amz-Meta-Snowball-Auto-Extract"
+
 	// Multipart parts count
 	AmzMpPartsCount = "x-amz-mp-parts-count"
 
@@ -110,6 +112,20 @@ const (
 
 	AmzMetaUnencryptedContentLength = "X-Amz-Meta-X-Amz-Unencrypted-Content-Length"
 	AmzMetaUnencryptedContentMD5    = "X-Amz-Meta-X-Amz-Unencrypted-Content-Md5"
+
+	// AWS server-side encryption headers for SSE-S3, SSE-KMS and SSE-C.
+	AmzServerSideEncryption                      = "X-Amz-Server-Side-Encryption"
+	AmzServerSideEncryptionKmsID                 = AmzServerSideEncryption + "-Aws-Kms-Key-Id"
+	AmzServerSideEncryptionKmsContext            = AmzServerSideEncryption + "-Context"
+	AmzServerSideEncryptionCustomerAlgorithm     = AmzServerSideEncryption + "-Customer-Algorithm"
+	AmzServerSideEncryptionCustomerKey           = AmzServerSideEncryption + "-Customer-Key"
+	AmzServerSideEncryptionCustomerKeyMD5        = AmzServerSideEncryption + "-Customer-Key-Md5"
+	AmzServerSideEncryptionCopyCustomerAlgorithm = "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Algorithm"
+	AmzServerSideEncryptionCopyCustomerKey       = "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key"
+	AmzServerSideEncryptionCopyCustomerKeyMD5    = "X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key-Md5"
+
+	AmzEncryptionAES = "AES256"
+	AmzEncryptionKMS = "aws:kms"
 
 	// Signature v2 related constants
 	AmzSignatureV2 = "Signature"
@@ -149,6 +165,10 @@ const (
 	MinIODeleteReplicationStatus = "X-Minio-Replication-Delete-Status"
 	// Header indicates delete-marker replication status.
 	MinIODeleteMarkerReplicationStatus = "X-Minio-Replication-DeleteMarker-Status"
+	// Header indicates if its a GET/HEAD proxy request for active-active replication
+	MinIOSourceProxyRequest = "X-Minio-Source-Proxy-Request"
+	// Header indicates that this request is a replication request to create a REPLICA
+	MinIOSourceReplicationRequest = "X-Minio-Source-Replication-Request"
 )
 
 // Common http query params S3 API

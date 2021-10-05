@@ -44,13 +44,21 @@ type ObjectOptions struct {
 	MTime                time.Time // Is only set in POST/PUT operations
 	Expires              time.Time // Is only used in POST/PUT operations
 
-	DeleteMarker                  bool                   // Is only set in DELETE operations for delete marker replication
-	UserDefined                   map[string]string      // only set in case of POST/PUT operations
-	PartNumber                    int                    // only useful in case of GetObject/HeadObject
-	CheckPrecondFn                CheckPreconditionFn    // only set during GetObject/HeadObject/CopyObjectPart preconditional valuation
-	DeleteMarkerReplicationStatus string                 // Is only set in DELETE operations
-	VersionPurgeStatus            VersionPurgeStatusType // Is only set in DELETE operations for delete marker version to be permanently deleted.
-	TransitionStatus              string                 // status of the transition
+	DeleteMarker                  bool                                                  // Is only set in DELETE operations for delete marker replication
+	UserDefined                   map[string]string                                     // only set in case of POST/PUT operations
+	PartNumber                    int                                                   // only useful in case of GetObject/HeadObject
+	CheckPrecondFn                CheckPreconditionFn                                   // only set during GetObject/HeadObject/CopyObjectPart preconditional valuation
+	DeleteMarkerReplicationStatus string                                                // Is only set in DELETE operations
+	VersionPurgeStatus            VersionPurgeStatusType                                // Is only set in DELETE operations for delete marker version to be permanently deleted.
+	TransitionStatus              string                                                // status of the transition
+	NoLock                        bool                                                  // indicates to lower layers if the caller is expecting to hold locks.
+	ProxyRequest                  bool                                                  // only set for GET/HEAD in active-active replication scenario
+	ProxyHeaderSet                bool                                                  // only set for GET/HEAD in active-active replication scenario
+	ParentIsObject                func(ctx context.Context, bucket, parent string) bool // Used to verify if parent is an object.
+
+	// Use the maximum parity (N/2), used when
+	// saving server configuration files
+	MaxParity bool
 }
 
 // BucketOptions represents bucket options for ObjectLayer bucket operations
@@ -69,17 +77,25 @@ const (
 	writeLock
 )
 
+// BackendMetrics - represents bytes served from backend
+type BackendMetrics struct {
+	bytesReceived uint64
+	bytesSent     uint64
+	requestStats  RequestStats
+}
+
 // ObjectLayer implements primitives for object API layer.
 type ObjectLayer interface {
-	SetDriveCount() int // Only implemented by erasure layer
-
 	// Locking operations on object.
 	NewNSLock(bucket string, objects ...string) RWLocker
 
 	// Storage operations.
 	Shutdown(context.Context) error
-	CrawlAndGetDataUsage(ctx context.Context, bf *bloomFilter, updates chan<- DataUsageInfo) error
-	StorageInfo(ctx context.Context, local bool) (StorageInfo, []error) // local queries only local disks
+	NSScanner(ctx context.Context, bf *bloomFilter, updates chan<- madmin.DataUsageInfo) error
+
+	BackendInfo() madmin.BackendInfo
+	StorageInfo(ctx context.Context) (StorageInfo, []error)
+	LocalStorageInfo(ctx context.Context) (StorageInfo, []error)
 
 	// Bucket operations.
 	MakeBucketWithLocation(ctx context.Context, bucket string, opts BucketOptions) error
@@ -101,7 +117,6 @@ type ObjectLayer interface {
 	// IMPORTANTLY, when implementations return err != nil, this
 	// function MUST NOT return a non-nil ReadCloser.
 	GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (reader *GetObjectReader, err error)
-	GetObject(ctx context.Context, bucket, object string, startOffset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error)
 	GetObjectInfo(ctx context.Context, bucket, object string, opts ObjectOptions) (objInfo ObjectInfo, err error)
 	PutObject(ctx context.Context, bucket, object string, data *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, err error)
 	CopyObject(ctx context.Context, srcBucket, srcObject, destBucket, destObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (objInfo ObjectInfo, err error)
@@ -119,12 +134,6 @@ type ObjectLayer interface {
 	AbortMultipartUpload(ctx context.Context, bucket, object, uploadID string, opts ObjectOptions) error
 	CompleteMultipartUpload(ctx context.Context, bucket, object, uploadID string, uploadedParts []CompletePart, opts ObjectOptions) (objInfo ObjectInfo, err error)
 
-	// Healing operations.
-	HealFormat(ctx context.Context, dryRun bool) (madmin.HealResultItem, error)
-	HealBucket(ctx context.Context, bucket string, opts madmin.HealOpts) (madmin.HealResultItem, error)
-	HealObject(ctx context.Context, bucket, object, versionID string, opts madmin.HealOpts) (madmin.HealResultItem, error)
-	HealObjects(ctx context.Context, bucket, prefix string, opts madmin.HealOpts, fn HealObjectFn) error
-
 	// Policy operations
 	SetBucketPolicy(context.Context, string, *policy.Policy) error
 	GetBucketPolicy(context.Context, string) (*policy.Policy, error)
@@ -137,14 +146,46 @@ type ObjectLayer interface {
 	IsTaggingSupported() bool
 	IsCompressionSupported() bool
 
+	SetDriveCounts() []int // list of erasure stripe size for each pool in order.
+
+	// Healing operations.
+	HealFormat(ctx context.Context, dryRun bool) (madmin.HealResultItem, error)
+	HealBucket(ctx context.Context, bucket string, opts madmin.HealOpts) (madmin.HealResultItem, error)
+	HealObject(ctx context.Context, bucket, object, versionID string, opts madmin.HealOpts) (madmin.HealResultItem, error)
+	HealObjects(ctx context.Context, bucket, prefix string, opts madmin.HealOpts, fn HealObjectFn) error
+
 	// Backend related metrics
-	GetMetrics(ctx context.Context) (*Metrics, error)
+	GetMetrics(ctx context.Context) (*BackendMetrics, error)
 
 	// Returns health of the backend
 	Health(ctx context.Context, opts HealthOptions) HealthResult
+	ReadHealth(ctx context.Context) bool
+
+	// Metadata operations
+	PutObjectMetadata(context.Context, string, string, ObjectOptions) (ObjectInfo, error)
 
 	// ObjectTagging operations
-	PutObjectTags(context.Context, string, string, string, ObjectOptions) error
+	PutObjectTags(context.Context, string, string, string, ObjectOptions) (ObjectInfo, error)
 	GetObjectTags(context.Context, string, string, ObjectOptions) (*tags.Tags, error)
-	DeleteObjectTags(context.Context, string, string, ObjectOptions) error
+	DeleteObjectTags(context.Context, string, string, ObjectOptions) (ObjectInfo, error)
+}
+
+// GetObject - TODO(aead): This function just acts as an adapter for GetObject tests and benchmarks
+// since the GetObject method of the ObjectLayer interface has been removed. Once, the
+// tests are adjusted to use GetObjectNInfo this function can be removed.
+func GetObject(ctx context.Context, api ObjectLayer, bucket, object string, startOffset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
+	var header http.Header
+	if etag != "" {
+		header.Set("ETag", etag)
+	}
+	Range := &HTTPRangeSpec{Start: startOffset, End: startOffset + length}
+
+	reader, err := api.GetObjectNInfo(ctx, bucket, object, Range, header, readLock, opts)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	_, err = io.Copy(writer, reader)
+	return err
 }

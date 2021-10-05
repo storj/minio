@@ -42,12 +42,8 @@ func SetIdentityLDAP(s config.Config, ldapArgs Config) {
 			Value: ldapArgs.GroupSearchFilter,
 		},
 		config.KV{
-			Key:   GroupNameAttribute,
-			Value: ldapArgs.GroupNameAttribute,
-		},
-		config.KV{
 			Key:   GroupSearchBaseDN,
-			Value: ldapArgs.GroupSearchBaseDN,
+			Value: ldapArgs.GroupSearchBaseDistName,
 		},
 	}
 }

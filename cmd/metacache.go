@@ -46,9 +46,6 @@ const (
 	// Enabling this will make cache sharing more likely and cause less IO,
 	// but may cause additional latency to some calls.
 	metacacheSharePrefix = false
-
-	// metacacheDebug will enable debug printing
-	metacacheDebug = false
 )
 
 //go:generate msgp -file $GOFILE -unexported
@@ -126,7 +123,7 @@ func (m *metacache) matches(o *listPathOptions, extend time.Duration) bool {
 		}
 		if time.Since(m.lastUpdate) > metacacheMaxRunningAge+extend {
 			// Cache ended within bloom cycle, but we can extend the life.
-			o.debugf("cache %s ended (%v) and beyond extended life (%v)", m.id, m.lastUpdate, extend+metacacheMaxRunningAge)
+			o.debugf("cache %s ended (%v) and beyond extended life (%v)", m.id, m.lastUpdate, metacacheMaxRunningAge+extend)
 			return false
 		}
 	}
@@ -148,14 +145,14 @@ func (m *metacache) worthKeeping(currentCycle uint64) bool {
 		// Cycle is somehow bigger.
 		return false
 	case cache.finished() && time.Since(cache.lastHandout) > 48*time.Hour:
-		// Keep only for 2 days. Fallback if crawler is clogged.
+		// Keep only for 2 days. Fallback if scanner is clogged.
 		return false
 	case cache.finished() && currentCycle >= dataUsageUpdateDirCycles && cache.startedCycle < currentCycle-dataUsageUpdateDirCycles:
 		// Cycle is too old to be valuable.
 		return false
 	case cache.status == scanStateError || cache.status == scanStateNone:
-		// Remove failed listings after 10 minutes.
-		return time.Since(cache.lastUpdate) < 10*time.Minute
+		// Remove failed listings after 5 minutes.
+		return time.Since(cache.lastUpdate) < 5*time.Minute
 	}
 	return true
 }
@@ -173,8 +170,9 @@ func (m *metacache) canBeReplacedBy(other *metacache) bool {
 	if m.status == scanStateStarted && time.Since(m.lastUpdate) < metacacheMaxRunningAge {
 		return false
 	}
+
 	// Keep it around a bit longer.
-	if time.Since(m.lastHandout) < time.Hour || time.Since(m.lastUpdate) < metacacheMaxRunningAge {
+	if time.Since(m.lastHandout) < 30*time.Minute || time.Since(m.lastUpdate) < metacacheMaxRunningAge {
 		return false
 	}
 

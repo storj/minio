@@ -200,6 +200,7 @@ func getMetadata(objInfo ObjectInfo) map[string]string {
 	if !objInfo.Expires.Equal(timeSentinel) {
 		metadata["expires"] = objInfo.Expires.Format(http.TimeFormat)
 	}
+	metadata["last-modified"] = objInfo.ModTime.Format(http.TimeFormat)
 	for k, v := range objInfo.UserDefined {
 		metadata[k] = v
 	}
@@ -704,14 +705,14 @@ func (c *cacheObjects) uploadObject(ctx context.Context, oi ObjectInfo) {
 	if st == CommitComplete || st.String() == "" {
 		return
 	}
-	hashReader, err := hash.NewReader(cReader, oi.Size, "", "", oi.Size, globalCLIContext.StrictS3Compat)
+	hashReader, err := hash.NewReader(cReader, oi.Size, "", "", oi.Size)
 	if err != nil {
 		return
 	}
 	var opts ObjectOptions
 	opts.UserDefined = make(map[string]string)
 	opts.UserDefined[xhttp.ContentMD5] = oi.UserDefined["content-md5"]
-	objInfo, err := c.InnerPutObjectFn(ctx, oi.Bucket, oi.Name, NewPutObjReader(hashReader, nil, nil), opts)
+	objInfo, err := c.InnerPutObjectFn(ctx, oi.Bucket, oi.Name, NewPutObjReader(hashReader), opts)
 	wbCommitStatus := CommitComplete
 	if err != nil {
 		wbCommitStatus = CommitFailed

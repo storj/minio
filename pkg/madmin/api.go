@@ -19,6 +19,7 @@ package madmin
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -33,6 +34,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -339,7 +341,6 @@ var successStatus = []int{
 // delayed manner using a standard back off algorithm.
 func (adm AdminClient) executeMethod(ctx context.Context, method string, reqData requestData) (res *http.Response, err error) {
 	var reqRetry = MaxRetry // Indicates how many times we can retry the request
-
 	defer func() {
 		if err != nil {
 			// close idle connections before returning, upon error.
@@ -364,6 +365,10 @@ func (adm AdminClient) executeMethod(ctx context.Context, method string, reqData
 		// Initiate the request.
 		res, err = adm.do(req)
 		if err != nil {
+			// Give up right away if it is a connection refused problem
+			if errors.Is(err, syscall.ECONNREFUSED) {
+				return nil, err
+			}
 			if err == context.Canceled || err == context.DeadlineExceeded {
 				return nil, err
 			}
@@ -476,7 +481,8 @@ func (adm AdminClient) newRequest(ctx context.Context, method string, reqData re
 	if length := len(reqData.content); length > 0 {
 		req.ContentLength = int64(length)
 	}
-	req.Header.Set("X-Amz-Content-Sha256", hex.EncodeToString(sum256(reqData.content)))
+	sum := sha256.Sum256(reqData.content)
+	req.Header.Set("X-Amz-Content-Sha256", hex.EncodeToString(sum[:]))
 	req.Body = ioutil.NopCloser(bytes.NewReader(reqData.content))
 
 	req = signer.SignV4(*req, accessKeyID, secretAccessKey, sessionToken, location)

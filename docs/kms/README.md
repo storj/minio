@@ -27,8 +27,8 @@ export MINIO_KMS_KES_KEY_NAME=my-minio-key
 #### 3. Start the MinIO Server
 
 ```sh
-export MINIO_ACCESS_KEY=minio
-export MINIO_SECRET_KEY=minio123
+export MINIO_ROOT_USER=minio
+export MINIO_ROOT_PASSWORD=minio123
 minio server ~/export
 ```
 
@@ -57,8 +57,8 @@ The main difference between various MinIO-KMS deployments is the KMS implementat
 |:---------------------------------------------------------------------------------------------|:------------------------------------------------------------------|
 | [Hashicorp Vault](https://github.com/minio/kes/wiki/Hashicorp-Vault-Keystore)                | Local KMS. MinIO and KMS on-prem (**Recommended**)                |
 | [AWS-KMS + SecretsManager](https://github.com/minio/kes/wiki/AWS-SecretsManager)             | Cloud KMS. MinIO in combination with a managed KMS installation   |
-| [Gemalto KeySecure /Thales CipherTrust](https://github.com/minio/kes/wiki/Gemalto-KeySecure) | Local KMS. MinIO and KMS On-Premises.                 |
-| [Google Cloud Platform SecretManager](https://github.com/minio/kes/wiki/GCP-SecretManager)   | Cloud KMS. MinIO in combination with a managed KMS installation | 
+| [Gemalto KeySecure /Thales CipherTrust](https://github.com/minio/kes/wiki/Gemalto-KeySecure) | Local KMS. MinIO and KMS On-Premises.                             |
+| [Google Cloud Platform SecretManager](https://github.com/minio/kes/wiki/GCP-SecretManager)   | Cloud KMS. MinIO in combination with a managed KMS installation   |
 | [FS](https://github.com/minio/kes/wiki/Filesystem-Keystore)                                  | Local testing or development (**Not recommended for production**) |
 
 

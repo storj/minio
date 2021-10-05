@@ -31,7 +31,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/minio/cmd/logger"
-	mioutil "github.com/minio/minio/pkg/ioutil"
+	xioutil "github.com/minio/minio/pkg/ioutil"
 	"github.com/minio/minio/pkg/trie"
 )
 
@@ -114,7 +114,7 @@ func (fs *FSObjects) backgroundAppend(ctx context.Context, bucket, object, uploa
 		}
 
 		partPath := pathJoin(uploadIDDir, entry)
-		err = mioutil.AppendFile(file.filePath, partPath, globalFSOSync)
+		err = xioutil.AppendFile(file.filePath, partPath, globalFSOSync)
 		if err != nil {
 			reqInfo := logger.GetReqInfo(ctx).AppendTags("partPath", partPath)
 			reqInfo.AppendTags("filepath", file.filePath)
@@ -313,14 +313,8 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 		return pi, toObjectErr(err, bucket, object)
 	}
 
-	bufSize := int64(readSizeV1)
-	if size := data.Size(); size > 0 && bufSize > size {
-		bufSize = size
-	}
-	buf := make([]byte, bufSize)
-
 	tmpPartPath := pathJoin(fs.fsPath, minioMetaTmpBucket, fs.fsUUID, uploadID+"."+mustGetUUID()+"."+strconv.Itoa(partID))
-	bytesWritten, err := fsCreateFile(ctx, tmpPartPath, data, buf, data.Size())
+	bytesWritten, err := fsCreateFile(ctx, tmpPartPath, data, data.Size())
 
 	// Delete temporary part in case of failure. If
 	// PutObjectPart succeeds then there would be nothing to
@@ -396,7 +390,7 @@ func (fs *FSObjects) GetMultipartInfo(ctx context.Context, bucket, object, uploa
 		return minfo, toObjectErr(err, bucket, object)
 	}
 
-	fsMetaBytes, err := ioutil.ReadFile(pathJoin(uploadIDDir, fs.metaJSONFile))
+	fsMetaBytes, err := xioutil.ReadFile(pathJoin(uploadIDDir, fs.metaJSONFile))
 	if err != nil {
 		logger.LogIf(ctx, err)
 		return minfo, toObjectErr(err, bucket, object)
@@ -706,7 +700,7 @@ func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string,
 					GotETag:    part.ETag,
 				}
 			}
-			if err = mioutil.AppendFile(appendFilePath, pathJoin(uploadIDDir, partFile), globalFSOSync); err != nil {
+			if err = xioutil.AppendFile(appendFilePath, pathJoin(uploadIDDir, partFile), globalFSOSync); err != nil {
 				logger.LogIf(ctx, err)
 				return oi, toObjectErr(err)
 			}
@@ -715,7 +709,8 @@ func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string,
 
 	// Hold write lock on the object.
 	destLock := fs.NewNSLock(bucket, object)
-	if err = destLock.GetLock(ctx, globalOperationTimeout); err != nil {
+	ctx, err = destLock.GetLock(ctx, globalOperationTimeout)
+	if err != nil {
 		return oi, err
 	}
 	defer destLock.Unlock()
@@ -750,7 +745,7 @@ func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string,
 	}()
 
 	// Read saved fs metadata for ongoing multipart.
-	fsMetaBuf, err := ioutil.ReadFile(pathJoin(uploadIDDir, fs.metaJSONFile))
+	fsMetaBuf, err := xioutil.ReadFile(pathJoin(uploadIDDir, fs.metaJSONFile))
 	if err != nil {
 		logger.LogIf(ctx, err)
 		return oi, toObjectErr(err, bucket, object)
@@ -855,14 +850,17 @@ func (fs *FSObjects) AbortMultipartUpload(ctx context.Context, bucket, object, u
 // on all buckets for every `cleanupInterval`, this function is
 // blocking and should be run in a go-routine.
 func (fs *FSObjects) cleanupStaleUploads(ctx context.Context, cleanupInterval, expiry time.Duration) {
-	ticker := time.NewTicker(cleanupInterval)
-	defer ticker.Stop()
+	timer := time.NewTimer(cleanupInterval)
+	defer timer.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-timer.C:
+			// Reset for the next interval
+			timer.Reset(cleanupInterval)
+
 			now := time.Now()
 			entries, err := readDir(pathJoin(fs.fsPath, minioMetaMultipartBucket))
 			if err != nil {

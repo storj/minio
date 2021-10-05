@@ -133,18 +133,20 @@ func setObjectHeaders(w http.ResponseWriter, objInfo ObjectInfo, rs *HTTPRangeSp
 		}
 
 		// https://github.com/google/security-research/security/advisories/GHSA-76wf-9vgp-pj7w
-		if strings.EqualFold(k, xhttp.AmzMetaUnencryptedContentLength) || strings.EqualFold(k, xhttp.AmzMetaUnencryptedContentMD5) {
+		if equals(k, xhttp.AmzMetaUnencryptedContentLength, xhttp.AmzMetaUnencryptedContentMD5) {
 			continue
 		}
+
 		var isSet bool
 		for _, userMetadataPrefix := range userMetadataKeyPrefixes {
-			if !strings.HasPrefix(k, userMetadataPrefix) {
+			if !strings.HasPrefix(strings.ToLower(k), strings.ToLower(userMetadataPrefix)) {
 				continue
 			}
 			w.Header()[strings.ToLower(k)] = []string{v}
 			isSet = true
 			break
 		}
+
 		if !isSet {
 			w.Header().Set(k, v)
 		}
@@ -156,7 +158,7 @@ func setObjectHeaders(w http.ResponseWriter, objInfo ObjectInfo, rs *HTTPRangeSp
 		return err
 	}
 
-	if opts.PartNumber > 0 {
+	if rs == nil && opts.PartNumber > 0 {
 		rs = partNumberToRangeSpec(objInfo, opts.PartNumber)
 	}
 
@@ -177,21 +179,25 @@ func setObjectHeaders(w http.ResponseWriter, objInfo ObjectInfo, rs *HTTPRangeSp
 	if objInfo.VersionID != "" {
 		w.Header()[xhttp.AmzVersionID] = []string{objInfo.VersionID}
 	}
+
 	if objInfo.ReplicationStatus.String() != "" {
 		w.Header()[xhttp.AmzBucketReplicationStatus] = []string{objInfo.ReplicationStatus.String()}
 	}
+
 	if lc, err := globalLifecycleSys.Get(objInfo.Bucket); err == nil {
-		ruleID, expiryTime := lc.PredictExpiryTime(lifecycle.ObjectOpts{
-			Name:         objInfo.Name,
-			UserTags:     objInfo.UserTags,
-			VersionID:    objInfo.VersionID,
-			ModTime:      objInfo.ModTime,
-			IsLatest:     objInfo.IsLatest,
-			DeleteMarker: objInfo.DeleteMarker,
-		})
-		if !expiryTime.IsZero() {
-			w.Header()[xhttp.AmzExpiration] = []string{
-				fmt.Sprintf(`expiry-date="%s", rule-id="%s"`, expiryTime.Format(http.TimeFormat), ruleID),
+		if opts.VersionID == "" {
+			if ruleID, expiryTime := lc.PredictExpiryTime(lifecycle.ObjectOpts{
+				Name:             objInfo.Name,
+				UserTags:         objInfo.UserTags,
+				VersionID:        objInfo.VersionID,
+				ModTime:          objInfo.ModTime,
+				IsLatest:         objInfo.IsLatest,
+				DeleteMarker:     objInfo.DeleteMarker,
+				SuccessorModTime: objInfo.SuccessorModTime,
+			}); !expiryTime.IsZero() {
+				w.Header()[xhttp.AmzExpiration] = []string{
+					fmt.Sprintf(`expiry-date="%s", rule-id="%s"`, expiryTime.Format(http.TimeFormat), ruleID),
+				}
 			}
 		}
 		if objInfo.TransitionStatus == lifecycle.TransitionComplete {

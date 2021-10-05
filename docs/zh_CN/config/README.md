@@ -37,11 +37,11 @@ $ mc tree --files ~/.minio
 你可以使用`--certs-dir`命令行选项提供自定义certs目录。
 
 #### 凭据
-只能通过环境变量`MINIO_ACCESS_KEY` 和 `MINIO_SECRET_KEY` 更改MinIO的admin凭据和root凭据。使用这两个值的组合，MinIO加密存储在后端的配置
+只能通过环境变量`MINIO_ROOT_USER` 和 `MINIO_ROOT_PASSWORD` 更改MinIO的admin凭据和root凭据。使用这两个值的组合，MinIO加密存储在后端的配置
 
 ```
-export MINIO_ACCESS_KEY=minio
-export MINIO_SECRET_KEY=minio13
+export MINIO_ROOT_USER=minio
+export MINIO_ROOT_PASSWORD=minio13
 minio server /data
 ```
 
@@ -52,16 +52,16 @@ minio server /data
 > 旧的环境变量永远不会在内存中被记住，并且在使用新凭据迁移现有内容后立即销毁。在服务器再次成功重启后，你可以安全的删除它们。
 
 ```
-export MINIO_ACCESS_KEY=newminio
-export MINIO_SECRET_KEY=newminio123
-export MINIO_ACCESS_KEY_OLD=minio
-export MINIO_SECRET_KEY_OLD=minio123
+export MINIO_ROOT_USER=newminio
+export MINIO_ROOT_PASSWORD=newminio123
+export MINIO_ROOT_USER_OLD=minio
+export MINIO_ROOT_PASSWORD_OLD=minio123
 minio server /data
 ```
 
-迁移完成后, 服务器会自动的取消进程空间中的`MINIO_ACCESS_KEY_OLD` and `MINIO_SECRET_KEY_OLD`设置。
+迁移完成后, 服务器会自动的取消进程空间中的`MINIO_ROOT_USER_OLD` and `MINIO_ROOT_PASSWORD_OLD`设置。
 
-> **注意: 在下一次服务重新启动前，要确保移除脚本或者服务文件中的 `MINIO_ACCESS_KEY_OLD` and `MINIO_SECRET_KEY_OLD`， 避免现有的内容被双重加密**
+> **注意: 在下一次服务重新启动前，要确保移除脚本或者服务文件中的 `MINIO_ROOT_USER_OLD` and `MINIO_ROOT_PASSWORD_OLD`， 避免现有的内容被双重加密**
 
 #### 区域
 ```
@@ -267,15 +267,15 @@ MINIO_ETCD_COMMENT          (sentence)  optionally add a comment to this setting
 
 数据使用情况采集器默认是启用的，通过Envs可以设置更多的交错延迟。
 
-采集器能适应系统速度，并在系统负载时完全暂停。 可以调整采集器的速度，从而达到延迟更新的效果。 每次采集操作之间的延迟都可以通过环境变量`MINIO_DISK_USAGE_CRAWL_DELAY`来调整。 默认情况下，该值为10。 这意味着采集每次操作都将休眠*10x*的时间。
+采集器能适应系统速度，并在系统负载时完全暂停。 可以调整采集器的速度，从而达到延迟更新的效果。 每次采集操作之间的延迟都可以通过环境变量`MINIO_SCANNER_DELAY`来调整。 默认情况下，该值为10。 这意味着采集每次操作都将休眠*10x*的时间。
 
 大多数设置要让采集器足够慢，这样不会影响整体的系统性能。
-设置 `MINIO_DISK_USAGE_CRAWL_DELAY` 为一个 *较低* 的值可以让采集器更快，并且设置为0的时候，可以让采集器全速运行（不推荐）。 设置一个较高的值可以让采集器变慢，进一步减少资源的消耗。
+设置 `MINIO_SCANNER_DELAY` 为一个 *较低* 的值可以让采集器更快，并且设置为0的时候，可以让采集器全速运行（不推荐）。 设置一个较高的值可以让采集器变慢，进一步减少资源的消耗。
 
 示例: 如下设置将使采集器的速度降低三倍, 减少了系统资源的使用，但是反映到更新的延迟会增加。
 
 ```sh
-export MINIO_DISK_USAGE_CRAWL_DELAY=30
+export MINIO_SCANNER_DELAY=30
 minio server /data
 ```
 

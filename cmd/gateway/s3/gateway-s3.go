@@ -29,15 +29,15 @@ import (
 	"github.com/minio/cli"
 	miniogo "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio-go/v7/pkg/tags"
-	minio "github.com/minio/minio/cmd"
-
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
+	"github.com/minio/minio-go/v7/pkg/tags"
+	minio "github.com/minio/minio/cmd"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/auth"
 	"github.com/minio/minio/pkg/bucket/policy"
+	"github.com/minio/minio/pkg/madmin"
 )
 
 func init() {
@@ -55,13 +55,13 @@ ENDPOINT:
 
 EXAMPLES:
   1. Start minio gateway server for AWS S3 backend
-     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_ACCESS_KEY{{.AssignmentOperator}}accesskey
-     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_SECRET_KEY{{.AssignmentOperator}}secretkey
+     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_ROOT_USER{{.AssignmentOperator}}accesskey
+     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_ROOT_PASSWORD{{.AssignmentOperator}}secretkey
      {{.Prompt}} {{.HelpName}}
 
   2. Start minio gateway server for AWS S3 backend with edge caching enabled
-     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_ACCESS_KEY{{.AssignmentOperator}}accesskey
-     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_SECRET_KEY{{.AssignmentOperator}}secretkey
+     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_ROOT_USER{{.AssignmentOperator}}accesskey
+     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_ROOT_PASSWORD{{.AssignmentOperator}}secretkey
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_DRIVES{{.AssignmentOperator}}"/mnt/drive1,/mnt/drive2,/mnt/drive3,/mnt/drive4"
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_EXCLUDE{{.AssignmentOperator}}"bucket1/*,*.png"
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_QUOTA{{.AssignmentOperator}}90
@@ -136,7 +136,7 @@ func randString(n int, src rand.Source, prefix string) string {
 // Chains all credential types, in the following order:
 //  - AWS env vars (i.e. AWS_ACCESS_KEY_ID)
 //  - AWS creds file (i.e. AWS_SHARED_CREDENTIALS_FILE or ~/.aws/credentials)
-//  - Static credentials provided by user (i.e. MINIO_ACCESS_KEY)
+//  - Static credentials provided by user (i.e. MINIO_ROOT_USER/MINIO_ACCESS_KEY)
 var defaultProviders = []credentials.Provider{
 	&credentials.EnvAWS{},
 	&credentials.FileAWSCredentials{},
@@ -149,6 +149,7 @@ var defaultProviders = []credentials.Provider{
 //  - IAM profile based credentials. (performs an HTTP
 //    call to a pre-defined endpoint, only valid inside
 //    configured ec2 instances)
+//  - Static credentials provided by user (i.e. MINIO_ROOT_USER/MINIO_ACCESS_KEY)
 var defaultAWSCredProviders = []credentials.Provider{
 	&credentials.EnvAWS{},
 	&credentials.FileAWSCredentials{},
@@ -259,11 +260,11 @@ type s3Objects struct {
 	minio.GatewayUnsupported
 	Client     *miniogo.Core
 	HTTPClient *http.Client
-	Metrics    *minio.Metrics
+	Metrics    *minio.BackendMetrics
 }
 
 // GetMetrics returns this gateway's metrics
-func (l *s3Objects) GetMetrics(ctx context.Context) (*minio.Metrics, error) {
+func (l *s3Objects) GetMetrics(ctx context.Context) (*minio.BackendMetrics, error) {
 	return l.Metrics, nil
 }
 
@@ -274,8 +275,8 @@ func (l *s3Objects) Shutdown(ctx context.Context) error {
 }
 
 // StorageInfo is not relevant to S3 backend.
-func (l *s3Objects) StorageInfo(ctx context.Context, _ bool) (si minio.StorageInfo, _ []error) {
-	si.Backend.Type = minio.BackendGateway
+func (l *s3Objects) StorageInfo(ctx context.Context) (si minio.StorageInfo, _ []error) {
+	si.Backend.Type = madmin.Gateway
 	host := l.Client.EndpointURL().Host
 	if l.Client.EndpointURL().Port() == "" {
 		host = l.Client.EndpointURL().Host + ":" + l.Client.EndpointURL().Scheme
@@ -402,7 +403,7 @@ func (l *s3Objects) GetObjectNInfo(ctx context.Context, bucket, object string, r
 
 	pr, pw := io.Pipe()
 	go func() {
-		err := l.GetObject(ctx, bucket, object, off, length, pw, objInfo.ETag, opts)
+		err := l.getObject(ctx, bucket, object, off, length, pw, objInfo.ETag, opts)
 		pw.CloseWithError(err)
 	}()
 
@@ -418,7 +419,7 @@ func (l *s3Objects) GetObjectNInfo(ctx context.Context, bucket, object string, r
 //
 // startOffset indicates the starting read location of the object.
 // length indicates the total length of the object.
-func (l *s3Objects) GetObject(ctx context.Context, bucket string, key string, startOffset int64, length int64, writer io.Writer, etag string, o minio.ObjectOptions) error {
+func (l *s3Objects) getObject(ctx context.Context, bucket string, key string, startOffset int64, length int64, writer io.Writer, etag string, o minio.ObjectOptions) error {
 	if length < 0 && length != -1 {
 		return minio.ErrorRespToObjectError(minio.InvalidRange{}, bucket, key)
 	}
@@ -431,6 +432,11 @@ func (l *s3Objects) GetObject(ctx context.Context, bucket string, key string, st
 			return minio.ErrorRespToObjectError(err, bucket, key)
 		}
 	}
+
+	if etag != "" {
+		opts.SetMatchETag(etag)
+	}
+
 	object, _, _, err := l.Client.GetObject(ctx, bucket, key, opts)
 	if err != nil {
 		return minio.ErrorRespToObjectError(err, bucket, key)
@@ -510,7 +516,7 @@ func (l *s3Objects) CopyObject(ctx context.Context, srcBucket string, srcObject 
 		srcInfo.UserDefined[k] = v[0]
 	}
 
-	if _, err = l.Client.CopyObject(ctx, srcBucket, srcObject, dstBucket, dstObject, srcInfo.UserDefined, miniogo.PutObjectOptions{}); err != nil {
+	if _, err = l.Client.CopyObject(ctx, srcBucket, srcObject, dstBucket, dstObject, srcInfo.UserDefined, miniogo.CopySrcOptions{}, miniogo.PutObjectOptions{}); err != nil {
 		return objInfo, minio.ErrorRespToObjectError(err, srcBucket, srcObject)
 	}
 	return l.GetObjectInfo(ctx, dstBucket, dstObject, dstOpts)
@@ -723,23 +729,34 @@ func (l *s3Objects) GetObjectTags(ctx context.Context, bucket string, object str
 }
 
 // PutObjectTags attaches the tags to the object
-func (l *s3Objects) PutObjectTags(ctx context.Context, bucket, object string, tagStr string, opts minio.ObjectOptions) error {
+func (l *s3Objects) PutObjectTags(ctx context.Context, bucket, object string, tagStr string, opts minio.ObjectOptions) (minio.ObjectInfo, error) {
 	tagObj, err := tags.Parse(tagStr, true)
 	if err != nil {
-		return minio.ErrorRespToObjectError(err, bucket, object)
+		return minio.ObjectInfo{}, minio.ErrorRespToObjectError(err, bucket, object)
 	}
-	if err = l.Client.PutObjectTagging(ctx, bucket, object, tagObj, miniogo.PutObjectTaggingOptions{}); err != nil {
-		return minio.ErrorRespToObjectError(err, bucket, object)
+	if err = l.Client.PutObjectTagging(ctx, bucket, object, tagObj, miniogo.PutObjectTaggingOptions{VersionID: opts.VersionID}); err != nil {
+		return minio.ObjectInfo{}, minio.ErrorRespToObjectError(err, bucket, object)
 	}
-	return nil
+
+	objInfo, err := l.GetObjectInfo(ctx, bucket, object, opts)
+	if err != nil {
+		return minio.ObjectInfo{}, minio.ErrorRespToObjectError(err, bucket, object)
+	}
+
+	return objInfo, nil
 }
 
 // DeleteObjectTags removes the tags attached to the object
-func (l *s3Objects) DeleteObjectTags(ctx context.Context, bucket, object string, opts minio.ObjectOptions) error {
+func (l *s3Objects) DeleteObjectTags(ctx context.Context, bucket, object string, opts minio.ObjectOptions) (minio.ObjectInfo, error) {
 	if err := l.Client.RemoveObjectTagging(ctx, bucket, object, miniogo.RemoveObjectTaggingOptions{}); err != nil {
-		return minio.ErrorRespToObjectError(err, bucket, object)
+		return minio.ObjectInfo{}, minio.ErrorRespToObjectError(err, bucket, object)
 	}
-	return nil
+	objInfo, err := l.GetObjectInfo(ctx, bucket, object, opts)
+	if err != nil {
+		return minio.ObjectInfo{}, minio.ErrorRespToObjectError(err, bucket, object)
+	}
+
+	return objInfo, nil
 }
 
 // IsCompressionSupported returns whether compression is applicable for this layer.

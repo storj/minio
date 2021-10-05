@@ -49,6 +49,8 @@ func testListObjects(obj ObjectLayer, instanceType string, t1 TestErrHandler) {
 		"test-bucket-single-object",
 		// Listing uncommon delimiter.
 		"test-bucket-delimiter",
+		// Listing prefixes > maxKeys
+		"test-bucket-max-keys-prefixes",
 	}
 	for _, bucket := range testBuckets {
 		err := obj.MakeBucketWithLocation(context.Background(), bucket, BucketOptions{})
@@ -79,6 +81,8 @@ func testListObjects(obj ObjectLayer, instanceType string, t1 TestErrHandler) {
 		{testBuckets[3], "A/B", "contentstring", nil},
 		{testBuckets[4], "file1/receipt.json", "content", nil},
 		{testBuckets[4], "file1/guidSplunk-aaaa/file", "content", nil},
+		{testBuckets[5], "dir/day_id=2017-10-10/issue", "content", nil},
+		{testBuckets[5], "dir/day_id=2017-10-11/issue", "content", nil},
 	}
 	for _, object := range testObjects {
 		md5Bytes := md5.Sum([]byte(object.content))
@@ -467,6 +471,11 @@ func testListObjects(obj ObjectLayer, instanceType string, t1 TestErrHandler) {
 			},
 			Prefixes: []string{"file1/guidSplunk"},
 		},
+		// ListObjectsResult-36 list with nextmarker prefix and maxKeys set to 1.
+		{
+			IsTruncated: true,
+			Prefixes:    []string{"dir/day_id=2017-10-10/"},
+		},
 	}
 
 	testCases := []struct {
@@ -522,6 +531,7 @@ func testListObjects(obj ObjectLayer, instanceType string, t1 TestErrHandler) {
 		{"test-bucket-list-object", "new", "", "", 4, resultCases[5], nil, true},
 		{"test-bucket-list-object", "new", "", "", 5, resultCases[5], nil, true},
 		{"test-bucket-list-object", "obj", "", "", 3, resultCases[6], nil, true},
+		{"test-bucket-list-object", "/obj", "", "", 0, ListObjectsInfo{}, nil, true},
 		// Testing with prefix and truncation (29-30).
 		{"test-bucket-list-object", "new", "", "", 1, resultCases[7], nil, true},
 		{"test-bucket-list-object", "obj", "", "", 2, resultCases[8], nil, true},
@@ -589,6 +599,8 @@ func testListObjects(obj ObjectLayer, instanceType string, t1 TestErrHandler) {
 		{testBuckets[4], "", "", "guidSplunk", 1000, resultCases[35], nil, true},
 		// Test listing an object with uncommon delimiter and matching prefix
 		{testBuckets[4], "file1/", "", "guidSplunk", 1000, resultCases[35], nil, true},
+		// Test listing at prefix with expected prefix markers
+		{testBuckets[5], "dir/", "", SlashSeparator, 1, resultCases[36], nil, true},
 	}
 
 	for i, testCase := range testCases {
@@ -661,26 +673,15 @@ func testListObjects(obj ObjectLayer, instanceType string, t1 TestErrHandler) {
 				}
 
 				if testCase.result.IsTruncated && result.NextMarker == "" {
-					t.Errorf("Test %d: %s: Expected NextContinuationToken to contain a string since listing is truncated, but instead found it to be empty", i+1, instanceType)
+					t.Errorf("Test %d: %s: Expected NextMarker to contain a string since listing is truncated, but instead found it to be empty", i+1, instanceType)
 				}
 
 				if !testCase.result.IsTruncated && result.NextMarker != "" {
 					if !result.IsTruncated || len(result.Objects) == 0 {
-						t.Errorf("Test %d: %s: Expected NextContinuationToken to be empty since listing is not truncated, but instead found `%v`", i+1, instanceType, result.NextMarker)
+						t.Errorf("Test %d: %s: Expected NextMarker to be empty since listing is not truncated, but instead found `%v`", i+1, instanceType, result.NextMarker)
 					}
 				}
 
-			}
-			// Take ListObject treeWalk go-routine to completion, if available in the treewalk pool.
-			for result.IsTruncated {
-				result, err = obj.ListObjects(context.Background(), testCase.bucketName,
-					testCase.prefix, result.NextMarker, testCase.delimiter, 1000)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !testCase.result.IsTruncated && len(result.Objects) > 0 {
-					t.Errorf("expected to get all objects in the previous call, but got %d more", len(result.Objects))
-				}
 			}
 		})
 	}
@@ -714,6 +715,8 @@ func testListObjectVersions(obj ObjectLayer, instanceType string, t1 TestErrHand
 		"test-bucket-single-object",
 		// Listing uncommon delimiter.
 		"test-bucket-delimiter",
+		// Listing prefixes > maxKeys
+		"test-bucket-max-keys-prefixes",
 	}
 	for _, bucket := range testBuckets {
 		err := obj.MakeBucketWithLocation(context.Background(), bucket, BucketOptions{VersioningEnabled: true})
@@ -748,7 +751,10 @@ func testListObjectVersions(obj ObjectLayer, instanceType string, t1 TestErrHand
 		{testBuckets[3], "A/B", "contentstring", nil},
 		{testBuckets[4], "file1/receipt.json", "content", nil},
 		{testBuckets[4], "file1/guidSplunk-aaaa/file", "content", nil},
+		{testBuckets[5], "dir/day_id=2017-10-10/issue", "content", nil},
+		{testBuckets[5], "dir/day_id=2017-10-11/issue", "content", nil},
 	}
+
 	for _, object := range testObjects {
 		md5Bytes := md5.Sum([]byte(object.content))
 		_, err = obj.PutObject(context.Background(), object.parentBucket, object.name, mustGetPutObjReader(t, bytes.NewBufferString(object.content),
@@ -1140,6 +1146,11 @@ func testListObjectVersions(obj ObjectLayer, instanceType string, t1 TestErrHand
 			},
 			Prefixes: []string{"file1/guidSplunk"},
 		},
+		// ListObjectsResult-36 list with nextmarker prefix and maxKeys set to 1.
+		{
+			IsTruncated: true,
+			Prefixes:    []string{"dir/day_id=2017-10-10/"},
+		},
 	}
 
 	testCases := []struct {
@@ -1262,6 +1273,8 @@ func testListObjectVersions(obj ObjectLayer, instanceType string, t1 TestErrHand
 		{testBuckets[4], "", "", "guidSplunk", 1000, resultCases[35], nil, true},
 		// Test listing an object with uncommon delimiter and matching prefix
 		{testBuckets[4], "file1/", "", "guidSplunk", 1000, resultCases[35], nil, true},
+		// Test listing at prefix with expected prefix markers
+		{testBuckets[5], "dir/", "", SlashSeparator, 1, resultCases[36], nil, true},
 	}
 
 	for i, testCase := range testCases {
@@ -1326,25 +1339,13 @@ func testListObjectVersions(obj ObjectLayer, instanceType string, t1 TestErrHand
 				}
 
 				if testCase.result.IsTruncated && result.NextMarker == "" {
-					t.Errorf("%s: Expected NextContinuationToken to contain a string since listing is truncated, but instead found it to be empty", instanceType)
+					t.Errorf("%s: Expected NextMarker to contain a string since listing is truncated, but instead found it to be empty", instanceType)
 				}
 
 				if !testCase.result.IsTruncated && result.NextMarker != "" {
 					if !result.IsTruncated || len(result.Objects) == 0 {
-						t.Errorf("%s: Expected NextContinuationToken to be empty since listing is not truncated, but instead found `%v`", instanceType, result.NextMarker)
+						t.Errorf("%s: Expected NextMarker to be empty since listing is not truncated, but instead found `%v`", instanceType, result.NextMarker)
 					}
-				}
-
-			}
-			// Take ListObject treeWalk go-routine to completion, if available in the treewalk pool.
-			for result.IsTruncated {
-				result, err = obj.ListObjectVersions(context.Background(), testCase.bucketName,
-					testCase.prefix, result.NextMarker, "", testCase.delimiter, 1000)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !testCase.result.IsTruncated && len(result.Objects) > 0 {
-					t.Errorf("expected to get all objects in the previous call, but got %d more", len(result.Objects))
 				}
 			}
 		})

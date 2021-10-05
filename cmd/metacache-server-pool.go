@@ -19,13 +19,35 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"os"
 	"path"
+	pathutil "path"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/minio/minio/cmd/logger"
 )
+
+func renameAllBucketMetacache(epPath string) error {
+	// Rename all previous `.minio.sys/buckets/<bucketname>/.metacache` to
+	// to `.minio.sys/tmp/` for deletion.
+	return readDirFn(pathJoin(epPath, minioMetaBucket, bucketMetaPrefix), func(name string, typ os.FileMode) error {
+		if typ == os.ModeDir {
+			tmpMetacacheOld := pathutil.Join(epPath, minioMetaTmpDeletedBucket, mustGetUUID())
+			if err := renameAll(pathJoin(epPath, minioMetaBucket, metacachePrefixForID(name, slashSeparator)),
+				tmpMetacacheOld); err != nil && err != errFileNotFound {
+				return fmt.Errorf("unable to rename (%s -> %s) %w",
+					pathJoin(epPath, minioMetaBucket+metacachePrefixForID(minioMetaBucket, slashSeparator)),
+					tmpMetacacheOld,
+					osErrToFileErr(err))
+			}
+		}
+		return nil
+	})
+}
 
 // listPath will return the requested entries.
 // If no more entries are in the listing io.EOF is returned,
@@ -53,17 +75,11 @@ func (z *erasureServerPools) listPath(ctx context.Context, o listPathOptions) (e
 	}
 
 	// For delimiter and prefix as '/' we do not list anything at all
-	// since according to s3 spec we stop at the 'delimiter'
 	// along // with the prefix. On a flat namespace with 'prefix'
 	// as '/' we don't have any entries, since all the keys are
 	// of form 'keyName/...'
-	if o.Separator == SlashSeparator && o.Prefix == SlashSeparator {
+	if strings.HasPrefix(o.Prefix, SlashSeparator) {
 		return entries, io.EOF
-	}
-
-	// Over flowing count - reset to maxObjectList.
-	if o.Limit < 0 || o.Limit > maxObjectList {
-		o.Limit = maxObjectList
 	}
 
 	// If delimiter is slashSeparator we must return directories of
@@ -147,13 +163,11 @@ func (z *erasureServerPools) listPath(ctx context.Context, o listPathOptions) (e
 	var wg sync.WaitGroup
 	var errs []error
 	allAtEOF := true
-	asked := 0
 	mu.Lock()
 	// Ask all sets and merge entries.
-	for _, zone := range z.serverPools {
-		for _, set := range zone.sets {
+	for _, pool := range z.serverPools {
+		for _, set := range pool.sets {
 			wg.Add(1)
-			asked++
 			go func(i int, set *erasureObjects) {
 				defer wg.Done()
 				e, err := set.listPath(ctx, o)

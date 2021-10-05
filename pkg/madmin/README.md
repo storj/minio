@@ -232,9 +232,7 @@ Fetches Storage information for all cluster nodes.
 | `Backend.Type`             | _BackendType_   | Type of backend used by the server currently only FS or Erasure.                                                         |
 | `Backend.OnlineDisks`      | _BackendDisks_  | Total number of disks online per node (only applies to Erasure backend) represented in map[string]int, is empty for FS.  |
 | `Backend.OfflineDisks`     | _BackendDisks_  | Total number of disks offline per node (only applies to Erasure backend) represented in map[string]int, is empty for FS. |
-| `Backend.StandardSCData`   | _int_           | Data disks set for standard storage class, is empty for FS.                                                              |
 | `Backend.StandardSCParity` | _int_           | Parity disks set for standard storage class, is empty for FS.                                                            |
-| `Backend.RRSCData`         | _int_           | Data disks set for reduced redundancy storage class, is empty for FS.                                                    |
 | `Backend.RRSCParity`       | _int_           | Parity disks set for reduced redundancy storage class, is empty for FS.                                                  |
 | `Backend.Sets`             | _[][]DriveInfo_ | Represents topology of drives in erasure coded sets.                                                                     |
 
@@ -260,15 +258,15 @@ Fetches accounting usage information for the current authenticated user
 | Param                          | Type                 | Description             |
 |--------------------------------|----------------------|-------------------------|
 | `AccountInfo.AccountName` | _string_             | Account name.           |
-| `AccountInfo.Buckets`     | _[]BucketUsageInfo_  | Bucket usage info.      |
+| `AccountInfo.Buckets`     | _[]BucketAccessInfo_  | Bucket usage info.      |
 
 
 | Param                      | Type            | Description                             |
 |----------------------------|-----------------|-----------------------------------------|
-| `BucketUsageInfo.Name`     | _string_        | The name of the current bucket
-| `BucketUsageInfo.Size`     | _uint64_        | The total size of the current bucket
-| `BucketUsageInfo.Created`  | _time.Time_     | Bucket creation time
-| `BucketUsageInfo.Access`   | _AccountAccess_ | Type of access of the current account
+| `BucketAccessInfo.Name`     | _string_        | The name of the current bucket
+| `BucketAccessInfo.Size`     | _uint64_        | The total size of the current bucket
+| `BucketAccessInfo.Created`  | _time.Time_     | Bucket creation time
+| `BucketAccessInfo.Access`   | _AccountAccess_ | Type of access of the current account
 
 
 | Param                  | Type    | Description                                                                                                              |

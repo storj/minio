@@ -19,15 +19,14 @@
 package ioutil
 
 import (
+	"bytes"
+	"context"
 	"io"
 	"os"
+	"time"
 
-	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/minio/pkg/disk"
 )
-
-// defaultAppendBufferSize - Default buffer size for the AppendFile
-const defaultAppendBufferSize = humanize.MiByte
 
 // WriteOnCloser implements io.WriteCloser and always
 // executes at least one write operation if it is closed.
@@ -65,6 +64,56 @@ func (w *WriteOnCloser) HasWritten() bool { return w.hasWritten }
 // WriteOnClose takes an io.Writer and returns an ioutil.WriteOnCloser.
 func WriteOnClose(w io.Writer) *WriteOnCloser {
 	return &WriteOnCloser{w, false}
+}
+
+type ioret struct {
+	n   int
+	err error
+}
+
+// DeadlineWriter deadline writer with context
+type DeadlineWriter struct {
+	io.WriteCloser
+	timeout time.Duration
+	err     error
+}
+
+// NewDeadlineWriter wraps a writer to make it respect given deadline
+// value per Write(). If there is a blocking write, the returned Writer
+// will return whenever the timer hits (the return values are n=0
+// and err=context.Canceled.)
+func NewDeadlineWriter(w io.WriteCloser, timeout time.Duration) io.WriteCloser {
+	return &DeadlineWriter{WriteCloser: w, timeout: timeout}
+}
+
+func (w *DeadlineWriter) Write(buf []byte) (int, error) {
+	if w.err != nil {
+		return 0, w.err
+	}
+
+	c := make(chan ioret, 1)
+	t := time.NewTimer(w.timeout)
+	defer t.Stop()
+
+	go func() {
+		n, err := w.WriteCloser.Write(buf)
+		c <- ioret{n, err}
+		close(c)
+	}()
+
+	select {
+	case r := <-c:
+		w.err = r.err
+		return r.n, r.err
+	case <-t.C:
+		w.err = context.Canceled
+		return 0, context.Canceled
+	}
+}
+
+// Close closer interface to close the underlying closer
+func (w *DeadlineWriter) Close() error {
+	return w.WriteCloser.Close()
 }
 
 // LimitWriter implements io.WriteCloser.
@@ -186,39 +235,21 @@ const directioAlignSize = 4096
 // 4K page boundaries. Without passing aligned buffer may cause
 // this function to return error.
 //
-// This code is similar in spirit to io.CopyBuffer but it is only to be
+// This code is similar in spirit to io.Copy but it is only to be
 // used with DIRECT I/O based file descriptor and it is expected that
 // input writer *os.File not a generic io.Writer. Make sure to have
 // the file opened for writes with syscall.O_DIRECT flag.
 func CopyAligned(w *os.File, r io.Reader, alignedBuf []byte, totalSize int64) (int64, error) {
 	// Writes remaining bytes in the buffer.
-	writeUnaligned := func(w *os.File, buf []byte) (remainingWritten int, err error) {
-		var n int
-		remaining := len(buf)
-		// The following logic writes the remainging data such that it writes whatever best is possible (aligned buffer)
-		// in O_DIRECT mode and remaining (unaligned buffer) in non-O_DIRECT mode.
-		remainingAligned := (remaining / directioAlignSize) * directioAlignSize
-		remainingAlignedBuf := buf[:remainingAligned]
-		remainingUnalignedBuf := buf[remainingAligned:]
-		if len(remainingAlignedBuf) > 0 {
-			n, err = w.Write(remainingAlignedBuf)
-			if err != nil {
-				return remainingWritten, err
-			}
-			remainingWritten += n
+	writeUnaligned := func(w *os.File, buf []byte) (remainingWritten int64, err error) {
+		// Disable O_DIRECT on fd's on unaligned buffer
+		// perform an amortized Fdatasync(fd) on the fd at
+		// the end, this is performed by the caller before
+		// closing 'w'.
+		if err = disk.DisableDirectIO(w); err != nil {
+			return remainingWritten, err
 		}
-		if len(remainingUnalignedBuf) > 0 {
-			// Write on O_DIRECT fds fail if buffer is not 4K aligned, hence disable O_DIRECT.
-			if err = disk.DisableDirectIO(w); err != nil {
-				return remainingWritten, err
-			}
-			n, err = w.Write(remainingUnalignedBuf)
-			if err != nil {
-				return remainingWritten, err
-			}
-			remainingWritten += n
-		}
-		return remainingWritten, nil
+		return io.Copy(w, bytes.NewReader(buf))
 	}
 
 	var written int64
@@ -236,21 +267,23 @@ func CopyAligned(w *os.File, r io.Reader, alignedBuf []byte, totalSize int64) (i
 			return written, err
 		}
 		buf = buf[:nr]
-		var nw int
+		var nw int64
 		if len(buf)%directioAlignSize == 0 {
+			var n int
 			// buf is aligned for directio write()
-			nw, err = w.Write(buf)
+			n, err = w.Write(buf)
+			nw = int64(n)
 		} else {
 			// buf is not aligned, hence use writeUnaligned()
 			nw, err = writeUnaligned(w, buf)
 		}
 		if nw > 0 {
-			written += int64(nw)
+			written += nw
 		}
 		if err != nil {
 			return written, err
 		}
-		if nw != len(buf) {
+		if nw != int64(len(buf)) {
 			return written, io.ErrShortWrite
 		}
 

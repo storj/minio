@@ -20,8 +20,8 @@ package madmin
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"runtime"
 	"time"
 )
 
@@ -35,8 +35,23 @@ const (
 	FS
 	// Multi disk Erasure (single, distributed) backend.
 	Erasure
+	// Gateway to other storage
+	Gateway
 
 	// Add your own backend.
+)
+
+// ItemState - represents the status of any item in offline,init,online state
+type ItemState string
+
+const (
+
+	// ItemOffline indicates that the item is offline
+	ItemOffline = ItemState("offline")
+	// ItemInitializing indicates that the item is still in initialization phase
+	ItemInitializing = ItemState("initializing")
+	// ItemOnline indicates that the item is online
+	ItemOnline = ItemState("online")
 )
 
 // StorageInfo - represents total capacity of underlying storage.
@@ -44,18 +59,26 @@ type StorageInfo struct {
 	Disks []Disk
 
 	// Backend type.
-	Backend struct {
-		// Represents various backend types, currently on FS and Erasure.
-		Type BackendType
+	Backend BackendInfo
+}
 
-		// Following fields are only meaningful if BackendType is Erasure.
-		OnlineDisks      BackendDisks // Online disks during server startup.
-		OfflineDisks     BackendDisks // Offline disks during server startup.
-		StandardSCData   int          // Data disks for currently configured Standard storage class.
-		StandardSCParity int          // Parity disks for currently configured Standard storage class.
-		RRSCData         int          // Data disks for currently configured Reduced Redundancy storage class.
-		RRSCParity       int          // Parity disks for currently configured Reduced Redundancy storage class.
-	}
+// BackendInfo - contains info of the underlying backend
+type BackendInfo struct {
+	// Represents various backend types, currently on FS, Erasure and Gateway
+	Type BackendType
+
+	// Following fields are only meaningful if BackendType is Gateway.
+	GatewayOnline bool
+
+	// Following fields are only meaningful if BackendType is Erasure.
+	OnlineDisks  BackendDisks // Online disks during server startup.
+	OfflineDisks BackendDisks // Offline disks during server startup.
+
+	// Following fields are only meaningful if BackendType is Erasure.
+	StandardSCData   []int // Data disks for currently configured Standard storage class.
+	StandardSCParity int   // Parity disks for currently configured Standard storage class.
+	RRSCData         []int // Data disks for currently configured Reduced Redundancy storage class.
+	RRSCParity       int   // Parity disks for currently configured Reduced Redundancy storage class.
 }
 
 // BackendDisks - represents the map of endpoint-disks.
@@ -74,14 +97,15 @@ func (d1 BackendDisks) Merge(d2 BackendDisks) BackendDisks {
 	if len(d2) == 0 {
 		d2 = make(BackendDisks)
 	}
+	var merged = make(BackendDisks)
 	for i1, v1 := range d1 {
 		if v2, ok := d2[i1]; ok {
-			d2[i1] = v2 + v1
+			merged[i1] = v2 + v1
 			continue
 		}
-		d2[i1] = v1
+		merged[i1] = v1
 	}
-	return d2
+	return merged
 }
 
 // StorageInfo - Connect to a minio server and call Storage Info Management API
@@ -100,36 +124,71 @@ func (adm *AdminClient) StorageInfo(ctx context.Context) (StorageInfo, error) {
 
 	// Unmarshal the server's json response
 	var storageInfo StorageInfo
-
-	respBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return StorageInfo{}, err
-	}
-
-	err = json.Unmarshal(respBytes, &storageInfo)
-	if err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&storageInfo); err != nil {
 		return StorageInfo{}, err
 	}
 
 	return storageInfo, nil
 }
 
-// DataUsageInfo represents data usage of an Object API
+// BucketUsageInfo - bucket usage info provides
+// - total size of the bucket
+// - total objects in a bucket
+// - object size histogram per bucket
+type BucketUsageInfo struct {
+	Size                    uint64 `json:"size"`
+	ReplicationPendingSize  uint64 `json:"objectsPendingReplicationTotalSize"`
+	ReplicationFailedSize   uint64 `json:"objectsFailedReplicationTotalSize"`
+	ReplicatedSize          uint64 `json:"objectsReplicatedTotalSize"`
+	ReplicaSize             uint64 `json:"objectReplicaTotalSize"`
+	ReplicationPendingCount uint64 `json:"objectsPendingReplicationCount"`
+	ReplicationFailedCount  uint64 `json:"objectsFailedReplicationCount"`
+
+	ObjectsCount         uint64            `json:"objectsCount"`
+	ObjectSizesHistogram map[string]uint64 `json:"objectsSizesHistogram"`
+}
+
+// DataUsageInfo represents data usage stats of the underlying Object API
 type DataUsageInfo struct {
 	// LastUpdate is the timestamp of when the data usage info was last updated.
 	// This does not indicate a full scan.
-	LastUpdate       time.Time `json:"lastUpdate"`
-	ObjectsCount     uint64    `json:"objectsCount"`
-	ObjectsTotalSize uint64    `json:"objectsTotalSize"`
+	LastUpdate time.Time `json:"lastUpdate"`
 
-	// ObjectsSizesHistogram contains information on objects across all buckets.
-	// See ObjectsHistogramIntervals.
-	ObjectsSizesHistogram map[string]uint64 `json:"objectsSizesHistogram"`
+	// Objects total count across all buckets
+	ObjectsTotalCount uint64 `json:"objectsCount"`
 
+	// Objects total size across all buckets
+	ObjectsTotalSize uint64 `json:"objectsTotalSize"`
+
+	// Total Size for objects that have not yet been replicated
+	ReplicationPendingSize uint64 `json:"objectsPendingReplicationTotalSize"`
+
+	// Total size for objects that have witness one or more failures and will be retried
+	ReplicationFailedSize uint64 `json:"objectsFailedReplicationTotalSize"`
+
+	// Total size for objects that have been replicated to destination
+	ReplicatedSize uint64 `json:"objectsReplicatedTotalSize"`
+
+	// Total size for objects that are replicas
+	ReplicaSize uint64 `json:"objectsReplicaTotalSize"`
+
+	// Total number of objects pending replication
+	ReplicationPendingCount uint64 `json:"objectsPendingReplicationCount"`
+
+	// Total number of objects that failed replication
+	ReplicationFailedCount uint64 `json:"objectsFailedReplicationCount"`
+
+	// Total number of buckets in this cluster
 	BucketsCount uint64 `json:"bucketsCount"`
 
-	// BucketsSizes is "bucket name" -> size.
-	BucketsSizes map[string]uint64 `json:"bucketsSizes"`
+	// Buckets usage info provides following information across all buckets
+	// - total size of the bucket
+	// - total objects in a bucket
+	// - object size histogram per bucket
+	BucketsUsage map[string]BucketUsageInfo `json:"bucketsUsageInfo"`
+
+	// Deprecated kept here for backward compatibility reasons.
+	BucketSizes map[string]uint64 `json:"bucketsSizes"`
 }
 
 // DataUsageInfo - returns data usage of the current object API
@@ -147,14 +206,7 @@ func (adm *AdminClient) DataUsageInfo(ctx context.Context) (DataUsageInfo, error
 
 	// Unmarshal the server's json response
 	var dataUsageInfo DataUsageInfo
-
-	respBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return DataUsageInfo{}, err
-	}
-
-	err = json.Unmarshal(respBytes, &dataUsageInfo)
-	if err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&dataUsageInfo); err != nil {
 		return DataUsageInfo{}, err
 	}
 
@@ -178,7 +230,7 @@ type InfoMessage struct {
 
 // Services contains different services information
 type Services struct {
-	Vault         Vault                         `json:"vault,omitempty"`
+	KMS           KMS                           `json:"kms,omitempty"`
 	LDAP          LDAP                          `json:"ldap,omitempty"`
 	Logger        []Logger                      `json:"logger,omitempty"`
 	Audit         []Audit                       `json:"audit,omitempty"`
@@ -187,21 +239,24 @@ type Services struct {
 
 // Buckets contains the number of buckets
 type Buckets struct {
-	Count uint64 `json:"count,omitempty"`
+	Count uint64 `json:"count"`
+	Error string `json:"error,omitempty"`
 }
 
 // Objects contains the number of objects
 type Objects struct {
-	Count uint64 `json:"count,omitempty"`
+	Count uint64 `json:"count"`
+	Error string `json:"error,omitempty"`
 }
 
-// Usage contains the tottal size used
+// Usage contains the total size used
 type Usage struct {
-	Size uint64 `json:"size,omitempty"`
+	Size  uint64 `json:"size"`
+	Error string `json:"error,omitempty"`
 }
 
-// Vault - Fetches the Vault status
-type Vault struct {
+// KMS contains KMS status information
+type KMS struct {
 	Status  string `json:"status,omitempty"`
 	Encrypt string `json:"encrypt,omitempty"`
 	Decrypt string `json:"decrypt,omitempty"`
@@ -246,44 +301,57 @@ type ErasureBackend struct {
 	Type         backendType `json:"backendType,omitempty"`
 	OnlineDisks  int         `json:"onlineDisks,omitempty"`
 	OfflineDisks int         `json:"offlineDisks,omitempty"`
-	// Data disks for currently configured Standard storage class.
-	StandardSCData int `json:"standardSCData,omitempty"`
 	// Parity disks for currently configured Standard storage class.
 	StandardSCParity int `json:"standardSCParity,omitempty"`
-	// Data disks for currently configured Reduced Redundancy storage class.
-	RRSCData int `json:"rrSCData,omitempty"`
 	// Parity disks for currently configured Reduced Redundancy storage class.
 	RRSCParity int `json:"rrSCParity,omitempty"`
 }
 
 // ServerProperties holds server information
 type ServerProperties struct {
-	State    string            `json:"state,omitempty"`
-	Endpoint string            `json:"endpoint,omitempty"`
-	Uptime   int64             `json:"uptime,omitempty"`
-	Version  string            `json:"version,omitempty"`
-	CommitID string            `json:"commitID,omitempty"`
-	Network  map[string]string `json:"network,omitempty"`
-	Disks    []Disk            `json:"drives,omitempty"`
+	State      string            `json:"state,omitempty"`
+	Endpoint   string            `json:"endpoint,omitempty"`
+	Uptime     int64             `json:"uptime,omitempty"`
+	Version    string            `json:"version,omitempty"`
+	CommitID   string            `json:"commitID,omitempty"`
+	Network    map[string]string `json:"network,omitempty"`
+	Disks      []Disk            `json:"drives,omitempty"`
+	PoolNumber int               `json:"poolNumber,omitempty"`
+	MemStats   runtime.MemStats  `json:"mem_stats"`
+}
+
+// DiskMetrics has the information about XL Storage APIs
+// the number of calls of each API and the moving average of
+// the duration of each API.
+type DiskMetrics struct {
+	APILatencies map[string]string `json:"apiLatencies,omitempty"`
+	APICalls     map[string]uint64 `json:"apiCalls,omitempty"`
 }
 
 // Disk holds Disk information
 type Disk struct {
-	Endpoint        string  `json:"endpoint,omitempty"`
-	RootDisk        bool    `json:"rootDisk,omitempty"`
-	DrivePath       string  `json:"path,omitempty"`
-	Healing         bool    `json:"healing,omitempty"`
-	State           string  `json:"state,omitempty"`
-	UUID            string  `json:"uuid,omitempty"`
-	Model           string  `json:"model,omitempty"`
-	TotalSpace      uint64  `json:"totalspace,omitempty"`
-	UsedSpace       uint64  `json:"usedspace,omitempty"`
-	AvailableSpace  uint64  `json:"availspace,omitempty"`
-	ReadThroughput  float64 `json:"readthroughput,omitempty"`
-	WriteThroughPut float64 `json:"writethroughput,omitempty"`
-	ReadLatency     float64 `json:"readlatency,omitempty"`
-	WriteLatency    float64 `json:"writelatency,omitempty"`
-	Utilization     float64 `json:"utilization,omitempty"`
+	Endpoint        string       `json:"endpoint,omitempty"`
+	RootDisk        bool         `json:"rootDisk,omitempty"`
+	DrivePath       string       `json:"path,omitempty"`
+	Healing         bool         `json:"healing,omitempty"`
+	State           string       `json:"state,omitempty"`
+	UUID            string       `json:"uuid,omitempty"`
+	Model           string       `json:"model,omitempty"`
+	TotalSpace      uint64       `json:"totalspace,omitempty"`
+	UsedSpace       uint64       `json:"usedspace,omitempty"`
+	AvailableSpace  uint64       `json:"availspace,omitempty"`
+	ReadThroughput  float64      `json:"readthroughput,omitempty"`
+	WriteThroughPut float64      `json:"writethroughput,omitempty"`
+	ReadLatency     float64      `json:"readlatency,omitempty"`
+	WriteLatency    float64      `json:"writelatency,omitempty"`
+	Utilization     float64      `json:"utilization,omitempty"`
+	Metrics         *DiskMetrics `json:"metrics,omitempty"`
+	HealInfo        *HealingDisk `json:"heal_info,omitempty"`
+
+	// Indexes, will be -1 until assigned a set.
+	PoolIndex int `json:"pool_index"`
+	SetIndex  int `json:"set_index"`
+	DiskIndex int `json:"disk_index"`
 }
 
 // ServerInfo - Connect to a minio server and call Server Admin Info Management API
@@ -305,14 +373,7 @@ func (adm *AdminClient) ServerInfo(ctx context.Context) (InfoMessage, error) {
 
 	// Unmarshal the server's json response
 	var message InfoMessage
-
-	respBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return InfoMessage{}, err
-	}
-
-	err = json.Unmarshal(respBytes, &message)
-	if err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&message); err != nil {
 		return InfoMessage{}, err
 	}
 

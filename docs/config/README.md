@@ -32,11 +32,11 @@ $ mc tree --files ~/.minio
 You can provide a custom certs directory using `--certs-dir` command line option.
 
 #### Credentials
-On MinIO admin credentials or root credentials are only allowed to be changed using ENVs namely `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`. Using the combination of these two values MinIO encrypts the config stored at the backend.
+On MinIO admin credentials or root credentials are only allowed to be changed using ENVs namely `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD`. Using the combination of these two values MinIO encrypts the config stored at the backend.
 
-```
-export MINIO_ACCESS_KEY=minio
-export MINIO_SECRET_KEY=minio13
+```sh
+export MINIO_ROOT_USER=minio
+export MINIO_ROOT_PASSWORD=minio13
 minio server /data
 ```
 
@@ -46,17 +46,17 @@ Additionally if you wish to change the admin credentials, then MinIO will automa
 
 > Old ENVs are never remembered in memory and are destroyed right after they are used to migrate your existing content with new credentials. You are safe to remove them after the server as successfully started, by restarting the services once again.
 
-```
-export MINIO_ACCESS_KEY=newminio
-export MINIO_SECRET_KEY=newminio123
-export MINIO_ACCESS_KEY_OLD=minio
-export MINIO_SECRET_KEY_OLD=minio123
+```sh
+export MINIO_ROOT_USER=newminio
+export MINIO_ROOT_PASSWORD=newminio123
+export MINIO_ROOT_USER_OLD=minio
+export MINIO_ROOT_PASSWORD_OLD=minio123
 minio server /data
 ```
 
-Once the migration is complete, server will automatically unset the `MINIO_ACCESS_KEY_OLD` and `MINIO_SECRET_KEY_OLD` with in the process namespace.
+Once the migration is complete, server will automatically unset the `MINIO_ROOT_USER_OLD` and `MINIO_ROOT_PASSWORD_OLD` with in the process namespace.
 
-> **NOTE: Make sure to remove `MINIO_ACCESS_KEY_OLD` and `MINIO_SECRET_KEY_OLD` in scripts or service files before next service restarts of the server to avoid double encryption of your existing contents.**
+> **NOTE: Make sure to remove `MINIO_ROOT_USER_OLD` and `MINIO_ROOT_PASSWORD_OLD` in scripts or service files before next service restarts of the server to avoid double encryption of your existing contents.**
 
 #### Region
 ```
@@ -172,7 +172,7 @@ MINIO_ETCD_COMMENT          (sentence)  optionally add a comment to this setting
 ```
 
 ### API
-By default, there is no limitation on the number of concurrents requests that a server/cluster processes at the same time. However, it is possible to impose such limitation using the API subsystem. Read more about throttling limitation in MinIO server [here](https://github.com/minio/minio/blob/master/docs/throttle/README.md).
+By default, there is no limitation on the number of concurrent requests that a server/cluster processes at the same time. However, it is possible to impose such limitation using the API subsystem. Read more about throttling limitation in MinIO server [here](https://github.com/minio/minio/blob/master/docs/throttle/README.md).
 
 ```
 KEY:
@@ -263,40 +263,40 @@ The following sub-systems are dynamic i.e., configuration parameters for each su
 ```
 api                   manage global HTTP API call specific features, such as throttling, authentication types, etc.
 heal                  manage object healing frequency and bitrot verification checks
-crawler               manage crawling for usage calculation, lifecycle, healing and more
+scanner               manage namespace scanning for usage calculation, lifecycle, healing and more
 ```
 
 > NOTE: if you set any of the following sub-system configuration using ENVs, dynamic behavior is not supported.
 
-### Usage crawler
+### Usage scanner
 
-Data usage crawler is enabled by default. The following configuration settings allow for more staggered delay in terms of usage calculation. The crawler adapts to the system speed and completely pauses when the system is under load. It is possible to adjust the speed of the crawler and thereby the latency of updates being reflected. The delays between each operation of the crawl can be adjusted by the `mc admin config set alias/ delay=15.0`. By default the value is `10.0`. This means the crawler will sleep *10x* the time each operation takes.
+Data usage scanner is enabled by default. The following configuration settings allow for more staggered delay in terms of usage calculation. The scanner adapts to the system speed and completely pauses when the system is under load. It is possible to adjust the speed of the scanner and thereby the latency of updates being reflected. The delays between each operation of the scanner can be adjusted by the `mc admin config set alias/ delay=15.0`. By default the value is `10.0`. This means the scanner will sleep *10x* the time each operation takes.
 
-In most setups this will keep the crawler slow enough to not impact overall system performance. Setting the `delay` key to a *lower* value will make the crawler faster and setting it to 0 will make the crawler run at full speed (not recommended in production). Setting it to a higher value will make the crawler slower, consuming less resources with the trade off of not collecting metrics for operations like healing and disk usage as fast.
+In most setups this will keep the scanner slow enough to not impact overall system performance. Setting the `delay` key to a *lower* value will make the scanner faster and setting it to 0 will make the scanner run at full speed (not recommended in production). Setting it to a higher value will make the scanner slower, consuming less resources with the trade off of not collecting metrics for operations like healing and disk usage as fast.
 
 ```
-~ mc admin config set alias/ crawler
+~ mc admin config set alias/ scanner
 KEY:
-crawler  manage crawling for usage calculation, lifecycle, healing and more
+scanner  manage namespace scanning for usage calculation, lifecycle, healing and more
 
 ARGS:
-delay     (float)     crawler delay multiplier, defaults to '10.0'
+delay     (float)     scanner delay multiplier, defaults to '10.0'
 max_wait  (duration)  maximum wait time between operations, defaults to '15s'
 ```
 
-Example: Following setting will decrease the crawler speed by a factor of 3, reducing the system resource use, but increasing the latency of updates being reflected.
+Example: Following setting will decrease the scanner speed by a factor of 3, reducing the system resource use, but increasing the latency of updates being reflected.
 
 ```sh
-~ mc admin config set alias/ crawler delay=30.0
+~ mc admin config set alias/ scanner delay=30.0
 ```
 
-Once set the crawler settings are automatically applied without the need for server restarts.
+Once set the scanner settings are automatically applied without the need for server restarts.
 
-> NOTE: Data usage crawler is not supported under Gateway deployments.
+> NOTE: Data usage scanner is not supported under Gateway deployments.
 
 ### Healing
 
-Healing is enabled by default. The following configuration settings allow for more staggered delay in terms of healing. The healing system by default adapts to the system speed and pauses up to '1sec' per object when the system has `max_io` number of concurrent requests. It is possible to adjust the `max_delay` and `max_io` values thereby increasing the healing speed. The delays between each operation of the healer can be adjusted by the `mc admin config set alias/ max_delay=1s` and maximum concurrent requests allowed before we start slowing things down can be configured with `mc admin config set alias/ max_io=30` . By default the wait delay is `1sec` beyond 10 cocurrent operations. This means the healer will sleep *1 second* at max for each heal operation if there are more than *10* concurrent client requests.
+Healing is enabled by default. The following configuration settings allow for more staggered delay in terms of healing. The healing system by default adapts to the system speed and pauses up to '1sec' per object when the system has `max_io` number of concurrent requests. It is possible to adjust the `max_delay` and `max_io` values thereby increasing the healing speed. The delays between each operation of the healer can be adjusted by the `mc admin config set alias/ max_delay=1s` and maximum concurrent requests allowed before we start slowing things down can be configured with `mc admin config set alias/ max_io=30` . By default the wait delay is `1sec` beyond 10 concurrent operations. This means the healer will sleep *1 second* at max for each heal operation if there are more than *10* concurrent client requests.
 
 In most setups this is sufficient to heal the content after drive replacements. Setting `max_delay` to a *lower* value and setting `max_io` to a *higher* value would make heal go faster.
 
@@ -306,7 +306,7 @@ KEY:
 heal  manage object healing frequency and bitrot verification checks
 
 ARGS:
-bitrotscan  (on|off)    perform bitrot scan on disks when checking objects during crawl
+bitrotscan  (on|off)    perform bitrot scan on disks when checking objects during scanner
 max_sleep   (duration)  maximum sleep duration between objects to slow down heal operation. eg. 2s
 max_io      (int)       maximum IO requests allowed between objects to slow down heal operation. eg. 3
 ```

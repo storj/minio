@@ -66,6 +66,10 @@ func getDefaultOpts(header http.Header, copySource bool, metadata map[string]str
 	if crypto.S3.IsRequested(header) || (metadata != nil && crypto.S3.IsEncrypted(metadata)) {
 		opts.ServerSideEncryption = encrypt.NewSSE()
 	}
+	if v, ok := header[xhttp.MinIOSourceProxyRequest]; ok {
+		opts.ProxyHeaderSet = true
+		opts.ProxyRequest = strings.Join(v, "") == "true"
+	}
 	return
 }
 
@@ -187,7 +191,7 @@ func delOpts(ctx context.Context, r *http.Request, bucket, object string) (opts 
 
 	mtime := strings.TrimSpace(r.Header.Get(xhttp.MinIOSourceMTime))
 	if mtime != "" {
-		opts.MTime, err = time.Parse(time.RFC3339, mtime)
+		opts.MTime, err = time.Parse(time.RFC3339Nano, mtime)
 		if err != nil {
 			return opts, InvalidArgument{
 				Bucket: bucket,

@@ -18,18 +18,27 @@ package cmd
 
 import (
 	"context"
-	"path"
 	"sync"
 
 	"github.com/minio/minio/pkg/sync/errgroup"
 )
+
+func (er erasureObjects) getLocalDisks() (localDisks []StorageAPI) {
+	disks := er.getDisks()
+	for _, disk := range disks {
+		if disk != nil && disk.IsLocal() {
+			localDisks = append(localDisks, disk)
+		}
+	}
+	return localDisks
+}
 
 func (er erasureObjects) getLoadBalancedLocalDisks() (newDisks []StorageAPI) {
 	disks := er.getDisks()
 	// Based on the random shuffling return back randomized disks.
 	for _, i := range hashOrder(UTCNow().String(), len(disks)) {
 		if disks[i-1] != nil && disks[i-1].IsLocal() {
-			if !disks[i-1].Healing() && disks[i-1].IsOnline() {
+			if disks[i-1].Healing() == nil && disks[i-1].IsOnline() {
 				newDisks = append(newDisks, disks[i-1])
 			}
 		}
@@ -144,27 +153,12 @@ func (er erasureObjects) getLoadBalancedDisks(optimized bool) []StorageAPI {
 }
 
 // This function does the following check, suppose
-// object is "a/b/c/d", stat makes sure that objects ""a/b/c""
-// "a/b" and "a" do not exist.
+// object is "a/b/c/d", stat makes sure that objects
+// - "a/b/c"
+// - "a/b"
+// - "a"
+// do not exist on the namespace.
 func (er erasureObjects) parentDirIsObject(ctx context.Context, bucket, parent string) bool {
-	var isParentDirObject func(string) bool
-	isParentDirObject = func(p string) bool {
-		if p == "." || p == SlashSeparator {
-			return false
-		}
-		if er.isObject(ctx, bucket, p) {
-			// If there is already a file at prefix "p", return true.
-			return true
-		}
-		// Check if there is a file as one of the parent paths.
-		return isParentDirObject(path.Dir(p))
-	}
-	return isParentDirObject(parent)
-}
-
-// isObject - returns `true` if the prefix is an object i.e if
-// `xl.meta` exists at the leaf, false otherwise.
-func (er erasureObjects) isObject(ctx context.Context, bucket, prefix string) (ok bool) {
 	storageDisks := er.getDisks()
 
 	g := errgroup.WithNErrs(len(storageDisks))
@@ -176,7 +170,7 @@ func (er erasureObjects) isObject(ctx context.Context, bucket, prefix string) (o
 				return errDiskNotFound
 			}
 			// Check if 'prefix' is an object on this 'disk', else continue the check the next disk
-			return storageDisks[index].CheckFile(ctx, bucket, prefix)
+			return storageDisks[index].CheckFile(ctx, bucket, parent)
 		}, index)
 	}
 

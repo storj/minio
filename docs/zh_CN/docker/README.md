@@ -8,8 +8,8 @@ MinIO 需要一个持久卷来存储配置和应用数据。不过, 如果只是
 
 ```sh
 docker run -p 9000:9000 \
-  -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
-  -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
+  -e "MINIO_ROOT_USER=AKIAIOSFODNN7EXAMPLE" \
+  -e "MINIO_ROOT_PASSWORD=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
   minio/minio server /data
 ```
 
@@ -20,8 +20,8 @@ docker run -p 9000:9000 \
 docker run -p 9000:9000 \
   --name minio1 \
   -v /mnt/data:/data \
-  -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
-  -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
+  -e "MINIO_ROOT_USER=AKIAIOSFODNN7EXAMPLE" \
+  -e "MINIO_ROOT_PASSWORD=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
   minio/minio server /data
 ```
 
@@ -30,8 +30,8 @@ docker run -p 9000:9000 \
 docker run -p 9000:9000 \
   --name minio1 \
   -v D:\data:/data \
-  -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
-  -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
+  -e "MINIO_ROOT_USER=AKIAIOSFODNN7EXAMPLE" \
+  -e "MINIO_ROOT_PASSWORD=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
   minio/minio server /data
 ```
 
@@ -48,8 +48,8 @@ docker run -p 9000:9000 \
 #### GNU/Linux 和 macOS
 ```sh
 docker run -p 9000:9000 --name minio1 \
-  -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
-  -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
+  -e "MINIO_ROOT_USER=AKIAIOSFODNN7EXAMPLE" \
+  -e "MINIO_ROOT_PASSWORD=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
   -v /mnt/data:/data \
   minio/minio server /data
 ```
@@ -57,8 +57,8 @@ docker run -p 9000:9000 --name minio1 \
 #### Windows
 ```powershell
 docker run -p 9000:9000 --name minio1 \
-  -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
-  -e "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
+  -e "MINIO_ROOT_USER=AKIAIOSFODNN7EXAMPLE" \
+  -e "MINIO_ROOT_PASSWORD=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
   -v D:\data:/data \
   minio/minio server /data
 ```
@@ -75,8 +75,8 @@ mkdir -p ${HOME}/data
 docker run -p 9000:9000 \
   --user $(id -u):$(id -g) \
   --name minio1 \
-  -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
-  -e "MINIO_SECRET_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY" \
+  -e "MINIO_ROOT_USER=AKIAIOSFODNN7EXAMPLE" \
+  -e "MINIO_ROOT_PASSWORD=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY" \
   -v ${HOME}/data:/data \
   minio/minio server /data
 ```
@@ -84,14 +84,14 @@ docker run -p 9000:9000 \
 #### Windows
 在windows上， 你需要用到 [Docker集成Windows身份验证](https://success.docker.com/article/modernizing-traditional-dot-net-applications#integratedwindowsauthentication) 和 [创建具有Active Directory支持的容器](https://blogs.msdn.microsoft.com/containerstuff/2017/01/30/create-a-container-with-active-directory-support/) 的能力
 
-> 注意: 在使用`credentialspec=`欠，要确保你的AD/Windows用户具备 *D:\data* 的写入权限。
+> 注意: 在使用`credentialspec=`时，要确保你的AD/Windows用户具备 *D:\data* 的写入权限。
 
 ```powershell
 docker run -p 9000:9000 \
   --name minio1 \
   --security-opt "credentialspec=file://myuser.json"
-  -e "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE" \
-  -e "MINIO_SECRET_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY" \
+  -e "MINIO_ROOT_USER=AKIAIOSFODNN7EXAMPLE" \
+  -e "MINIO_ROOT_PASSWORD=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY" \
   -v D:\data:/data \
   minio/minio server /data
 ```
@@ -117,8 +117,8 @@ docker service create --name="minio-service" --secret="access_key" --secret="sec
 docker service create --name="minio-service" \
   --secret="my_access_key" \
   --secret="my_secret_key" \
-  --env="MINIO_ACCESS_KEY_FILE=my_access_key" \
-  --env="MINIO_SECRET_KEY_FILE=my_secret_key" \
+  --env="MINIO_ROOT_USER_FILE=my_access_key" \
+  --env="MINIO_ROOT_PASSWORD_FILE=my_secret_key" \
   minio/minio server /data
 ```
 

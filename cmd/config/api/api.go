@@ -36,6 +36,7 @@ const (
 	apiRemoteTransportDeadline = "remote_transport_deadline"
 	apiListQuorum              = "list_quorum"
 	apiExtendListCacheLife     = "extend_list_cache_life"
+	apiReplicationWorkers      = "replication_workers"
 
 	EnvAPIRequestsMax             = "MINIO_API_REQUESTS_MAX"
 	EnvAPIRequestsDeadline        = "MINIO_API_REQUESTS_DEADLINE"
@@ -45,6 +46,7 @@ const (
 	EnvAPIListQuorum              = "MINIO_API_LIST_QUORUM"
 	EnvAPIExtendListCacheLife     = "MINIO_API_EXTEND_LIST_CACHE_LIFE"
 	EnvAPISecureCiphers           = "MINIO_API_SECURE_CIPHERS"
+	EnvAPIReplicationWorkers      = "MINIO_API_REPLICATION_WORKERS"
 )
 
 // Deprecated key and ENVs
@@ -78,11 +80,15 @@ var (
 		},
 		config.KV{
 			Key:   apiListQuorum,
-			Value: "optimal",
+			Value: "strict",
 		},
 		config.KV{
 			Key:   apiExtendListCacheLife,
 			Value: "0s",
+		},
+		config.KV{
+			Key:   apiReplicationWorkers,
+			Value: "500",
 		},
 	}
 )
@@ -96,6 +102,7 @@ type Config struct {
 	RemoteTransportDeadline time.Duration `json:"remote_transport_deadline"`
 	ListQuorum              string        `json:"list_strict_quorum"`
 	ExtendListLife          time.Duration `json:"extend_list_cache_life"`
+	ReplicationWorkers      int           `json:"replication_workers"`
 }
 
 // UnmarshalJSON - Validate SS and RRS parity when unmarshalling JSON.
@@ -113,8 +120,6 @@ func (sCfg *Config) UnmarshalJSON(data []byte) error {
 // acceptable quorum expected for list operations
 func (sCfg Config) GetListQuorum() int {
 	switch sCfg.ListQuorum {
-	case "optimal":
-		return 3
 	case "reduced":
 		return 2
 	case "disk":
@@ -123,7 +128,7 @@ func (sCfg Config) GetListQuorum() int {
 	case "strict":
 		return -1
 	}
-	// Defaults to 3 drives per set.
+	// Defaults to 3 drives per set, defaults to "optimal" value
 	return 3
 }
 
@@ -175,6 +180,15 @@ func LookupConfig(kvs config.KVS) (cfg Config, err error) {
 		return cfg, err
 	}
 
+	replicationWorkers, err := strconv.Atoi(env.Get(EnvAPIReplicationWorkers, kvs.Get(apiReplicationWorkers)))
+	if err != nil {
+		return cfg, err
+	}
+
+	if replicationWorkers <= 0 {
+		return cfg, config.ErrInvalidReplicationWorkersValue(nil).Msg("Minimum number of replication workers should be 1")
+	}
+
 	return Config{
 		RequestsMax:             requestsMax,
 		RequestsDeadline:        requestsDeadline,
@@ -183,5 +197,6 @@ func LookupConfig(kvs config.KVS) (cfg Config, err error) {
 		RemoteTransportDeadline: remoteTransportDeadline,
 		ListQuorum:              listQuorum,
 		ExtendListLife:          listLife,
+		ReplicationWorkers:      replicationWorkers,
 	}, nil
 }

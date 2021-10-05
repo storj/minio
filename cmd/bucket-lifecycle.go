@@ -24,11 +24,11 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	miniogo "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/minio/cmd/crypto"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
 	sse "github.com/minio/minio/pkg/bucket/encryption"
@@ -66,13 +66,58 @@ func NewLifecycleSys() *LifecycleSys {
 	return &LifecycleSys{}
 }
 
+type expiryTask struct {
+	objInfo       ObjectInfo
+	versionExpiry bool
+}
+
+type expiryState struct {
+	once     sync.Once
+	expiryCh chan expiryTask
+}
+
+func (es *expiryState) queueExpiryTask(oi ObjectInfo, rmVersion bool) {
+	select {
+	case <-GlobalContext.Done():
+		es.once.Do(func() {
+			close(es.expiryCh)
+		})
+	case es.expiryCh <- expiryTask{objInfo: oi, versionExpiry: rmVersion}:
+	default:
+	}
+}
+
+var (
+	globalExpiryState *expiryState
+)
+
+func newExpiryState() *expiryState {
+	return &expiryState{
+		expiryCh: make(chan expiryTask, 10000),
+	}
+}
+
+func initBackgroundExpiry(ctx context.Context, objectAPI ObjectLayer) {
+	globalExpiryState = newExpiryState()
+	go func() {
+		for t := range globalExpiryState.expiryCh {
+			applyExpiryRule(ctx, objectAPI, t.objInfo, false, t.versionExpiry)
+		}
+	}()
+}
+
 type transitionState struct {
+	once sync.Once
 	// add future metrics here
 	transitionCh chan ObjectInfo
 }
 
 func (t *transitionState) queueTransitionTask(oi ObjectInfo) {
 	select {
+	case <-GlobalContext.Done():
+		t.once.Do(func() {
+			close(t.transitionCh)
+		})
 	case t.transitionCh <- oi:
 	default:
 	}
@@ -84,19 +129,13 @@ var (
 )
 
 func newTransitionState() *transitionState {
-
 	// fix minimum concurrent transition to 1 for single CPU setup
 	if globalTransitionConcurrent == 0 {
 		globalTransitionConcurrent = 1
 	}
-	ts := &transitionState{
+	return &transitionState{
 		transitionCh: make(chan ObjectInfo, 10000),
 	}
-	go func() {
-		<-GlobalContext.Done()
-		close(ts.transitionCh)
-	}()
-	return ts
 }
 
 // addWorker creates a new worker to process tasks
@@ -206,16 +245,11 @@ func transitionSCInUse(ctx context.Context, lfc *lifecycle.Lifecycle, bucket, ar
 }
 
 // set PutObjectOptions for PUT operation to transition data to target cluster
-func putTransitionOpts(objInfo ObjectInfo) (putOpts miniogo.PutObjectOptions) {
+func putTransitionOpts(objInfo ObjectInfo) (putOpts miniogo.PutObjectOptions, err error) {
 	meta := make(map[string]string)
 
-	tag, err := tags.ParseObjectTags(objInfo.UserTags)
-	if err != nil {
-		return
-	}
 	putOpts = miniogo.PutObjectOptions{
 		UserMetadata:    meta,
-		UserTags:        tag.ToMap(),
 		ContentType:     objInfo.ContentType,
 		ContentEncoding: objInfo.ContentEncoding,
 		StorageClass:    objInfo.StorageClass,
@@ -225,29 +259,47 @@ func putTransitionOpts(objInfo ObjectInfo) (putOpts miniogo.PutObjectOptions) {
 			SourceETag:      objInfo.ETag,
 		},
 	}
-	if mode, ok := objInfo.UserDefined[xhttp.AmzObjectLockMode]; ok {
+
+	if objInfo.UserTags != "" {
+		tag, _ := tags.ParseObjectTags(objInfo.UserTags)
+		if tag != nil {
+			putOpts.UserTags = tag.ToMap()
+		}
+	}
+
+	lkMap := caseInsensitiveMap(objInfo.UserDefined)
+	if lang, ok := lkMap.Lookup(xhttp.ContentLanguage); ok {
+		putOpts.ContentLanguage = lang
+	}
+	if disp, ok := lkMap.Lookup(xhttp.ContentDisposition); ok {
+		putOpts.ContentDisposition = disp
+	}
+	if cc, ok := lkMap.Lookup(xhttp.CacheControl); ok {
+		putOpts.CacheControl = cc
+	}
+	if mode, ok := lkMap.Lookup(xhttp.AmzObjectLockMode); ok {
 		rmode := miniogo.RetentionMode(mode)
 		putOpts.Mode = rmode
 	}
-	if retainDateStr, ok := objInfo.UserDefined[xhttp.AmzObjectLockRetainUntilDate]; ok {
+	if retainDateStr, ok := lkMap.Lookup(xhttp.AmzObjectLockRetainUntilDate); ok {
 		rdate, err := time.Parse(time.RFC3339, retainDateStr)
 		if err != nil {
-			return
+			return putOpts, err
 		}
 		putOpts.RetainUntilDate = rdate
 	}
-	if lhold, ok := objInfo.UserDefined[xhttp.AmzObjectLockLegalHold]; ok {
+	if lhold, ok := lkMap.Lookup(xhttp.AmzObjectLockLegalHold); ok {
 		putOpts.LegalHold = miniogo.LegalHoldStatus(lhold)
 	}
 
-	return
+	return putOpts, nil
 }
 
 // handle deletes of transitioned objects or object versions when one of the following is true:
 // 1. temporarily restored copies of objects (restored with the PostRestoreObject API) expired.
 // 2. life cycle expiry date is met on the object.
 // 3. Object is removed through DELETE api call
-func deleteTransitionedObject(ctx context.Context, objectAPI ObjectLayer, bucket, object string, lcOpts lifecycle.ObjectOpts, action lifecycle.Action, isDeleteTierOnly bool) error {
+func deleteTransitionedObject(ctx context.Context, objectAPI ObjectLayer, bucket, object string, lcOpts lifecycle.ObjectOpts, restoredObject, isDeleteTierOnly bool) error {
 	if lcOpts.TransitionStatus == "" && !isDeleteTierOnly {
 		return nil
 	}
@@ -267,45 +319,40 @@ func deleteTransitionedObject(ctx context.Context, objectAPI ObjectLayer, bucket
 	var opts ObjectOptions
 	opts.Versioned = globalBucketVersioningSys.Enabled(bucket)
 	opts.VersionID = lcOpts.VersionID
-	switch action {
-	case lifecycle.DeleteRestoredAction, lifecycle.DeleteRestoredVersionAction:
+	if restoredObject {
 		// delete locally restored copy of object or object version
 		// from the source, while leaving metadata behind. The data on
 		// transitioned tier lies untouched and still accessible
 		opts.TransitionStatus = lcOpts.TransitionStatus
 		_, err = objectAPI.DeleteObject(ctx, bucket, object, opts)
 		return err
-	case lifecycle.DeleteAction, lifecycle.DeleteVersionAction:
-		// When an object is past expiry, delete the data from transitioned tier and
-		// metadata from source
-		if err := tgt.RemoveObject(context.Background(), arn.Bucket, object, miniogo.RemoveObjectOptions{VersionID: lcOpts.VersionID}); err != nil {
-			logger.LogIf(ctx, err)
-		}
-
-		if isDeleteTierOnly {
-			return nil
-		}
-		_, err = objectAPI.DeleteObject(ctx, bucket, object, opts)
-		if err != nil {
-			return err
-		}
-		eventName := event.ObjectRemovedDelete
-		if lcOpts.DeleteMarker {
-			eventName = event.ObjectRemovedDeleteMarkerCreated
-		}
-		objInfo := ObjectInfo{
-			Name:         object,
-			VersionID:    lcOpts.VersionID,
-			DeleteMarker: lcOpts.DeleteMarker,
-		}
-		// Notify object deleted event.
-		sendEvent(eventArgs{
-			EventName:  eventName,
-			BucketName: bucket,
-			Object:     objInfo,
-			Host:       "Internal: [ILM-EXPIRY]",
-		})
 	}
+
+	// When an object is past expiry, delete the data from transitioned tier and
+	// metadata from source
+	if err := tgt.RemoveObject(context.Background(), arn.Bucket, object, miniogo.RemoveObjectOptions{VersionID: lcOpts.VersionID}); err != nil {
+		logger.LogIf(ctx, err)
+	}
+
+	if isDeleteTierOnly {
+		return nil
+	}
+
+	objInfo, err := objectAPI.DeleteObject(ctx, bucket, object, opts)
+	if err != nil {
+		return err
+	}
+	eventName := event.ObjectRemovedDelete
+	if lcOpts.DeleteMarker {
+		eventName = event.ObjectRemovedDeleteMarkerCreated
+	}
+	// Notify object deleted event.
+	sendEvent(eventArgs{
+		EventName:  eventName,
+		BucketName: bucket,
+		Object:     objInfo,
+		Host:       "Internal: [ILM-EXPIRY]",
+	})
 
 	// should never reach here
 	return nil
@@ -341,13 +388,19 @@ func transitionObject(ctx context.Context, objectAPI ObjectLayer, objInfo Object
 		return err
 	}
 	oi := gr.ObjInfo
-
 	if oi.TransitionStatus == lifecycle.TransitionComplete {
+		gr.Close()
 		return nil
 	}
 
-	putOpts := putTransitionOpts(oi)
-	if _, err = tgt.PutObject(ctx, arn.Bucket, oi.Name, gr, oi.Size, "", "", putOpts); err != nil {
+	putOpts, err := putTransitionOpts(oi)
+	if err != nil {
+		gr.Close()
+		return err
+
+	}
+	if _, err = tgt.PutObject(ctx, arn.Bucket, oi.Name, gr, oi.Size, putOpts); err != nil {
+		gr.Close()
 		return err
 	}
 	gr.Close()
@@ -358,20 +411,19 @@ func transitionObject(ctx context.Context, objectAPI ObjectLayer, objInfo Object
 	opts.TransitionStatus = lifecycle.TransitionComplete
 	eventName := event.ObjectTransitionComplete
 
-	_, err = objectAPI.DeleteObject(ctx, oi.Bucket, oi.Name, opts)
+	objInfo, err = objectAPI.DeleteObject(ctx, oi.Bucket, oi.Name, opts)
 	if err != nil {
 		eventName = event.ObjectTransitionFailed
 	}
+
 	// Notify object deleted event.
 	sendEvent(eventArgs{
 		EventName:  eventName,
-		BucketName: oi.Bucket,
-		Object: ObjectInfo{
-			Name:      oi.Name,
-			VersionID: opts.VersionID,
-		},
-		Host: "Internal: [ILM-Transition]",
+		BucketName: objInfo.Bucket,
+		Object:     objInfo,
+		Host:       "Internal: [ILM-Transition]",
 	})
+
 	return err
 }
 
@@ -421,7 +473,7 @@ func getTransitionedObjectReader(ctx context.Context, bucket, object string, rs 
 		}
 	}
 
-	reader, _, _, err := tgt.GetObject(ctx, arn.Bucket, object, gopts)
+	reader, err := tgt.GetObject(ctx, arn.Bucket, object, gopts)
 	if err != nil {
 		return nil, err
 	}
@@ -478,7 +530,7 @@ type SelectParameters struct {
 
 // IsEmpty returns true if no select parameters set
 func (sp *SelectParameters) IsEmpty() bool {
-	return sp == nil || sp.S3Select == s3select.S3Select{}
+	return sp == nil
 }
 
 var (
@@ -547,7 +599,7 @@ func (r *RestoreObjectRequest) validate(ctx context.Context, objAPI ObjectLayer)
 		if r.OutputLocation.S3.Prefix == "" {
 			return fmt.Errorf("Prefix is a required parameter in OutputLocation")
 		}
-		if r.OutputLocation.S3.Encryption.EncryptionType != crypto.SSEAlgorithmAES256 {
+		if r.OutputLocation.S3.Encryption.EncryptionType != xhttp.AmzEncryptionAES {
 			return NotImplemented{}
 		}
 	}
@@ -571,9 +623,11 @@ func putRestoreOpts(bucket, object string, rreq *RestoreObjectRequest, objInfo O
 			}
 			meta[v.Name] = v.Value
 		}
-		meta[xhttp.AmzObjectTagging] = rreq.OutputLocation.S3.Tagging.String()
+		if tags := rreq.OutputLocation.S3.Tagging.String(); tags != "" {
+			meta[xhttp.AmzObjectTagging] = tags
+		}
 		if rreq.OutputLocation.S3.Encryption.EncryptionType != "" {
-			meta[crypto.SSEHeader] = crypto.SSEAlgorithmAES256
+			meta[xhttp.AmzServerSideEncryption] = xhttp.AmzEncryptionAES
 		}
 		return ObjectOptions{
 			Versioned:        globalBucketVersioningSys.Enabled(bucket),
@@ -584,7 +638,9 @@ func putRestoreOpts(bucket, object string, rreq *RestoreObjectRequest, objInfo O
 	for k, v := range objInfo.UserDefined {
 		meta[k] = v
 	}
-	meta[xhttp.AmzObjectTagging] = objInfo.UserTags
+	if len(objInfo.UserTags) != 0 {
+		meta[xhttp.AmzObjectTagging] = objInfo.UserTags
+	}
 
 	return ObjectOptions{
 		Versioned:        globalBucketVersioningSys.Enabled(bucket),
@@ -640,11 +696,11 @@ func restoreTransitionedObject(ctx context.Context, bucket, object string, objAP
 		return err
 	}
 	defer gr.Close()
-	hashReader, err := hash.NewReader(gr, objInfo.Size, "", "", objInfo.Size, globalCLIContext.StrictS3Compat)
+	hashReader, err := hash.NewReader(gr, objInfo.Size, "", "", objInfo.Size)
 	if err != nil {
 		return err
 	}
-	pReader := NewPutObjReader(hashReader, nil, nil)
+	pReader := NewPutObjReader(hashReader)
 	opts := putRestoreOpts(bucket, object, rreq, objInfo)
 	opts.UserDefined[xhttp.AmzRestore] = fmt.Sprintf("ongoing-request=%t, expiry-date=%s", false, restoreExpiry.Format(http.TimeFormat))
 	if _, err := objAPI.PutObject(ctx, bucket, object, pReader, opts); err != nil {

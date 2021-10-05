@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -38,7 +37,6 @@ import (
 	"github.com/minio/minio/cmd/config"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/cmd/rest"
 	"github.com/minio/minio/pkg/env"
 	"github.com/minio/minio/pkg/mountinfo"
 	xnet "github.com/minio/minio/pkg/net"
@@ -59,7 +57,7 @@ const (
 // See proxyRequest() for details.
 type ProxyEndpoint struct {
 	Endpoint
-	Transport *http.Transport
+	Transport http.RoundTripper
 }
 
 // Endpoint - any type of endpoint.
@@ -198,20 +196,20 @@ func NewEndpoint(arg string) (ep Endpoint, e error) {
 	}, nil
 }
 
-// ZoneEndpoints represent endpoints in a given zone
+// PoolEndpoints represent endpoints in a given pool
 // along with its setCount and setDriveCount.
-type ZoneEndpoints struct {
+type PoolEndpoints struct {
 	SetCount     int
 	DrivesPerSet int
 	Endpoints    Endpoints
 }
 
 // EndpointServerPools - list of list of endpoints
-type EndpointServerPools []ZoneEndpoints
+type EndpointServerPools []PoolEndpoints
 
-// GetLocalZoneIdx returns the zone which endpoint belongs to locally.
-// if ep is remote this code will return -1 zoneIndex
-func (l EndpointServerPools) GetLocalZoneIdx(ep Endpoint) int {
+// GetLocalPoolIdx returns the pool which endpoint belongs to locally.
+// if ep is remote this code will return -1 poolIndex
+func (l EndpointServerPools) GetLocalPoolIdx(ep Endpoint) int {
 	for i, zep := range l {
 		for _, cep := range zep.Endpoints {
 			if cep.IsLocal && ep.IsLocal {
@@ -224,8 +222,8 @@ func (l EndpointServerPools) GetLocalZoneIdx(ep Endpoint) int {
 	return -1
 }
 
-// Add add zone endpoints
-func (l *EndpointServerPools) Add(zeps ZoneEndpoints) error {
+// Add add pool endpoints
+func (l *EndpointServerPools) Add(zeps PoolEndpoints) error {
 	existSet := set.NewStringSet()
 	for _, zep := range *l {
 		for _, ep := range zep.Endpoints {
@@ -353,6 +351,14 @@ func (endpoints Endpoints) GetString(i int) string {
 	return endpoints[i].String()
 }
 
+// GetAllStrings - returns allstring of all endpoints
+func (endpoints Endpoints) GetAllStrings() (all []string) {
+	for _, e := range endpoints {
+		all = append(all, e.String())
+	}
+	return
+}
+
 func hostResolveToLocalhost(endpoint Endpoint) bool {
 	hostIPs, err := getHostIP(endpoint.Hostname())
 	if err != nil {
@@ -472,8 +478,8 @@ func (endpoints Endpoints) UpdateIsLocal(foundPrevLocal bool) error {
 						// participate atleast one disk and be local.
 						//
 						// In special cases for replica set with expanded
-						// zone setups we need to make sure to provide
-						// value of foundPrevLocal from zone1 if we already
+						// pool setups we need to make sure to provide
+						// value of foundPrevLocal from pool1 if we already
 						// found a local setup. Only if we haven't found
 						// previous local we continue to wait to look for
 						// atleast one local.
@@ -755,7 +761,7 @@ func CreateEndpoints(serverAddr string, foundLocal bool, args ...[]string) (Endp
 // the first element from the set of peers which indicate that
 // they are local. There is always one entry that is local
 // even with repeated server endpoints.
-func GetLocalPeer(endpointServerPools EndpointServerPools) (localPeer string) {
+func GetLocalPeer(endpointServerPools EndpointServerPools, host, port string) (localPeer string) {
 	peerSet := set.NewStringSet()
 	for _, ep := range endpointServerPools {
 		for _, endpoint := range ep.Endpoints {
@@ -770,11 +776,11 @@ func GetLocalPeer(endpointServerPools EndpointServerPools) (localPeer string) {
 	if peerSet.IsEmpty() {
 		// Local peer can be empty in FS or Erasure coded mode.
 		// If so, return globalMinioHost + globalMinioPort value.
-		if globalMinioHost != "" {
-			return net.JoinHostPort(globalMinioHost, globalMinioPort)
+		if host != "" {
+			return net.JoinHostPort(host, port)
 		}
 
-		return net.JoinHostPort("127.0.0.1", globalMinioPort)
+		return net.JoinHostPort("127.0.0.1", port)
 	}
 	return peerSet.ToSlice()[0]
 }
@@ -873,20 +879,9 @@ func GetProxyEndpoints(endpointServerPools EndpointServerPools) []ProxyEndpoint 
 			}
 			proxyEpSet.Add(host)
 
-			var tlsConfig *tls.Config
-			if globalIsSSL {
-				tlsConfig = &tls.Config{
-					ServerName: endpoint.Hostname(),
-					RootCAs:    globalRootCAs,
-				}
-			}
-
-			// allow transport to be HTTP/1.1 for proxying.
-			tr := newCustomHTTPProxyTransport(tlsConfig, rest.DefaultTimeout)()
-
 			proxyEps = append(proxyEps, ProxyEndpoint{
 				Endpoint:  endpoint,
-				Transport: tr,
+				Transport: globalProxyTransport,
 			})
 		}
 	}

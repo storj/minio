@@ -173,7 +173,7 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx = newContext(r, w, action)
-	defer logger.AuditLog(w, r, action, nil)
+	defer logger.AuditLog(ctx, w, r, nil)
 
 	sessionPolicyStr := r.Form.Get(stsPolicy)
 	// https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
@@ -284,7 +284,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx = newContext(r, w, action)
-	defer logger.AuditLog(w, r, action, nil)
+	defer logger.AuditLog(ctx, w, r, nil)
 
 	if globalOpenIDValidators == nil {
 		writeSTSErrorResponse(ctx, w, true, ErrSTSNotInitialized, errServerNotInitialized)
@@ -437,7 +437,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithClientGrants(w http.ResponseWriter, r *
 func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "AssumeRoleWithLDAPIdentity")
 
-	defer logger.AuditLog(w, r, "AssumeRoleWithLDAPIdentity", nil, stsLDAPPassword)
+	defer logger.AuditLog(ctx, w, r, nil, stsLDAPPassword)
 
 	// Parse the incoming form data.
 	if err := r.ParseForm(); err != nil {
@@ -490,17 +490,26 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 		}
 	}
 
-	groups, err := globalLDAPConfig.Bind(ldapUsername, ldapPassword)
+	ldapUserDN, groupDistNames, err := globalLDAPConfig.Bind(ldapUsername, ldapPassword)
 	if err != nil {
-		err = fmt.Errorf("LDAP server connection failure: %w", err)
+		err = fmt.Errorf("LDAP server error: %w", err)
 		writeSTSErrorResponse(ctx, w, true, ErrSTSInvalidParameterValue, err)
+		return
+	}
+
+	// Check if this user or their groups have a policy applied.
+	ldapPolicies, _ := globalIAMSys.PolicyDBGet(ldapUserDN, false, groupDistNames...)
+	if len(ldapPolicies) == 0 {
+		writeSTSErrorResponse(ctx, w, true, ErrSTSInvalidParameterValue,
+			fmt.Errorf("expecting a policy to be set for user `%s` or one of their groups: `%s` - rejecting this request",
+				ldapUserDN, strings.Join(groupDistNames, "`,`")))
 		return
 	}
 
 	expiryDur := globalLDAPConfig.GetExpiryDuration()
 	m := map[string]interface{}{
 		expClaim: UTCNow().Add(expiryDur).Unix(),
-		ldapUser: ldapUsername,
+		ldapUser: ldapUserDN,
 	}
 
 	if len(sessionPolicyStr) > 0 {
@@ -516,11 +525,11 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 
 	// Set the parent of the temporary access key, this is useful
 	// in obtaining service accounts by this cred.
-	cred.ParentUser = ldapUsername
+	cred.ParentUser = ldapUserDN
 
 	// Set this value to LDAP groups, LDAP user can be part
 	// of large number of groups
-	cred.Groups = groups
+	cred.Groups = groupDistNames
 
 	// Set the newly generated credentials, policyName is empty on purpose
 	// LDAP policies are applied automatically using their ldapUser, ldapGroups

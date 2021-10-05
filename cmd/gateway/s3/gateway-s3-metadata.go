@@ -168,9 +168,9 @@ func getGWMetadata(ctx context.Context, bucket, prefix string, gwMeta gwMetaV1) 
 		logger.LogIf(ctx, err)
 		return nil, err
 	}
-	hashReader, err := hash.NewReader(bytes.NewReader(metadataBytes), int64(len(metadataBytes)), "", "", int64(len(metadataBytes)), false)
+	hashReader, err := hash.NewReader(bytes.NewReader(metadataBytes), int64(len(metadataBytes)), "", "", int64(len(metadataBytes)))
 	if err != nil {
 		return nil, err
 	}
-	return minio.NewPutObjReader(hashReader, nil, nil), nil
+	return minio.NewPutObjReader(hashReader), nil
 }

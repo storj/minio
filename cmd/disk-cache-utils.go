@@ -173,7 +173,11 @@ func backendDownError(err error) bool {
 
 // IsCacheable returns if the object should be saved in the cache.
 func (o ObjectInfo) IsCacheable() bool {
-	return !crypto.IsEncrypted(o.UserDefined) || globalCacheKMS != nil
+	if globalCacheKMS != nil {
+		return true
+	}
+	_, ok := crypto.IsEncrypted(o.UserDefined)
+	return !ok
 }
 
 // reads file cached on disk from offset upto length
@@ -241,11 +245,10 @@ func decryptCacheObjectETag(info *ObjectInfo) error {
 			return errKMSNotConfigured
 		}
 		keyID, kmsKey, sealedKey, err := crypto.S3.ParseMetadata(info.UserDefined)
-
 		if err != nil {
 			return err
 		}
-		extKey, err := globalCacheKMS.UnsealKey(keyID, kmsKey, crypto.Context{info.Bucket: path.Join(info.Bucket, info.Name)})
+		extKey, err := globalCacheKMS.DecryptKey(keyID, kmsKey, crypto.Context{info.Bucket: path.Join(info.Bucket, info.Name)})
 		if err != nil {
 			return err
 		}

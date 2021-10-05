@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/minio/minio-go/v7/pkg/tags"
+	"github.com/minio/minio/cmd/crypto"
 	"github.com/minio/minio/cmd/logger"
 	bucketsse "github.com/minio/minio/pkg/bucket/encryption"
 	"github.com/minio/minio/pkg/bucket/lifecycle"
@@ -168,7 +169,13 @@ func (sys *BucketMetadataSys) Update(bucket string, configFile string, configDat
 		}
 		meta.ReplicationConfigXML = configData
 	case bucketTargetsFile:
-		meta.BucketTargetsConfigJSON = configData
+		meta.BucketTargetsConfigJSON, meta.BucketTargetsConfigMetaJSON, err = encryptBucketMetadata(meta.Name, configData, crypto.Context{
+			bucket:            meta.Name,
+			bucketTargetsFile: bucketTargetsFile,
+		})
+		if err != nil {
+			return fmt.Errorf("Error encrypting bucket target metadata %w", err)
+		}
 	default:
 		return fmt.Errorf("Unknown bucket %s metadata update requested %s", bucket, configFile)
 	}
@@ -471,6 +478,15 @@ func (sys *BucketMetadataSys) load(ctx context.Context, buckets []BucketInfo, ob
 		sys.concurrentLoad(ctx, buckets[:count], objAPI)
 		buckets = buckets[count:]
 	}
+}
+
+// Reset the state of the BucketMetadataSys.
+func (sys *BucketMetadataSys) Reset() {
+	sys.Lock()
+	for k := range sys.metadataMap {
+		delete(sys.metadataMap, k)
+	}
+	sys.Unlock()
 }
 
 // NewBucketMetadataSys - creates new policy system.

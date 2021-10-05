@@ -43,8 +43,8 @@ func toLockError(err error) error {
 	switch err.Error() {
 	case errLockConflict.Error():
 		return errLockConflict
-	case errLockNotExpired.Error():
-		return errLockNotExpired
+	case errLockNotFound.Error():
+		return errLockNotFound
 	}
 	return err
 }
@@ -103,7 +103,7 @@ func (client *lockRESTClient) restCall(ctx context.Context, call string, args ds
 	switch err {
 	case nil:
 		return true, nil
-	case errLockConflict, errLockNotExpired:
+	case errLockConflict, errLockNotFound:
 		return false, nil
 	default:
 		return false, err
@@ -125,14 +125,19 @@ func (client *lockRESTClient) RUnlock(args dsync.LockArgs) (reply bool, err erro
 	return client.restCall(context.Background(), lockRESTMethodRUnlock, args)
 }
 
+// RUnlock calls read unlock REST API.
+func (client *lockRESTClient) Refresh(ctx context.Context, args dsync.LockArgs) (reply bool, err error) {
+	return client.restCall(ctx, lockRESTMethodRefresh, args)
+}
+
 // Unlock calls write unlock RPC.
 func (client *lockRESTClient) Unlock(args dsync.LockArgs) (reply bool, err error) {
 	return client.restCall(context.Background(), lockRESTMethodUnlock, args)
 }
 
-// Expired calls expired handler to check if lock args have expired.
-func (client *lockRESTClient) Expired(ctx context.Context, args dsync.LockArgs) (expired bool, err error) {
-	return client.restCall(ctx, lockRESTMethodExpired, args)
+// ForceUnlock calls force unlock handler to forcibly unlock an active lock.
+func (client *lockRESTClient) ForceUnlock(ctx context.Context, args dsync.LockArgs) (reply bool, err error) {
+	return client.restCall(ctx, lockRESTMethodForceUnlock, args)
 }
 
 func newLockAPI(endpoint Endpoint) dsync.NetLocker {
@@ -156,7 +161,7 @@ func newlockRESTClient(endpoint Endpoint) *lockRESTClient {
 	healthClient := rest.NewClient(serverURL, globalInternodeTransport, newAuthToken)
 	healthClient.ExpectTimeouts = true
 	restClient.HealthCheckFn = func() bool {
-		ctx, cancel := context.WithTimeout(GlobalContext, restClient.HealthCheckTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), restClient.HealthCheckTimeout)
 		defer cancel()
 		respBody, err := healthClient.Call(ctx, lockRESTMethodHealth, nil, nil, -1)
 		xhttp.DrainBody(respBody)

@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -28,7 +29,6 @@ import (
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/bucket/replication"
 	"github.com/minio/minio/pkg/sync/errgroup"
-	"github.com/minio/sha256-simd"
 )
 
 const erasureAlgorithm = "rs-vandermonde"
@@ -102,23 +102,26 @@ func (fi FileInfo) IsValid() bool {
 func (fi FileInfo) ToObjectInfo(bucket, object string) ObjectInfo {
 	object = decodeDirObject(object)
 	versionID := fi.VersionID
-	if globalBucketVersioningSys.Enabled(bucket) && versionID == "" {
+	if (globalBucketVersioningSys.Enabled(bucket) || globalBucketVersioningSys.Suspended(bucket)) && versionID == "" {
 		versionID = nullVersionID
 	}
 
 	objInfo := ObjectInfo{
-		IsDir:           HasSuffix(object, SlashSeparator),
-		Bucket:          bucket,
-		Name:            object,
-		VersionID:       versionID,
-		IsLatest:        fi.IsLatest,
-		DeleteMarker:    fi.Deleted,
-		Size:            fi.Size,
-		ModTime:         fi.ModTime,
-		Legacy:          fi.XLV1,
-		ContentType:     fi.Metadata["content-type"],
-		ContentEncoding: fi.Metadata["content-encoding"],
+		IsDir:            HasSuffix(object, SlashSeparator),
+		Bucket:           bucket,
+		Name:             object,
+		VersionID:        versionID,
+		IsLatest:         fi.IsLatest,
+		DeleteMarker:     fi.Deleted,
+		Size:             fi.Size,
+		ModTime:          fi.ModTime,
+		Legacy:           fi.XLV1,
+		ContentType:      fi.Metadata["content-type"],
+		ContentEncoding:  fi.Metadata["content-encoding"],
+		NumVersions:      fi.NumVersions,
+		SuccessorModTime: fi.SuccessorModTime,
 	}
+
 	// Update expires
 	var (
 		t time.Time
@@ -135,7 +138,10 @@ func (fi FileInfo) ToObjectInfo(bucket, object string) ObjectInfo {
 	objInfo.ETag = extractETag(fi.Metadata)
 
 	// Add user tags to the object info
-	objInfo.UserTags = fi.Metadata[xhttp.AmzObjectTagging]
+	tags := fi.Metadata[xhttp.AmzObjectTagging]
+	if len(tags) != 0 {
+		objInfo.UserTags = tags
+	}
 
 	// Add replication status to the object info
 	objInfo.ReplicationStatus = replication.StatusType(fi.Metadata[xhttp.AmzBucketReplicationStatus])
@@ -226,15 +232,17 @@ func (fi FileInfo) ObjectToPartOffset(ctx context.Context, offset int64) (partIn
 	return 0, 0, InvalidRange{}
 }
 
-func findFileInfoInQuorum(ctx context.Context, metaArr []FileInfo, modTime time.Time, quorum int) (xmv FileInfo, e error) {
+func findFileInfoInQuorum(ctx context.Context, metaArr []FileInfo, modTime time.Time, dataDir string, quorum int) (xmv FileInfo, e error) {
 	metaHashes := make([]string, len(metaArr))
 	h := sha256.New()
 	for i, meta := range metaArr {
-		if meta.IsValid() && meta.ModTime.Equal(modTime) {
+		if meta.IsValid() && meta.ModTime.Equal(modTime) && meta.DataDir == dataDir {
 			for _, part := range meta.Parts {
 				h.Write([]byte(fmt.Sprintf("part.%d", part.Number)))
 			}
 			h.Write([]byte(fmt.Sprintf("%v", meta.Erasure.Distribution)))
+			// make sure that length of Data is same
+			h.Write([]byte(fmt.Sprintf("%v", len(meta.Data))))
 			metaHashes[i] = hex.EncodeToString(h.Sum(nil))
 			h.Reset()
 		}
@@ -272,39 +280,8 @@ func findFileInfoInQuorum(ctx context.Context, metaArr []FileInfo, modTime time.
 
 // pickValidFileInfo - picks one valid FileInfo content and returns from a
 // slice of FileInfo.
-func pickValidFileInfo(ctx context.Context, metaArr []FileInfo, modTime time.Time, quorum int) (xmv FileInfo, e error) {
-	return findFileInfoInQuorum(ctx, metaArr, modTime, quorum)
-}
-
-// Rename metadata content to destination location for each disk concurrently.
-func renameFileInfo(ctx context.Context, disks []StorageAPI, srcBucket, srcEntry, dstBucket, dstEntry string, quorum int) ([]StorageAPI, error) {
-	ignoredErr := []error{errFileNotFound}
-
-	g := errgroup.WithNErrs(len(disks))
-
-	// Rename file on all underlying storage disks.
-	for index := range disks {
-		index := index
-		g.Go(func() error {
-			if disks[index] == nil {
-				return errDiskNotFound
-			}
-			if err := disks[index].RenameData(ctx, srcBucket, srcEntry, "", dstBucket, dstEntry); err != nil {
-				if !IsErrIgnored(err, ignoredErr...) {
-					return err
-				}
-			}
-			return nil
-		}, index)
-	}
-
-	// Wait for all renames to finish.
-	errs := g.Wait()
-
-	// We can safely allow RenameData errors up to len(er.getDisks()) - writeQuorum
-	// otherwise return failure. Cleanup successful renames.
-	err := reduceWriteQuorumErrs(ctx, errs, objectOpIgnoredErrs, quorum)
-	return evalDisks(disks, errs), err
+func pickValidFileInfo(ctx context.Context, metaArr []FileInfo, modTime time.Time, dataDir string, quorum int) (xmv FileInfo, e error) {
+	return findFileInfoInQuorum(ctx, metaArr, modTime, dataDir, quorum)
 }
 
 // writeUniqueFileInfo - writes unique `xl.meta` content for each disk concurrently.
@@ -319,8 +296,12 @@ func writeUniqueFileInfo(ctx context.Context, disks []StorageAPI, bucket, prefix
 				return errDiskNotFound
 			}
 			// Pick one FileInfo for a disk at index.
-			files[index].Erasure.Index = index + 1
-			return disks[index].WriteMetadata(ctx, bucket, prefix, files[index])
+			fi := files[index]
+			fi.Erasure.Index = index + 1
+			if fi.IsValid() {
+				return disks[index].WriteMetadata(ctx, bucket, prefix, fi)
+			}
+			return errCorruptedFormat
 		}, index)
 	}
 
@@ -334,7 +315,7 @@ func writeUniqueFileInfo(ctx context.Context, disks []StorageAPI, bucket, prefix
 // Returns per object readQuorum and writeQuorum
 // readQuorum is the min required disks to read data.
 // writeQuorum is the min required disks to write data.
-func objectQuorumFromMeta(ctx context.Context, er erasureObjects, partsMetaData []FileInfo, errs []error) (objectReadQuorum, objectWriteQuorum int, err error) {
+func objectQuorumFromMeta(ctx context.Context, partsMetaData []FileInfo, errs []error, defaultParityCount int) (objectReadQuorum, objectWriteQuorum int, err error) {
 	// get the latest updated Metadata and a count of all the latest updated FileInfo(s)
 	latestFileInfo, err := getLatestFileInfo(ctx, partsMetaData, errs)
 	if err != nil {
@@ -343,13 +324,13 @@ func objectQuorumFromMeta(ctx context.Context, er erasureObjects, partsMetaData 
 
 	dataBlocks := latestFileInfo.Erasure.DataBlocks
 	parityBlocks := globalStorageClass.GetParityForSC(latestFileInfo.Metadata[xhttp.AmzStorageClass])
-	if parityBlocks == 0 {
-		parityBlocks = dataBlocks
+	if parityBlocks <= 0 {
+		parityBlocks = defaultParityCount
 	}
 
 	writeQuorum := dataBlocks
 	if dataBlocks == parityBlocks {
-		writeQuorum = dataBlocks + 1
+		writeQuorum++
 	}
 
 	// Since all the valid erasure code meta updated at the same time are equivalent, pass dataBlocks

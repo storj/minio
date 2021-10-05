@@ -23,7 +23,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -40,6 +39,8 @@ import (
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/disk"
+	"github.com/minio/minio/pkg/fips"
+	"github.com/minio/minio/pkg/kms"
 	"github.com/minio/sio"
 )
 
@@ -103,7 +104,6 @@ func (m *cacheMeta) ToObjectInfo(bucket, object string) (o ObjectInfo) {
 	}
 
 	// We set file info only if its valid.
-	o.ModTime = m.Stat.ModTime
 	o.Size = m.Stat.Size
 	o.ETag = extractETag(m.Meta)
 	o.ContentType = m.Meta["content-type"]
@@ -122,6 +122,12 @@ func (m *cacheMeta) ToObjectInfo(bucket, object string) (o ObjectInfo) {
 			o.Expires = t.UTC()
 		}
 	}
+	if mtime, ok := m.Meta["last-modified"]; ok {
+		if t, e = time.Parse(http.TimeFormat, mtime); e == nil {
+			o.ModTime = t.UTC()
+		}
+	}
+
 	// etag/md5Sum has already been extracted. We need to
 	// remove to avoid it from appearing as part of user-defined metadata
 	o.UserDefined = cleanMetadata(m.Meta)
@@ -264,10 +270,6 @@ func (c *diskCache) toClear() uint64 {
 	return bytesToClear(int64(di.Total), int64(di.Free), uint64(c.quotaPct), uint64(c.lowWatermark), uint64(c.highWatermark))
 }
 
-var (
-	errDoneForNow = errors.New("done for now")
-)
-
 func (c *diskCache) purgeWait(ctx context.Context) {
 	for {
 		select {
@@ -377,7 +379,7 @@ func (c *diskCache) purge(ctx context.Context) {
 		return nil
 	}
 
-	if err := readDirFilterFn(c.dir, filterFn); err != nil {
+	if err := readDirFn(c.dir, filterFn); err != nil {
 		logger.LogIf(ctx, err)
 		return
 	}
@@ -437,7 +439,7 @@ func (c *diskCache) Stat(ctx context.Context, bucket, object string) (oi ObjectI
 func (c *diskCache) statCachedMeta(ctx context.Context, cacheObjPath string) (meta *cacheMeta, partial bool, numHits int, err error) {
 
 	cLock := c.NewNSLockFn(cacheObjPath)
-	if err = cLock.GetRLock(ctx, globalOperationTimeout); err != nil {
+	if ctx, err = cLock.GetRLock(ctx, globalOperationTimeout); err != nil {
 		return
 	}
 
@@ -506,9 +508,7 @@ func (c *diskCache) statCache(ctx context.Context, cacheObjPath string) (meta *c
 	}
 	// get metadata of part.1 if full file has been cached.
 	partial = true
-	fi, err := os.Stat(pathJoin(cacheObjPath, cacheDataFile))
-	if err == nil {
-		meta.Stat.ModTime = atime.Get(fi)
+	if _, err := os.Stat(pathJoin(cacheObjPath, cacheDataFile)); err == nil {
 		partial = false
 	}
 	return meta, partial, meta.Hits, nil
@@ -517,9 +517,11 @@ func (c *diskCache) statCache(ctx context.Context, cacheObjPath string) (meta *c
 // saves object metadata to disk cache
 // incHitsOnly is true if metadata update is incrementing only the hit counter
 func (c *diskCache) SaveMetadata(ctx context.Context, bucket, object string, meta map[string]string, actualSize int64, rs *HTTPRangeSpec, rsFileName string, incHitsOnly bool) error {
+	var err error
 	cachedPath := getCacheSHADir(c.dir, bucket, object)
 	cLock := c.NewNSLockFn(cachedPath)
-	if err := cLock.GetLock(ctx, globalOperationTimeout); err != nil {
+	ctx, err = cLock.GetLock(ctx, globalOperationTimeout)
+	if err != nil {
 		return err
 	}
 	defer cLock.Unlock()
@@ -570,7 +572,6 @@ func (c *diskCache) saveMetadata(ctx context.Context, bucket, object string, met
 		}
 	}
 	m.Stat.Size = actualSize
-	m.Stat.ModTime = UTCNow()
 	if !incHitsOnly {
 		// reset meta
 		m.Meta = meta
@@ -662,7 +663,7 @@ func newCacheEncryptReader(content io.Reader, bucket, object string, metadata ma
 		return nil, err
 	}
 
-	reader, err := sio.EncryptReader(content, sio.Config{Key: objectEncryptionKey[:], MinVersion: sio.Version20})
+	reader, err := sio.EncryptReader(content, sio.Config{Key: objectEncryptionKey[:], MinVersion: sio.Version20, CipherSuites: fips.CipherSuitesDARE()})
 	if err != nil {
 		return nil, crypto.ErrInvalidCustomerKey
 	}
@@ -673,14 +674,14 @@ func newCacheEncryptMetadata(bucket, object string, metadata map[string]string) 
 	if globalCacheKMS == nil {
 		return nil, errKMSNotConfigured
 	}
-	key, encKey, err := globalCacheKMS.GenerateKey(globalCacheKMS.DefaultKeyID(), crypto.Context{bucket: pathJoin(bucket, object)})
+	key, err := globalCacheKMS.GenerateKey("", kms.Context{bucket: pathJoin(bucket, object)})
 	if err != nil {
 		return nil, err
 	}
 
-	objectKey := crypto.GenerateKey(key, rand.Reader)
-	sealedKey = objectKey.Seal(key, crypto.GenerateIV(rand.Reader), crypto.S3.String(), bucket, object)
-	crypto.S3.CreateMetadata(metadata, globalCacheKMS.DefaultKeyID(), encKey, sealedKey)
+	objectKey := crypto.GenerateKey(key.Plaintext, rand.Reader)
+	sealedKey = objectKey.Seal(key.Plaintext, crypto.GenerateIV(rand.Reader), crypto.S3.String(), bucket, object)
+	crypto.S3.CreateMetadata(metadata, key.KeyID, key.Ciphertext, sealedKey)
 
 	if etag, ok := metadata["etag"]; ok {
 		metadata["etag"] = hex.EncodeToString(objectKey.SealETag([]byte(etag)))
@@ -697,7 +698,8 @@ func (c *diskCache) Put(ctx context.Context, bucket, object string, data io.Read
 	}
 	cachePath := getCacheSHADir(c.dir, bucket, object)
 	cLock := c.NewNSLockFn(cachePath)
-	if err := cLock.GetLock(ctx, globalOperationTimeout); err != nil {
+	ctx, err = cLock.GetLock(ctx, globalOperationTimeout)
+	if err != nil {
 		return oi, err
 	}
 	defer cLock.Unlock()
@@ -911,7 +913,8 @@ func (c *diskCache) bitrotReadFromCache(ctx context.Context, filePath string, of
 func (c *diskCache) Get(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, opts ObjectOptions) (gr *GetObjectReader, numHits int, err error) {
 	cacheObjPath := getCacheSHADir(c.dir, bucket, object)
 	cLock := c.NewNSLockFn(cacheObjPath)
-	if err := cLock.GetRLock(ctx, globalOperationTimeout); err != nil {
+	ctx, err = cLock.GetRLock(ctx, globalOperationTimeout)
+	if err != nil {
 		return nil, numHits, err
 	}
 
@@ -962,7 +965,7 @@ func (c *diskCache) Get(ctx context.Context, bucket, object string, rs *HTTPRang
 	}
 	if globalCacheKMS != nil {
 		// clean up internal SSE cache metadata
-		delete(gr.ObjInfo.UserDefined, crypto.SSEHeader)
+		delete(gr.ObjInfo.UserDefined, xhttp.AmzServerSideEncryption)
 	}
 	if !rngInfo.Empty() {
 		// overlay Size with actual object size and not the range size
@@ -975,7 +978,8 @@ func (c *diskCache) Get(ctx context.Context, bucket, object string, rs *HTTPRang
 // Deletes the cached object
 func (c *diskCache) delete(ctx context.Context, cacheObjPath string) (err error) {
 	cLock := c.NewNSLockFn(cacheObjPath)
-	if err := cLock.GetLock(ctx, globalOperationTimeout); err != nil {
+	_, err = cLock.GetLock(ctx, globalOperationTimeout)
+	if err != nil {
 		return err
 	}
 	defer cLock.Unlock()
@@ -1023,7 +1027,7 @@ func (c *diskCache) scanCacheWritebackFailures(ctx context.Context) {
 		return nil
 	}
 
-	if err := readDirFilterFn(c.dir, filterFn); err != nil {
+	if err := readDirFn(c.dir, filterFn); err != nil {
 		logger.LogIf(ctx, err)
 		return
 	}

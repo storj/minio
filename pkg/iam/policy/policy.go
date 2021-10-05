@@ -31,12 +31,14 @@ const DefaultVersion = "2012-10-17"
 // Args - arguments to policy to check whether it is allowed
 type Args struct {
 	AccountName     string                 `json:"account"`
+	Groups          []string               `json:"groups"`
 	Action          Action                 `json:"action"`
 	BucketName      string                 `json:"bucket"`
 	ConditionValues map[string][]string    `json:"conditions"`
 	IsOwner         bool                   `json:"owner"`
 	ObjectName      string                 `json:"object"`
 	Claims          map[string]interface{} `json:"claims"`
+	DenyOnly        bool                   `json:"denyOnly"` // only applies deny
 }
 
 // GetPoliciesFromClaims returns the list of policies to be applied for this
@@ -105,6 +107,15 @@ func (iamp Policy) IsAllowed(args Args) bool {
 		}
 	}
 
+	// Applied any 'Deny' only policies, if we have
+	// reached here it means that there were no 'Deny'
+	// policies - this function mainly used for
+	// specific scenarios where we only want to validate
+	// 'Deny' only policies.
+	if args.DenyOnly {
+		return true
+	}
+
 	// For owner, its allowed by default.
 	if args.IsOwner {
 		return true
@@ -141,23 +152,30 @@ func (iamp Policy) isValid() error {
 	return nil
 }
 
+// Merge merges two policies documents and drop
+// duplicate statements if any.
+func (iamp Policy) Merge(input Policy) Policy {
+	var mergedPolicy Policy
+	if iamp.Version != "" {
+		mergedPolicy.Version = iamp.Version
+	} else {
+		mergedPolicy.Version = input.Version
+	}
+	for _, st := range iamp.Statements {
+		mergedPolicy.Statements = append(mergedPolicy.Statements, st.Clone())
+	}
+	for _, st := range input.Statements {
+		mergedPolicy.Statements = append(mergedPolicy.Statements, st.Clone())
+	}
+	mergedPolicy.dropDuplicateStatements()
+	return mergedPolicy
+}
+
 func (iamp *Policy) dropDuplicateStatements() {
 redo:
 	for i := range iamp.Statements {
 		for j, statement := range iamp.Statements[i+1:] {
-			if iamp.Statements[i].Effect != statement.Effect {
-				continue
-			}
-
-			if !iamp.Statements[i].Actions.Equals(statement.Actions) {
-				continue
-			}
-
-			if !iamp.Statements[i].Resources.Equals(statement.Resources) {
-				continue
-			}
-
-			if iamp.Statements[i].Conditions.String() != statement.Conditions.String() {
+			if !iamp.Statements[i].Equals(statement) {
 				continue
 			}
 			iamp.Statements = append(iamp.Statements[:j], iamp.Statements[j+1:]...)

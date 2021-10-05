@@ -18,10 +18,10 @@ package cmd
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"hash/crc32"
-	"io"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -29,12 +29,15 @@ import (
 	"time"
 
 	"github.com/dchest/siphash"
+	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/bpool"
+	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/dsync"
+	"github.com/minio/minio/pkg/env"
 	"github.com/minio/minio/pkg/madmin"
 	"github.com/minio/minio/pkg/sync/errgroup"
 )
@@ -42,10 +45,7 @@ import (
 // setsDsyncLockers is encapsulated type for Close()
 type setsDsyncLockers [][]dsync.NetLocker
 
-// Information of a new disk connection
-type diskConnectInfo struct {
-	setIndex int
-}
+const envMinioDeleteCleanupInterval = "MINIO_DELETE_CLEANUP_INTERVAL"
 
 // erasureSets implements ObjectLayer combining a static list of erasure coded
 // object sets. NOTE: There is no dynamic scaling allowed or intended in
@@ -80,8 +80,13 @@ type erasureSets struct {
 
 	// Total number of sets and the number of disks per set.
 	setCount, setDriveCount int
+	defaultParityCount      int
 
-	disksConnectEvent chan diskConnectInfo
+	poolIndex int
+
+	// A channel to send the set index to the MRF when
+	// any disk belonging to that set is connected
+	setReconnectEvent chan int
 
 	// Distribution algorithm of choice.
 	distributionAlgo string
@@ -191,6 +196,7 @@ func findDiskIndex(refFormat, format *formatErasureV3) (int, int, error) {
 // and re-arranges the disks in proper position.
 func (s *erasureSets) connectDisks() {
 	var wg sync.WaitGroup
+	var setsJustConnected = make([]bool, s.setCount)
 	diskMap := s.getDiskMap()
 	for _, endpoint := range s.endpoints {
 		diskPath := endpoint.String()
@@ -213,7 +219,7 @@ func (s *erasureSets) connectDisks() {
 				}
 				return
 			}
-			if disk.IsLocal() && disk.Healing() {
+			if disk.IsLocal() && disk.Healing() != nil {
 				globalBackgroundHealState.pushHealLocalDisks(disk.Endpoint())
 				logger.Info(fmt.Sprintf("Found the drive %s that needs healing, attempting to heal...", disk))
 			}
@@ -242,18 +248,32 @@ func (s *erasureSets) connectDisks() {
 				disk.SetDiskID(format.Erasure.This)
 				s.erasureDisks[setIndex][diskIndex] = disk
 			}
+			disk.SetDiskLoc(s.poolIndex, setIndex, diskIndex)
 			s.endpointStrings[setIndex*s.setDriveCount+diskIndex] = disk.String()
+			setsJustConnected[setIndex] = true
 			s.erasureDisksMu.Unlock()
-			go func(setIndex int) {
-				// Send a new disk connect event with a timeout
-				select {
-				case s.disksConnectEvent <- diskConnectInfo{setIndex: setIndex}:
-				case <-time.After(100 * time.Millisecond):
-				}
-			}(setIndex)
 		}(endpoint)
 	}
+
 	wg.Wait()
+
+	go func() {
+		idler := time.NewTimer(100 * time.Millisecond)
+		defer idler.Stop()
+
+		for setIndex, justConnected := range setsJustConnected {
+			if !justConnected {
+				continue
+			}
+
+			// Send a new set connect event with a timeout
+			idler.Reset(100 * time.Millisecond)
+			select {
+			case s.setReconnectEvent <- setIndex:
+			case <-idler.C:
+			}
+		}
+	}()
 }
 
 // monitorAndConnectEndpoints this is a monitoring loop to keep track of disconnected
@@ -267,35 +287,24 @@ func (s *erasureSets) monitorAndConnectEndpoints(ctx context.Context, monitorInt
 	// Pre-emptively connect the disks if possible.
 	s.connectDisks()
 
+	monitor := time.NewTimer(monitorInterval)
+	defer monitor.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(monitorInterval):
+		case <-monitor.C:
+			// Reset the timer once fired for required interval.
+			monitor.Reset(monitorInterval)
+
+			if serverDebugLog {
+				console.Debugln("running disk monitoring")
+			}
+
 			s.connectDisks()
 		}
 	}
-}
-
-// GetAllLockers return a list of all lockers for all sets.
-func (s *erasureSets) GetAllLockers() []dsync.NetLocker {
-	var allLockers []dsync.NetLocker
-	lockEpSet := set.NewStringSet()
-	for _, lockers := range s.erasureLockers {
-		for _, locker := range lockers {
-			if locker == nil || !locker.IsOnline() {
-				// Skip any offline lockers.
-				continue
-			}
-			if lockEpSet.Contains(locker.String()) {
-				// Skip duplicate lockers.
-				continue
-			}
-			lockEpSet.Add(locker.String())
-			allLockers = append(allLockers, locker)
-		}
-	}
-	return allLockers
 }
 
 func (s *erasureSets) GetLockers(setIndex int) func() ([]dsync.NetLocker, string) {
@@ -335,7 +344,7 @@ func (s *erasureSets) GetDisks(setIndex int) func() []StorageAPI {
 const defaultMonitorConnectEndpointInterval = defaultMonitorNewDiskInterval + time.Second*5
 
 // Initialize new set of erasure coded sets.
-func newErasureSets(ctx context.Context, endpoints Endpoints, storageDisks []StorageAPI, format *formatErasureV3) (*erasureSets, error) {
+func newErasureSets(ctx context.Context, endpoints Endpoints, storageDisks []StorageAPI, format *formatErasureV3, defaultParityCount, poolIdx int) (*erasureSets, error) {
 	setCount := len(format.Erasure.Sets)
 	setDriveCount := len(format.Erasure.Sets[0])
 
@@ -343,26 +352,31 @@ func newErasureSets(ctx context.Context, endpoints Endpoints, storageDisks []Sto
 
 	// Initialize the erasure sets instance.
 	s := &erasureSets{
-		sets:              make([]*erasureObjects, setCount),
-		erasureDisks:      make([][]StorageAPI, setCount),
-		erasureLockers:    make([][]dsync.NetLocker, setCount),
-		erasureLockOwner:  GetLocalPeer(globalEndpoints),
-		endpoints:         endpoints,
-		endpointStrings:   endpointStrings,
-		setCount:          setCount,
-		setDriveCount:     setDriveCount,
-		format:            format,
-		disksConnectEvent: make(chan diskConnectInfo),
-		distributionAlgo:  format.Erasure.DistributionAlgo,
-		deploymentID:      uuid.MustParse(format.ID),
-		mrfOperations:     make(map[healSource]int),
+		sets:               make([]*erasureObjects, setCount),
+		erasureDisks:       make([][]StorageAPI, setCount),
+		erasureLockers:     make([][]dsync.NetLocker, setCount),
+		erasureLockOwner:   globalLocalNodeName,
+		endpoints:          endpoints,
+		endpointStrings:    endpointStrings,
+		setCount:           setCount,
+		setDriveCount:      setDriveCount,
+		defaultParityCount: defaultParityCount,
+		format:             format,
+		setReconnectEvent:  make(chan int),
+		distributionAlgo:   format.Erasure.DistributionAlgo,
+		deploymentID:       uuid.MustParse(format.ID),
+		mrfOperations:      make(map[healSource]int),
+		poolIndex:          poolIdx,
 	}
 
 	mutex := newNSLock(globalIsDistErasure)
 
+	// Number of buffers, max 2GB
+	n := (2 * humanize.GiByte) / (blockSizeV2 * 2)
+
 	// Initialize byte pool once for all sets, bpool size is set to
-	// setCount * setDriveCount with each memory upto blockSizeV1.
-	bp := bpool.NewBytePoolCap(setCount*setDriveCount, blockSizeV1, blockSizeV1*2)
+	// setCount * setDriveCount with each memory upto blockSizeV2.
+	bp := bpool.NewBytePoolCap(n, blockSizeV2, blockSizeV2*2)
 
 	for i := 0; i < setCount; i++ {
 		s.erasureDisks[i] = make([]StorageAPI, setDriveCount)
@@ -396,24 +410,40 @@ func newErasureSets(ctx context.Context, endpoints Endpoints, storageDisks []Sto
 			if err != nil {
 				continue
 			}
+			disk.SetDiskLoc(s.poolIndex, m, n)
 			s.endpointStrings[m*setDriveCount+n] = disk.String()
 			s.erasureDisks[m][n] = disk
 		}
 
 		// Initialize erasure objects for a given set.
 		s.sets[i] = &erasureObjects{
-			setDriveCount: setDriveCount,
-			getDisks:      s.GetDisks(i),
-			getLockers:    s.GetLockers(i),
-			getEndpoints:  s.GetEndpoints(i),
-			nsMutex:       mutex,
-			bp:            bp,
-			mrfOpCh:       make(chan partialOperation, 10000),
+			setIndex:              i,
+			poolIndex:             poolIdx,
+			setDriveCount:         setDriveCount,
+			defaultParityCount:    defaultParityCount,
+			getDisks:              s.GetDisks(i),
+			getLockers:            s.GetLockers(i),
+			getEndpoints:          s.GetEndpoints(i),
+			deletedCleanupSleeper: newDynamicSleeper(10, 2*time.Second),
+			nsMutex:               mutex,
+			bp:                    bp,
+			mrfOpCh:               make(chan partialOperation, 10000),
 		}
+	}
+
+	// cleanup ".trash/" folder every 5m minutes with sufficient sleep cycles, between each
+	// deletes a dynamic sleeper is used with a factor of 10 ratio with max delay between
+	// deletes to be 2 seconds.
+	deletedObjectsCleanupInterval, err := time.ParseDuration(env.Get(envMinioDeleteCleanupInterval, "5m"))
+	if err != nil {
+		return nil, err
 	}
 
 	// start cleanup stale uploads go-routine.
 	go s.cleanupStaleUploads(ctx, GlobalStaleUploadsCleanupInterval, GlobalStaleUploadsExpiry)
+
+	// start cleanup of deleted objects.
+	go s.cleanupDeletedObjects(ctx, deletedObjectsCleanupInterval)
 
 	// Start the disk monitoring and connect routine.
 	go s.monitorAndConnectEndpoints(ctx, defaultMonitorConnectEndpointInterval)
@@ -423,20 +453,80 @@ func newErasureSets(ctx context.Context, endpoints Endpoints, storageDisks []Sto
 	return s, nil
 }
 
-func (s *erasureSets) cleanupStaleUploads(ctx context.Context, cleanupInterval, expiry time.Duration) {
-	ticker := time.NewTicker(cleanupInterval)
-	defer ticker.Stop()
+func (s *erasureSets) cleanupDeletedObjects(ctx context.Context, cleanupInterval time.Duration) {
+	timer := time.NewTimer(cleanupInterval)
+	defer timer.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-timer.C:
+			// Reset for the next interval
+			timer.Reset(cleanupInterval)
+
+			for _, set := range s.sets {
+				set.cleanupDeletedObjects(ctx)
+			}
+		}
+	}
+}
+
+func (s *erasureSets) cleanupStaleUploads(ctx context.Context, cleanupInterval, expiry time.Duration) {
+	timer := time.NewTimer(cleanupInterval)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			// Reset for the next interval
+			timer.Reset(cleanupInterval)
+
 			for _, set := range s.sets {
 				set.cleanupStaleUploads(ctx, expiry)
 			}
 		}
 	}
+}
+
+const objectErasureMapKey = "objectErasureMap"
+
+type auditObjectOp struct {
+	Pool  int      `json:"poolId"`
+	Set   int      `json:"setId"`
+	Disks []string `json:"disks"`
+}
+
+func auditObjectErasureSet(ctx context.Context, object string, set *erasureObjects) {
+	if len(logger.AuditTargets) == 0 {
+		return
+	}
+
+	object = decodeDirObject(object)
+
+	op := auditObjectOp{
+		Pool:  set.poolIndex + 1,
+		Set:   set.setIndex + 1,
+		Disks: set.getEndpoints(),
+	}
+
+	var objectErasureSetTag map[string]auditObjectOp
+	reqInfo := logger.GetReqInfo(ctx)
+	for _, kv := range reqInfo.GetTags() {
+		if kv.Key == objectErasureMapKey {
+			objectErasureSetTag = kv.Val.(map[string]auditObjectOp)
+			break
+		}
+	}
+
+	if objectErasureSetTag == nil {
+		objectErasureSetTag = make(map[string]auditObjectOp)
+	}
+
+	objectErasureSetTag[object] = op
+	reqInfo.SetTags(objectErasureMapKey, objectErasureSetTag)
 }
 
 // NewNSLock - initialize a new namespace RWLocker instance.
@@ -452,6 +542,12 @@ func (s *erasureSets) SetDriveCount() int {
 	return s.setDriveCount
 }
 
+// ParityCount returns the default parity count used while erasure
+// coding objects
+func (s *erasureSets) ParityCount() int {
+	return s.defaultParityCount
+}
+
 // StorageUsageInfo - combines output of StorageInfo across all erasure coded object sets.
 // This only returns disk usage info for ServerPools to perform placement decision, this call
 // is not implemented in Object interface and is not meant to be used by other object
@@ -460,14 +556,14 @@ func (s *erasureSets) StorageUsageInfo(ctx context.Context) StorageInfo {
 	storageUsageInfo := func() StorageInfo {
 		var storageInfo StorageInfo
 		storageInfos := make([]StorageInfo, len(s.sets))
-		storageInfo.Backend.Type = BackendErasure
+		storageInfo.Backend.Type = madmin.Erasure
 
 		g := errgroup.WithNErrs(len(s.sets))
 		for index := range s.sets {
 			index := index
 			g.Go(func() error {
 				// ignoring errors on purpose
-				storageInfos[index], _ = s.sets[index].StorageInfo(ctx, false)
+				storageInfos[index], _ = s.sets[index].StorageInfo(ctx)
 				return nil
 			}, index)
 		}
@@ -477,8 +573,6 @@ func (s *erasureSets) StorageUsageInfo(ctx context.Context) StorageInfo {
 
 		for _, lstorageInfo := range storageInfos {
 			storageInfo.Disks = append(storageInfo.Disks, lstorageInfo.Disks...)
-			storageInfo.Backend.OnlineDisks = storageInfo.Backend.OnlineDisks.Merge(lstorageInfo.Backend.OnlineDisks)
-			storageInfo.Backend.OfflineDisks = storageInfo.Backend.OfflineDisks.Merge(lstorageInfo.Backend.OfflineDisks)
 		}
 
 		return storageInfo
@@ -496,17 +590,17 @@ func (s *erasureSets) StorageUsageInfo(ctx context.Context) StorageInfo {
 }
 
 // StorageInfo - combines output of StorageInfo across all erasure coded object sets.
-func (s *erasureSets) StorageInfo(ctx context.Context, local bool) (StorageInfo, []error) {
-	var storageInfo StorageInfo
+func (s *erasureSets) StorageInfo(ctx context.Context) (StorageInfo, []error) {
+	var storageInfo madmin.StorageInfo
 
-	storageInfos := make([]StorageInfo, len(s.sets))
+	storageInfos := make([]madmin.StorageInfo, len(s.sets))
 	storageInfoErrs := make([][]error, len(s.sets))
 
 	g := errgroup.WithNErrs(len(s.sets))
 	for index := range s.sets {
 		index := index
 		g.Go(func() error {
-			storageInfos[index], storageInfoErrs[index] = s.sets[index].StorageInfo(ctx, local)
+			storageInfos[index], storageInfoErrs[index] = s.sets[index].StorageInfo(ctx)
 			return nil
 		}, index)
 	}
@@ -516,14 +610,37 @@ func (s *erasureSets) StorageInfo(ctx context.Context, local bool) (StorageInfo,
 
 	for _, lstorageInfo := range storageInfos {
 		storageInfo.Disks = append(storageInfo.Disks, lstorageInfo.Disks...)
-		storageInfo.Backend.OnlineDisks = storageInfo.Backend.OnlineDisks.Merge(lstorageInfo.Backend.OnlineDisks)
-		storageInfo.Backend.OfflineDisks = storageInfo.Backend.OfflineDisks.Merge(lstorageInfo.Backend.OfflineDisks)
 	}
 
-	if local {
-		// if local is true, we are not interested in the drive UUID info.
-		// this is called primarily by prometheus
-		return storageInfo, nil
+	errs := make([]error, 0, len(s.sets)*s.setDriveCount)
+	for i := range s.sets {
+		errs = append(errs, storageInfoErrs[i]...)
+	}
+
+	return storageInfo, errs
+}
+
+// StorageInfo - combines output of StorageInfo across all erasure coded object sets.
+func (s *erasureSets) LocalStorageInfo(ctx context.Context) (StorageInfo, []error) {
+	var storageInfo StorageInfo
+
+	storageInfos := make([]StorageInfo, len(s.sets))
+	storageInfoErrs := make([][]error, len(s.sets))
+
+	g := errgroup.WithNErrs(len(s.sets))
+	for index := range s.sets {
+		index := index
+		g.Go(func() error {
+			storageInfos[index], storageInfoErrs[index] = s.sets[index].LocalStorageInfo(ctx)
+			return nil
+		}, index)
+	}
+
+	// Wait for the go routines.
+	g.Wait()
+
+	for _, lstorageInfo := range storageInfos {
+		storageInfo.Disks = append(storageInfo.Disks, lstorageInfo.Disks...)
 	}
 
 	var errs []error
@@ -552,12 +669,12 @@ func (s *erasureSets) Shutdown(ctx context.Context) error {
 		}
 	}
 	select {
-	case _, ok := <-s.disksConnectEvent:
+	case _, ok := <-s.setReconnectEvent:
 		if ok {
-			close(s.disksConnectEvent)
+			close(s.setReconnectEvent)
 		}
 	default:
-		close(s.disksConnectEvent)
+		close(s.setReconnectEvent)
 	}
 	return nil
 }
@@ -597,9 +714,11 @@ func sipHashMod(key string, cardinality int, id [16]byte) int {
 	if cardinality <= 0 {
 		return -1
 	}
-	sip := siphash.New(id[:])
-	sip.Write([]byte(key))
-	return int(sip.Sum64() % uint64(cardinality))
+	// use the faster version as per siphash docs
+	// https://github.com/dchest/siphash#usage
+	k0, k1 := binary.LittleEndian.Uint64(id[0:8]), binary.LittleEndian.Uint64(id[8:16])
+	sum64 := siphash.Hash(k0, k1, []byte(key))
+	return int(sum64 % uint64(cardinality))
 }
 
 func crcHashMod(key string, cardinality int) int {
@@ -612,9 +731,9 @@ func crcHashMod(key string, cardinality int) int {
 
 func hashKey(algo string, key string, cardinality int, id [16]byte) int {
 	switch algo {
-	case formatErasureVersionV2DistributionAlgoLegacy:
+	case formatErasureVersionV2DistributionAlgoV1:
 		return crcHashMod(key, cardinality)
-	case formatErasureVersionV3DistributionAlgo:
+	case formatErasureVersionV3DistributionAlgoV2, formatErasureVersionV3DistributionAlgoV3:
 		return sipHashMod(key, cardinality, id)
 	default:
 		// Unknown algorithm returns -1, also if cardinality is lesser than 0.
@@ -738,27 +857,38 @@ func (s *erasureSets) ListBuckets(ctx context.Context) (buckets []BucketInfo, er
 
 // GetObjectNInfo - returns object info and locked object ReadCloser
 func (s *erasureSets) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
-	return s.getHashedSet(object).GetObjectNInfo(ctx, bucket, object, rs, h, lockType, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	return set.GetObjectNInfo(ctx, bucket, object, rs, h, lockType, opts)
 }
 
-// GetObject - reads an object from the hashedSet based on the object name.
-func (s *erasureSets) GetObject(ctx context.Context, bucket, object string, startOffset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) error {
-	return s.getHashedSet(object).GetObject(ctx, bucket, object, startOffset, length, writer, etag, opts)
+func (s *erasureSets) parentDirIsObject(ctx context.Context, bucket, parent string) bool {
+	if parent == "." {
+		return false
+	}
+	return s.getHashedSet(parent).parentDirIsObject(ctx, bucket, parent)
 }
 
 // PutObject - writes an object to hashedSet based on the object name.
 func (s *erasureSets) PutObject(ctx context.Context, bucket string, object string, data *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, err error) {
-	return s.getHashedSet(object).PutObject(ctx, bucket, object, data, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	opts.ParentIsObject = s.parentDirIsObject
+	return set.PutObject(ctx, bucket, object, data, opts)
 }
 
 // GetObjectInfo - reads object metadata from the hashedSet based on the object name.
 func (s *erasureSets) GetObjectInfo(ctx context.Context, bucket, object string, opts ObjectOptions) (objInfo ObjectInfo, err error) {
-	return s.getHashedSet(object).GetObjectInfo(ctx, bucket, object, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	return set.GetObjectInfo(ctx, bucket, object, opts)
 }
 
 // DeleteObject - deletes an object from the hashedSet based on the object name.
 func (s *erasureSets) DeleteObject(ctx context.Context, bucket string, object string, opts ObjectOptions) (objInfo ObjectInfo, err error) {
-	return s.getHashedSet(object).DeleteObject(ctx, bucket, object, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	return set.DeleteObject(ctx, bucket, object, opts)
 }
 
 // DeleteObjects - bulk delete of objects
@@ -803,10 +933,14 @@ func (s *erasureSets) DeleteObjects(ctx context.Context, bucket string, objects 
 	// Invoke bulk delete on objects per set and save
 	// the result of the delete operation
 	for _, objsGroup := range objSetMap {
-		dobjects, errs := s.getHashedSet(objsGroup[0].object.ObjectName).DeleteObjects(ctx, bucket, toNames(objsGroup), opts)
+		set := s.getHashedSet(objsGroup[0].object.ObjectName)
+		dobjects, errs := set.DeleteObjects(ctx, bucket, toNames(objsGroup), opts)
 		for i, obj := range objsGroup {
 			delErrs[obj.origIndex] = errs[i]
 			delObjects[obj.origIndex] = dobjects[i]
+			if errs[i] == nil {
+				auditObjectErasureSet(ctx, obj.object.ObjectName, set)
+			}
 		}
 	}
 
@@ -817,6 +951,8 @@ func (s *erasureSets) DeleteObjects(ctx context.Context, bucket string, objects 
 func (s *erasureSets) CopyObject(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (objInfo ObjectInfo, err error) {
 	srcSet := s.getHashedSet(srcObject)
 	dstSet := s.getHashedSet(dstObject)
+
+	auditObjectErasureSet(ctx, dstObject, dstSet)
 
 	cpSrcDstSame := srcSet == dstSet
 	// Check if this request is only metadata update.
@@ -852,192 +988,63 @@ func (s *erasureSets) CopyObject(ctx context.Context, srcBucket, srcObject, dstB
 	return dstSet.putObject(ctx, dstBucket, dstObject, srcInfo.PutObjReader, putOpts)
 }
 
-// FileInfoVersionsCh - file info versions channel
-type FileInfoVersionsCh struct {
-	Ch    chan FileInfoVersions
-	Prev  FileInfoVersions
-	Valid bool
-}
-
-// Pop - pops a cached entry if any, or from the cached channel.
-func (f *FileInfoVersionsCh) Pop() (fi FileInfoVersions, ok bool) {
-	if f.Valid {
-		f.Valid = false
-		return f.Prev, true
-	} // No cached entries found, read from channel
-	f.Prev, ok = <-f.Ch
-	return f.Prev, ok
-}
-
-// Push - cache an entry, for Pop() later.
-func (f *FileInfoVersionsCh) Push(fi FileInfoVersions) {
-	f.Prev = fi
-	f.Valid = true
-}
-
-// FileInfoCh - file info channel
-type FileInfoCh struct {
-	Ch    chan FileInfo
-	Prev  FileInfo
-	Valid bool
-}
-
-// Pop - pops a cached entry if any, or from the cached channel.
-func (f *FileInfoCh) Pop() (fi FileInfo, ok bool) {
-	if f.Valid {
-		f.Valid = false
-		return f.Prev, true
-	} // No cached entries found, read from channel
-	f.Prev, ok = <-f.Ch
-	return f.Prev, ok
-}
-
-// Push - cache an entry, for Pop() later.
-func (f *FileInfoCh) Push(fi FileInfo) {
-	f.Prev = fi
-	f.Valid = true
-}
-
-// Calculate lexically least entry across multiple FileInfo channels,
-// returns the lexically common entry and the total number of times
-// we found this entry. Additionally also returns a boolean
-// to indicate if the caller needs to call this function
-// again to list the next entry. It is callers responsibility
-// if the caller wishes to list N entries to call lexicallySortedEntry
-// N times until this boolean is 'false'.
-func lexicallySortedEntryVersions(entryChs []FileInfoVersionsCh, entries []FileInfoVersions, entriesValid []bool) (FileInfoVersions, int, bool) {
-	for j := range entryChs {
-		entries[j], entriesValid[j] = entryChs[j].Pop()
-	}
-
-	var isTruncated = false
-	for _, valid := range entriesValid {
-		if !valid {
-			continue
-		}
-		isTruncated = true
-		break
-	}
-
-	var lentry FileInfoVersions
-	var found bool
-	for i, valid := range entriesValid {
-		if !valid {
-			continue
-		}
-		if !found {
-			lentry = entries[i]
-			found = true
-			continue
-		}
-		if entries[i].Name < lentry.Name {
-			lentry = entries[i]
-		}
-	}
-
-	// We haven't been able to find any lexically least entry,
-	// this would mean that we don't have valid entry.
-	if !found {
-		return lentry, 0, isTruncated
-	}
-
-	lexicallySortedEntryCount := 0
-	for i, valid := range entriesValid {
-		if !valid {
-			continue
-		}
-
-		// Entries are duplicated across disks,
-		// we should simply skip such entries.
-		if lentry.Name == entries[i].Name && lentry.LatestModTime.Equal(entries[i].LatestModTime) {
-			lexicallySortedEntryCount++
-			continue
-		}
-
-		// Push all entries which are lexically higher
-		// and will be returned later in Pop()
-		entryChs[i].Push(entries[i])
-	}
-
-	return lentry, lexicallySortedEntryCount, isTruncated
-}
-
-func (s *erasureSets) startMergeWalksVersions(ctx context.Context, bucket, prefix, marker string, recursive bool, endWalkCh <-chan struct{}) []FileInfoVersionsCh {
-	return s.startMergeWalksVersionsN(ctx, bucket, prefix, marker, recursive, endWalkCh, -1)
-}
-
-// Starts a walk versions channel across N number of disks and returns a slice.
-// FileInfoCh which can be read from.
-func (s *erasureSets) startMergeWalksVersionsN(ctx context.Context, bucket, prefix, marker string, recursive bool, endWalkCh <-chan struct{}, ndisks int) []FileInfoVersionsCh {
-	var entryChs []FileInfoVersionsCh
-	var wg sync.WaitGroup
-	var mutex sync.Mutex
-	for _, set := range s.sets {
-		// Reset for the next erasure set.
-		for _, disk := range set.getLoadBalancedNDisks(ndisks) {
-			wg.Add(1)
-			go func(disk StorageAPI) {
-				defer wg.Done()
-
-				entryCh, err := disk.WalkVersions(GlobalContext, bucket, prefix, marker, recursive, endWalkCh)
-				if err != nil {
-					return
-				}
-
-				mutex.Lock()
-				entryChs = append(entryChs, FileInfoVersionsCh{
-					Ch: entryCh,
-				})
-				mutex.Unlock()
-			}(disk)
-		}
-	}
-	wg.Wait()
-	return entryChs
-}
-
 func (s *erasureSets) ListMultipartUploads(ctx context.Context, bucket, prefix, keyMarker, uploadIDMarker, delimiter string, maxUploads int) (result ListMultipartsInfo, err error) {
 	// In list multipart uploads we are going to treat input prefix as the object,
 	// this means that we are not supporting directory navigation.
-	return s.getHashedSet(prefix).ListMultipartUploads(ctx, bucket, prefix, keyMarker, uploadIDMarker, delimiter, maxUploads)
+	set := s.getHashedSet(prefix)
+	auditObjectErasureSet(ctx, prefix, set)
+	return set.ListMultipartUploads(ctx, bucket, prefix, keyMarker, uploadIDMarker, delimiter, maxUploads)
 }
 
 // Initiate a new multipart upload on a hashedSet based on object name.
 func (s *erasureSets) NewMultipartUpload(ctx context.Context, bucket, object string, opts ObjectOptions) (uploadID string, err error) {
-	return s.getHashedSet(object).NewMultipartUpload(ctx, bucket, object, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	return set.NewMultipartUpload(ctx, bucket, object, opts)
 }
 
 // Copies a part of an object from source hashedSet to destination hashedSet.
 func (s *erasureSets) CopyObjectPart(ctx context.Context, srcBucket, srcObject, destBucket, destObject string, uploadID string, partID int,
 	startOffset int64, length int64, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (partInfo PartInfo, err error) {
 	destSet := s.getHashedSet(destObject)
-
-	return destSet.PutObjectPart(ctx, destBucket, destObject, uploadID, partID, NewPutObjReader(srcInfo.Reader, nil, nil), dstOpts)
+	auditObjectErasureSet(ctx, destObject, destSet)
+	return destSet.PutObjectPart(ctx, destBucket, destObject, uploadID, partID, NewPutObjReader(srcInfo.Reader), dstOpts)
 }
 
 // PutObjectPart - writes part of an object to hashedSet based on the object name.
 func (s *erasureSets) PutObjectPart(ctx context.Context, bucket, object, uploadID string, partID int, data *PutObjReader, opts ObjectOptions) (info PartInfo, err error) {
-	return s.getHashedSet(object).PutObjectPart(ctx, bucket, object, uploadID, partID, data, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	return set.PutObjectPart(ctx, bucket, object, uploadID, partID, data, opts)
 }
 
 // GetMultipartInfo - return multipart metadata info uploaded at hashedSet.
 func (s *erasureSets) GetMultipartInfo(ctx context.Context, bucket, object, uploadID string, opts ObjectOptions) (result MultipartInfo, err error) {
-	return s.getHashedSet(object).GetMultipartInfo(ctx, bucket, object, uploadID, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	return set.GetMultipartInfo(ctx, bucket, object, uploadID, opts)
 }
 
 // ListObjectParts - lists all uploaded parts to an object in hashedSet.
 func (s *erasureSets) ListObjectParts(ctx context.Context, bucket, object, uploadID string, partNumberMarker int, maxParts int, opts ObjectOptions) (result ListPartsInfo, err error) {
-	return s.getHashedSet(object).ListObjectParts(ctx, bucket, object, uploadID, partNumberMarker, maxParts, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	return set.ListObjectParts(ctx, bucket, object, uploadID, partNumberMarker, maxParts, opts)
 }
 
 // Aborts an in-progress multipart operation on hashedSet based on the object name.
 func (s *erasureSets) AbortMultipartUpload(ctx context.Context, bucket, object, uploadID string, opts ObjectOptions) error {
-	return s.getHashedSet(object).AbortMultipartUpload(ctx, bucket, object, uploadID, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	return set.AbortMultipartUpload(ctx, bucket, object, uploadID, opts)
 }
 
 // CompleteMultipartUpload - completes a pending multipart transaction, on hashedSet based on object name.
 func (s *erasureSets) CompleteMultipartUpload(ctx context.Context, bucket, object, uploadID string, uploadedParts []CompletePart, opts ObjectOptions) (objInfo ObjectInfo, err error) {
-	return s.getHashedSet(object).CompleteMultipartUpload(ctx, bucket, object, uploadID, uploadedParts, opts)
+	set := s.getHashedSet(object)
+	auditObjectErasureSet(ctx, object, set)
+	opts.ParentIsObject = s.parentDirIsObject
+	return set.CompleteMultipartUpload(ctx, bucket, object, uploadID, uploadedParts, opts)
 }
 
 /*
@@ -1167,7 +1174,8 @@ func markRootDisksAsDown(storageDisks []StorageAPI, errs []error) {
 			if storageDisks[i] != nil && infos[i].RootDisk {
 				// We should not heal on root disk. i.e in a situation where the minio-administrator has unmounted a
 				// defective drive we should not heal a path on the root disk.
-				logger.Info("Disk `%s` is a root disk. Please ensure the disk is mounted properly, refusing to use root disk.",
+				logger.Info("Disk `%s` the same as the system root disk.\n"+
+					"Disk will not be used. Please supply a separate disk and restart the server.",
 					storageDisks[i].String())
 				storageDisks[i] = nil
 			}
@@ -1191,7 +1199,7 @@ func (s *erasureSets) HealFormat(ctx context.Context, dryRun bool) (res madmin.H
 	}(storageDisks)
 
 	formats, sErrs := loadFormatErasureAll(storageDisks, true)
-	if err = checkFormatErasureValues(formats, s.setDriveCount); err != nil {
+	if err = checkFormatErasureValues(formats, storageDisks, s.setDriveCount); err != nil {
 		return madmin.HealResultItem{}, err
 	}
 
@@ -1218,8 +1226,8 @@ func (s *erasureSets) HealFormat(ctx context.Context, dryRun bool) (res madmin.H
 	res.Before.Drives = make([]madmin.HealDriveInfo, len(beforeDrives))
 	// Copy "after" drive state too from before.
 	for k, v := range beforeDrives {
-		res.Before.Drives[k] = madmin.HealDriveInfo(v)
-		res.After.Drives[k] = madmin.HealDriveInfo(v)
+		res.Before.Drives[k] = v
+		res.After.Drives[k] = v
 	}
 
 	if countErrs(sErrs, errUnformattedDisk) == 0 {
@@ -1262,7 +1270,7 @@ func (s *erasureSets) HealFormat(ctx context.Context, dryRun bool) (res madmin.H
 			if s.erasureDisks[m][n] != nil {
 				s.erasureDisks[m][n].Close()
 			}
-
+			storageDisks[index].SetDiskLoc(s.poolIndex, m, n)
 			s.erasureDisks[m][n] = storageDisks[index]
 			s.endpointStrings[m*s.setDriveCount+n] = storageDisks[index].String()
 		}
@@ -1286,11 +1294,11 @@ func (s *erasureSets) HealBucket(ctx context.Context, bucket string, opts madmin
 		SetCount:  s.setCount,
 	}
 
-	for _, s := range s.sets {
+	for _, set := range s.sets {
 		var healResult madmin.HealResultItem
-		healResult, err = s.HealBucket(ctx, bucket, opts)
+		healResult, err = set.HealBucket(ctx, bucket, opts)
 		if err != nil {
-			return result, err
+			return result, toObjectErr(err, bucket)
 		}
 		result.Before.Drives = append(result.Before.Drives, healResult.Before.Drives...)
 		result.After.Drives = append(result.After.Drives, healResult.After.Drives...)
@@ -1310,19 +1318,28 @@ func (s *erasureSets) HealObject(ctx context.Context, bucket, object, versionID 
 	return s.getHashedSet(object).HealObject(ctx, bucket, object, versionID, opts)
 }
 
+// PutObjectMetadata - replace or add metadata to an existing object/version
+func (s *erasureSets) PutObjectMetadata(ctx context.Context, bucket, object string, opts ObjectOptions) (ObjectInfo, error) {
+	er := s.getHashedSet(object)
+	return er.PutObjectMetadata(ctx, bucket, object, opts)
+}
+
 // PutObjectTags - replace or add tags to an existing object
-func (s *erasureSets) PutObjectTags(ctx context.Context, bucket, object string, tags string, opts ObjectOptions) error {
-	return s.getHashedSet(object).PutObjectTags(ctx, bucket, object, tags, opts)
+func (s *erasureSets) PutObjectTags(ctx context.Context, bucket, object string, tags string, opts ObjectOptions) (ObjectInfo, error) {
+	er := s.getHashedSet(object)
+	return er.PutObjectTags(ctx, bucket, object, tags, opts)
 }
 
 // DeleteObjectTags - delete object tags from an existing object
-func (s *erasureSets) DeleteObjectTags(ctx context.Context, bucket, object string, opts ObjectOptions) error {
-	return s.getHashedSet(object).DeleteObjectTags(ctx, bucket, object, opts)
+func (s *erasureSets) DeleteObjectTags(ctx context.Context, bucket, object string, opts ObjectOptions) (ObjectInfo, error) {
+	er := s.getHashedSet(object)
+	return er.DeleteObjectTags(ctx, bucket, object, opts)
 }
 
 // GetObjectTags - get object tags from an existing object
 func (s *erasureSets) GetObjectTags(ctx context.Context, bucket, object string, opts ObjectOptions) (*tags.Tags, error) {
-	return s.getHashedSet(object).GetObjectTags(ctx, bucket, object, opts)
+	er := s.getHashedSet(object)
+	return er.GetObjectTags(ctx, bucket, object, opts)
 }
 
 // maintainMRFList gathers the list of successful partial uploads
@@ -1352,6 +1369,7 @@ func (s *erasureSets) maintainMRFList() {
 			bucket:    fOp.bucket,
 			object:    fOp.object,
 			versionID: fOp.versionID,
+			opts:      &madmin.HealOpts{Remove: true},
 		}] = fOp.failedSet
 		s.mrfMU.Unlock()
 	}
@@ -1363,13 +1381,13 @@ func (s *erasureSets) healMRFRoutine() {
 	// Wait until background heal state is initialized
 	bgSeq := mustGetHealSequence(GlobalContext)
 
-	for e := range s.disksConnectEvent {
+	for setIndex := range s.setReconnectEvent {
 		// Get the list of objects related the er.set
 		// to which the connected disk belongs.
 		var mrfOperations []healSource
 		s.mrfMU.Lock()
 		for k, v := range s.mrfOperations {
-			if v == e.setIndex {
+			if v == setIndex {
 				mrfOperations = append(mrfOperations, k)
 			}
 		}
@@ -1377,11 +1395,10 @@ func (s *erasureSets) healMRFRoutine() {
 
 		// Heal objects
 		for _, u := range mrfOperations {
-			// Send an object to be healed with a timeout
-			select {
-			case bgSeq.sourceCh <- u:
-			case <-time.After(100 * time.Millisecond):
-			}
+			waitForLowHTTPReq(globalHealConfig.IOCount, globalHealConfig.Sleep)
+
+			// Send an object to background heal
+			bgSeq.sourceCh <- u
 
 			s.mrfMU.Lock()
 			delete(s.mrfOperations, u)

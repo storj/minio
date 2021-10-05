@@ -67,6 +67,9 @@ const (
 	// ListBucketAction - ListBucket Rest API action.
 	ListBucketAction = "s3:ListBucket"
 
+	// GetBucketPolicyStatusAction - Retrieves the policy status for a bucket.
+	GetBucketPolicyStatusAction = "s3:GetBucketPolicyStatus"
+
 	// ListBucketVersionsAction - ListBucketVersions Rest API action.
 	ListBucketVersionsAction = "s3:ListBucketVersions"
 
@@ -197,6 +200,7 @@ var supportedActions = map[Action]struct{}{
 	HeadBucketAction:                       {},
 	ListAllMyBucketsAction:                 {},
 	ListBucketAction:                       {},
+	GetBucketPolicyStatusAction:            {},
 	ListBucketVersionsAction:               {},
 	ListBucketMultipartUploadsAction:       {},
 	ListenNotificationAction:               {},
@@ -266,48 +270,51 @@ var supportedObjectActions = map[Action]struct{}{
 
 // isObjectAction - returns whether action is object type or not.
 func (action Action) isObjectAction() bool {
-	_, ok := supportedObjectActions[action]
-	return ok
+	for supAction := range supportedObjectActions {
+		if action.Match(supAction) {
+			return true
+		}
+	}
+	return false
 }
 
-// Match - matches object name with resource pattern.
+// Match - matches action name with action patter.
 func (action Action) Match(a Action) bool {
 	return wildcard.Match(string(action), string(a))
 }
 
 // IsValid - checks if action is valid or not.
 func (action Action) IsValid() bool {
-	_, ok := supportedActions[action]
-	return ok
+	for supAction := range supportedActions {
+		if action.Match(supAction) {
+			return true
+		}
+	}
+	return false
 }
 
-// actionConditionKeyMap - holds mapping of supported condition key for an action.
-var actionConditionKeyMap = map[Action]condition.KeySet{
+type actionConditionKeyMap map[Action]condition.KeySet
+
+func (a actionConditionKeyMap) Lookup(action Action) condition.KeySet {
+	var ckeysMerged = condition.NewKeySet(condition.CommonKeys...)
+	for act, ckey := range a {
+		if action.Match(act) {
+			ckeysMerged.Merge(ckey)
+		}
+	}
+	return ckeysMerged
+}
+
+// iamActionConditionKeyMap - holds mapping of supported condition key for an action.
+var iamActionConditionKeyMap = actionConditionKeyMap{
 	AllActions: condition.NewKeySet(condition.AllSupportedKeys...),
-
-	AbortMultipartUploadAction: condition.NewKeySet(condition.CommonKeys...),
-
-	CreateBucketAction: condition.NewKeySet(condition.CommonKeys...),
-
-	DeleteBucketPolicyAction: condition.NewKeySet(condition.CommonKeys...),
-
-	DeleteObjectAction: condition.NewKeySet(condition.CommonKeys...),
-
-	GetBucketLocationAction: condition.NewKeySet(condition.CommonKeys...),
-
-	GetBucketNotificationAction: condition.NewKeySet(condition.CommonKeys...),
-
-	GetBucketPolicyAction: condition.NewKeySet(condition.CommonKeys...),
 
 	GetObjectAction: condition.NewKeySet(
 		append([]condition.Key{
 			condition.S3XAmzServerSideEncryption,
 			condition.S3XAmzServerSideEncryptionCustomerAlgorithm,
+			condition.S3VersionID,
 		}, condition.CommonKeys...)...),
-
-	HeadBucketAction: condition.NewKeySet(condition.CommonKeys...),
-
-	ListAllMyBucketsAction: condition.NewKeySet(condition.CommonKeys...),
 
 	ListBucketAction: condition.NewKeySet(
 		append([]condition.Key{
@@ -323,17 +330,10 @@ var actionConditionKeyMap = map[Action]condition.KeySet{
 			condition.S3MaxKeys,
 		}, condition.CommonKeys...)...),
 
-	ListBucketMultipartUploadsAction: condition.NewKeySet(condition.CommonKeys...),
-
-	ListenNotificationAction: condition.NewKeySet(condition.CommonKeys...),
-
-	ListenBucketNotificationAction: condition.NewKeySet(condition.CommonKeys...),
-
-	ListMultipartUploadPartsAction: condition.NewKeySet(condition.CommonKeys...),
-
-	PutBucketNotificationAction: condition.NewKeySet(condition.CommonKeys...),
-
-	PutBucketPolicyAction: condition.NewKeySet(condition.CommonKeys...),
+	DeleteObjectAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
 
 	PutObjectAction: condition.NewKeySet(
 		append([]condition.Key{
@@ -342,6 +342,7 @@ var actionConditionKeyMap = map[Action]condition.KeySet{
 			condition.S3XAmzServerSideEncryptionCustomerAlgorithm,
 			condition.S3XAmzMetadataDirective,
 			condition.S3XAmzStorageClass,
+			condition.S3VersionID,
 			condition.S3ObjectLockRetainUntilDate,
 			condition.S3ObjectLockMode,
 			condition.S3ObjectLockLegalHold,
@@ -351,36 +352,57 @@ var actionConditionKeyMap = map[Action]condition.KeySet{
 	// LockLegalHold is not supported with PutObjectRetentionAction
 	PutObjectRetentionAction: condition.NewKeySet(
 		append([]condition.Key{
+			condition.S3XAmzServerSideEncryption,
+			condition.S3XAmzServerSideEncryptionCustomerAlgorithm,
 			condition.S3ObjectLockRemainingRetentionDays,
 			condition.S3ObjectLockRetainUntilDate,
 			condition.S3ObjectLockMode,
+			condition.S3VersionID,
 		}, condition.CommonKeys...)...),
 
-	GetObjectRetentionAction: condition.NewKeySet(condition.CommonKeys...),
+	GetObjectRetentionAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3XAmzServerSideEncryption,
+			condition.S3XAmzServerSideEncryptionCustomerAlgorithm,
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
+
 	PutObjectLegalHoldAction: condition.NewKeySet(
 		append([]condition.Key{
+			condition.S3XAmzServerSideEncryption,
+			condition.S3XAmzServerSideEncryptionCustomerAlgorithm,
 			condition.S3ObjectLockLegalHold,
+			condition.S3VersionID,
 		}, condition.CommonKeys...)...),
 	GetObjectLegalHoldAction: condition.NewKeySet(condition.CommonKeys...),
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/dev/list_amazons3.html
 	BypassGovernanceRetentionAction: condition.NewKeySet(
 		append([]condition.Key{
+			condition.S3VersionID,
 			condition.S3ObjectLockRemainingRetentionDays,
 			condition.S3ObjectLockRetainUntilDate,
 			condition.S3ObjectLockMode,
 			condition.S3ObjectLockLegalHold,
 		}, condition.CommonKeys...)...),
 
-	GetBucketObjectLockConfigurationAction: condition.NewKeySet(condition.CommonKeys...),
-	PutBucketObjectLockConfigurationAction: condition.NewKeySet(condition.CommonKeys...),
-	GetBucketTaggingAction:                 condition.NewKeySet(condition.CommonKeys...),
-	PutBucketTaggingAction:                 condition.NewKeySet(condition.CommonKeys...),
-	PutObjectTaggingAction:                 condition.NewKeySet(condition.CommonKeys...),
-	GetObjectTaggingAction:                 condition.NewKeySet(condition.CommonKeys...),
-	DeleteObjectTaggingAction:              condition.NewKeySet(condition.CommonKeys...),
+	PutObjectTaggingAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
+	GetObjectTaggingAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
+	DeleteObjectTaggingAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
 
-	PutObjectVersionTaggingAction: condition.NewKeySet(condition.CommonKeys...),
+	PutObjectVersionTaggingAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
 	GetObjectVersionAction: condition.NewKeySet(
 		append([]condition.Key{
 			condition.S3VersionID,
@@ -397,10 +419,20 @@ var actionConditionKeyMap = map[Action]condition.KeySet{
 		append([]condition.Key{
 			condition.S3VersionID,
 		}, condition.CommonKeys...)...),
-	GetReplicationConfigurationAction:    condition.NewKeySet(condition.CommonKeys...),
-	PutReplicationConfigurationAction:    condition.NewKeySet(condition.CommonKeys...),
-	ReplicateObjectAction:                condition.NewKeySet(condition.CommonKeys...),
-	ReplicateDeleteAction:                condition.NewKeySet(condition.CommonKeys...),
-	ReplicateTagsAction:                  condition.NewKeySet(condition.CommonKeys...),
-	GetObjectVersionForReplicationAction: condition.NewKeySet(condition.CommonKeys...),
+	ReplicateObjectAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
+	ReplicateDeleteAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
+	ReplicateTagsAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
+	GetObjectVersionForReplicationAction: condition.NewKeySet(
+		append([]condition.Key{
+			condition.S3VersionID,
+		}, condition.CommonKeys...)...),
 }

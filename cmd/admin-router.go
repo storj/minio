@@ -20,8 +20,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/env"
 	"github.com/minio/minio/pkg/madmin"
 )
 
@@ -112,10 +110,9 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 			// -- IAM APIs --
 
 			// Add policy IAM
-			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/add-canned-policy").HandlerFunc(httpTraceHdrs(adminAPI.AddCannedPolicy)).Queries("name", "{name:.*}")
+			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/add-canned-policy").HandlerFunc(httpTraceAll(adminAPI.AddCannedPolicy)).Queries("name", "{name:.*}")
 
 			// Add user IAM
-
 			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/accountinfo").HandlerFunc(httpTraceAll(adminAPI.AccountInfoHandler))
 
 			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/add-user").HandlerFunc(httpTraceHdrs(adminAPI.AddUser)).Queries("accessKey", "{accessKey:.*}")
@@ -124,6 +121,8 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 
 			// Service accounts ops
 			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/add-service-account").HandlerFunc(httpTraceHdrs(adminAPI.AddServiceAccount))
+			adminRouter.Methods(http.MethodPost).Path(adminVersion+"/update-service-account").HandlerFunc(httpTraceHdrs(adminAPI.UpdateServiceAccount)).Queries("accessKey", "{accessKey:.*}")
+			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/info-service-account").HandlerFunc(httpTraceHdrs(adminAPI.InfoServiceAccount)).Queries("accessKey", "{accessKey:.*}")
 			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-service-accounts").HandlerFunc(httpTraceHdrs(adminAPI.ListServiceAccounts))
 			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/delete-service-account").HandlerFunc(httpTraceHdrs(adminAPI.DeleteServiceAccount)).Queries("accessKey", "{accessKey:.*}")
 
@@ -172,31 +171,31 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 		}
 
 		if globalIsDistErasure || globalIsErasure {
-			// Quota operations
-			if env.Get(envDataUsageCrawlConf, config.EnableOn) == config.EnableOn {
-				// GetBucketQuotaConfig
-				adminRouter.Methods(http.MethodGet).Path(adminVersion+"/get-bucket-quota").HandlerFunc(
-					httpTraceHdrs(adminAPI.GetBucketQuotaConfigHandler)).Queries("bucket", "{bucket:.*}")
-				// PutBucketQuotaConfig
-				adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-bucket-quota").HandlerFunc(
-					httpTraceHdrs(adminAPI.PutBucketQuotaConfigHandler)).Queries("bucket", "{bucket:.*}")
+			// GetBucketQuotaConfig
+			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/get-bucket-quota").HandlerFunc(
+				httpTraceHdrs(adminAPI.GetBucketQuotaConfigHandler)).Queries("bucket", "{bucket:.*}")
+			// PutBucketQuotaConfig
+			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-bucket-quota").HandlerFunc(
+				httpTraceHdrs(adminAPI.PutBucketQuotaConfigHandler)).Queries("bucket", "{bucket:.*}")
 
-				// Bucket replication operations
-				// GetBucketTargetHandler
-				adminRouter.Methods(http.MethodGet).Path(adminVersion+"/list-remote-targets").HandlerFunc(
-					httpTraceHdrs(adminAPI.ListRemoteTargetsHandler)).Queries("bucket", "{bucket:.*}", "type", "{type:.*}")
-				// SetRemoteTargetHandler
-				adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-remote-target").HandlerFunc(
-					httpTraceHdrs(adminAPI.SetRemoteTargetHandler)).Queries("bucket", "{bucket:.*}")
-				// RemoveRemoteTargetHandler
-				adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/remove-remote-target").HandlerFunc(
-					httpTraceHdrs(adminAPI.RemoveRemoteTargetHandler)).Queries("bucket", "{bucket:.*}", "arn", "{arn:.*}")
-			}
+			// Bucket replication operations
+			// GetBucketTargetHandler
+			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/list-remote-targets").HandlerFunc(
+				httpTraceHdrs(adminAPI.ListRemoteTargetsHandler)).Queries("bucket", "{bucket:.*}", "type", "{type:.*}")
+			// SetRemoteTargetHandler
+			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-remote-target").HandlerFunc(
+				httpTraceHdrs(adminAPI.SetRemoteTargetHandler)).Queries("bucket", "{bucket:.*}")
+			// RemoveRemoteTargetHandler
+			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/remove-remote-target").HandlerFunc(
+				httpTraceHdrs(adminAPI.RemoveRemoteTargetHandler)).Queries("bucket", "{bucket:.*}", "arn", "{arn:.*}")
 		}
-		// -- Top APIs --
-		// Top locks
+
 		if globalIsDistErasure {
+			// Top locks
 			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/top/locks").HandlerFunc(httpTraceHdrs(adminAPI.TopLocksHandler))
+			// Force unlocks paths
+			adminRouter.Methods(http.MethodPost).Path(adminVersion+"/force-unlock").
+				Queries("paths", "{paths:.*}").HandlerFunc(httpTraceHdrs(adminAPI.ForceUnlockHandler))
 		}
 
 		// HTTP Trace

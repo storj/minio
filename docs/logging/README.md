@@ -38,7 +38,7 @@ minio server /mnt/data
 Assuming `mc` is already [configured](https://docs.min.io/docs/minio-client-quickstart-guide.html)
 ```
 mc admin config get myminio/ audit_webhook
-audit_webhook:name1 auth_token="" endpoint=""
+audit_webhook:name1 enable=off endpoint= auth_token= client_cert= client_key= 
 ```
 
 ```
@@ -53,12 +53,19 @@ MinIO also honors environment variable for HTTP target Audit logging as shown be
 export MINIO_AUDIT_WEBHOOK_ENABLE_target1="on"
 export MINIO_AUDIT_WEBHOOK_AUTH_TOKEN_target1="token"
 export MINIO_AUDIT_WEBHOOK_ENDPOINT_target1=http://localhost:8080/minio/logs
+export MINIO_AUDIT_WEBHOOK_CLIENT_CERT="/tmp/cert.pem"
+export MINIO_AUDIT_WEBHOOK_CLIENT_KEY=="/tmp/key.pem"
 minio server /mnt/data
 ```
 
 Setting this environment variable automatically enables audit logging to the HTTP target. The audit logging is in JSON format as described below.
 
-NOTE: `timeToFirstByte` and `timeToResponse` will be expressed in Nanoseconds.
+NOTE:
+- `timeToFirstByte` and `timeToResponse` will be expressed in Nanoseconds.
+- Additionally in the case of the erasure coded setup `tags.objectErasureMap` provides per object details about
+   - Pool number the object operation was performed on.
+   - Set number the object operation was performed on.
+   - The list of disks participating in this operation belong to the set.
 
 ```json
 {
@@ -95,6 +102,19 @@ NOTE: `timeToFirstByte` and `timeToResponse` will be expressed in Nanoseconds.
     "Vary": "Origin",
     "X-Amz-Request-Id": "15BA4A72C0C70AFC",
     "X-Xss-Protection": "1; mode=block"
+  },
+  "tags": {
+    "objectErasureMap": {
+      "object": {
+        "poolId": 1,
+        "setId": 10,
+        "disks": [
+          "http://server01/mnt/pool1/disk01",
+          "http://server02/mnt/pool1/disk02",
+          "http://server03/mnt/pool1/disk03",
+          "http://server04/mnt/pool1/disk04"
+        ]
+     }
   }
 }
 ```

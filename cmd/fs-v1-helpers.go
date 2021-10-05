@@ -22,6 +22,7 @@ import (
 	"os"
 	pathutil "path"
 	"runtime"
+	"strings"
 
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/lock"
@@ -271,8 +272,8 @@ func fsOpenFile(ctx context.Context, readPath string, offset int64) (io.ReadClos
 	return fr, st.Size(), nil
 }
 
-// Creates a file and copies data from incoming reader. Staging buffer is used by io.CopyBuffer.
-func fsCreateFile(ctx context.Context, filePath string, reader io.Reader, buf []byte, fallocSize int64) (int64, error) {
+// Creates a file and copies data from incoming reader.
+func fsCreateFile(ctx context.Context, filePath string, reader io.Reader, fallocSize int64) (int64, error) {
 	if filePath == "" || reader == nil {
 		logger.LogIf(ctx, errInvalidArgument)
 		return 0, errInvalidArgument
@@ -317,21 +318,10 @@ func fsCreateFile(ctx context.Context, filePath string, reader io.Reader, buf []
 		}
 	}
 
-	var bytesWritten int64
-	if buf != nil {
-		bytesWritten, err = io.CopyBuffer(writer, reader, buf)
-		if err != nil {
-			if err != io.ErrUnexpectedEOF {
-				logger.LogIf(ctx, err)
-			}
-			return 0, err
-		}
-	} else {
-		bytesWritten, err = io.Copy(writer, reader)
-		if err != nil {
-			logger.LogIf(ctx, err)
-			return 0, err
-		}
+	bytesWritten, err := io.Copy(writer, reader)
+	if err != nil {
+		logger.LogIf(ctx, err)
+		return 0, err
 	}
 
 	return bytesWritten, nil
@@ -399,6 +389,55 @@ func fsRenameFile(ctx context.Context, sourcePath, destPath string) error {
 		logger.LogIf(ctx, err)
 		return err
 	}
+
+	return nil
+}
+
+func deleteFile(basePath, deletePath string, recursive bool) error {
+	if basePath == "" || deletePath == "" {
+		return nil
+	}
+	isObjectDir := HasSuffix(deletePath, SlashSeparator)
+	basePath = pathutil.Clean(basePath)
+	deletePath = pathutil.Clean(deletePath)
+	if !strings.HasPrefix(deletePath, basePath) || deletePath == basePath {
+		return nil
+	}
+
+	var err error
+	if recursive {
+		os.RemoveAll(deletePath)
+	} else {
+		err = os.Remove(deletePath)
+	}
+	if err != nil {
+		switch {
+		case isSysErrNotEmpty(err):
+			// if object is a directory, but if its not empty
+			// return FileNotFound to indicate its an empty prefix.
+			if isObjectDir {
+				return errFileNotFound
+			}
+			// Ignore errors if the directory is not empty. The server relies on
+			// this functionality, and sometimes uses recursion that should not
+			// error on parent directories.
+			return nil
+		case osIsNotExist(err):
+			return errFileNotFound
+		case osIsPermission(err):
+			return errFileAccessDenied
+		case isSysErrIO(err):
+			return errFaultyDisk
+		default:
+			return err
+		}
+	}
+
+	deletePath = pathutil.Dir(deletePath)
+
+	// Delete parent directory obviously not recursively. Errors for
+	// parent directories shouldn't trickle down.
+	deleteFile(basePath, deletePath, false)
 
 	return nil
 }

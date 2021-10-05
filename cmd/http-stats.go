@@ -79,10 +79,10 @@ func (s *ConnStats) getS3OutputBytes() uint64 {
 // Return connection stats (total input/output bytes and total s3 input/output bytes)
 func (s *ConnStats) toServerConnStats() ServerConnStats {
 	return ServerConnStats{
-		TotalInputBytes:  s.getTotalInputBytes(),
-		TotalOutputBytes: s.getTotalOutputBytes(),
-		S3InputBytes:     s.getS3InputBytes(),
-		S3OutputBytes:    s.getS3OutputBytes(),
+		TotalInputBytes:  s.getTotalInputBytes(),  // Traffic including reserved bucket
+		TotalOutputBytes: s.getTotalOutputBytes(), // Traffic including reserved bucket
+		S3InputBytes:     s.getS3InputBytes(),     // Traffic for client buckets
+		S3OutputBytes:    s.getS3OutputBytes(),    // Traffic for client buckets
 	}
 }
 
@@ -137,25 +137,40 @@ func (stats *HTTPAPIStats) Load() map[string]int {
 // HTTPStats holds statistics information about
 // HTTP requests made by all clients
 type HTTPStats struct {
-	currentS3Requests HTTPAPIStats
-	totalS3Requests   HTTPAPIStats
-	totalS3Errors     HTTPAPIStats
+	s3RequestsInQueue       int32
+	currentS3Requests       HTTPAPIStats
+	totalS3Requests         HTTPAPIStats
+	totalS3Errors           HTTPAPIStats
+	totalS3Canceled         HTTPAPIStats
+	rejectedRequestsAuth    uint64
+	rejectedRequestsTime    uint64
+	rejectedRequestsHeader  uint64
+	rejectedRequestsInvalid uint64
+}
+
+func (st *HTTPStats) addRequestsInQueue(i int32) {
+	atomic.AddInt32(&st.s3RequestsInQueue, i)
 }
 
 // Converts http stats into struct to be sent back to the client.
 func (st *HTTPStats) toServerHTTPStats() ServerHTTPStats {
 	serverStats := ServerHTTPStats{}
-
+	serverStats.S3RequestsInQueue = atomic.LoadInt32(&st.s3RequestsInQueue)
+	serverStats.TotalS3RejectedAuth = atomic.LoadUint64(&st.rejectedRequestsAuth)
+	serverStats.TotalS3RejectedTime = atomic.LoadUint64(&st.rejectedRequestsTime)
+	serverStats.TotalS3RejectedHeader = atomic.LoadUint64(&st.rejectedRequestsHeader)
+	serverStats.TotalS3RejectedInvalid = atomic.LoadUint64(&st.rejectedRequestsInvalid)
 	serverStats.CurrentS3Requests = ServerHTTPAPIStats{
 		APIStats: st.currentS3Requests.Load(),
 	}
-
 	serverStats.TotalS3Requests = ServerHTTPAPIStats{
 		APIStats: st.totalS3Requests.Load(),
 	}
-
 	serverStats.TotalS3Errors = ServerHTTPAPIStats{
 		APIStats: st.totalS3Errors.Load(),
+	}
+	serverStats.TotalS3Canceled = ServerHTTPAPIStats{
+		APIStats: st.totalS3Canceled.Load(),
 	}
 	return serverStats
 }
@@ -163,12 +178,21 @@ func (st *HTTPStats) toServerHTTPStats() ServerHTTPStats {
 // Update statistics from http request and response data
 func (st *HTTPStats) updateStats(api string, r *http.Request, w *logger.ResponseWriter) {
 	// A successful request has a 2xx response code
-	successReq := (w.StatusCode >= 200 && w.StatusCode < 300)
+	successReq := w.StatusCode >= 200 && w.StatusCode < 300
 
-	if !strings.HasSuffix(r.URL.Path, prometheusMetricsPath) {
+	if !strings.HasSuffix(r.URL.Path, prometheusMetricsPathLegacy) ||
+		!strings.HasSuffix(r.URL.Path, prometheusMetricsV2ClusterPath) ||
+		!strings.HasSuffix(r.URL.Path, prometheusMetricsV2NodePath) {
 		st.totalS3Requests.Inc(api)
-		if !successReq && w.StatusCode != 0 {
-			st.totalS3Errors.Inc(api)
+		if !successReq {
+			switch w.StatusCode {
+			case 0:
+			case 499:
+				// 499 is a good error, shall be counted at canceled.
+				st.totalS3Canceled.Inc(api)
+			default:
+				st.totalS3Errors.Inc(api)
+			}
 		}
 	}
 

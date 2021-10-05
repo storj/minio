@@ -1,6 +1,8 @@
-# Bucket Replication Guide [![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/minio.svg?maxAge=604800)](https://hub.docker.com/r/minio/minio/)
+# Bucket Replication Guide [![slack](https://slack.min.io/slack?type=svg)](https://slack.min.io) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/minio.svg?maxAge=604800)](https://hub.docker.com/r/minio/minio/)
 
 Bucket replication is designed to replicate selected objects in a bucket to a destination bucket.
+
+The contents of this page have been migrated to the new [MinIO Baremetal Documentation: Bucket Replication](https://docs.min.io/minio/baremetal/replication/replication-overview.html#) page. The [Bucket Replication](https://docs.min.io/minio/baremetal/replication/replication-overview.html#) section includes dedicated tutorials for configuring one-way "Active-Passive" and two-way "Active-Active" bucket replication. Please update your bookmarks to use the new MinIO documentation, as this legacy documentation will be deprecated and removed in the future.
 
 To replicate objects in a bucket to a destination bucket on a target site either in the same cluster or a different cluster, start by enabling [versioning](https://docs.minio.io/docs/minio-bucket-versioning-guide.html) for both source and destination buckets. Finally, the target site and the destination bucket need to be configured on the source MinIO server.
 
@@ -22,16 +24,26 @@ Role ARN = 'arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566
 
 >  The user running the above command needs *s3:GetReplicationConfiguration* and *s3:GetBucketVersioning* permission on the source cluster. We do not recommend running root credentials/super admin with replication, instead create a dedicated user. The access credentials used at the destination requires *s3:ReplicateObject* permission.
 
-The *source* bucket should have following minimal permission policy:
+The following minimal permission policy is needed by admin user setting up replication on the `source`:
 ```
 {
  "Version": "2012-10-17",
  "Statement": [
   {
+    "Action": [
+        "admin:SetBucketTarget",
+        "admin:GetBucketTarget"
+    ],
+    "Effect": "Allow",
+    "Sid": ""
+  },
+  {
    "Effect": "Allow",
    "Action": [
     "s3:GetReplicationConfiguration",
+    "s3:PutReplicationConfiguration",
     "s3:ListBucket",
+    "s3:ListBucketMultipartUploads",
     "s3:GetBucketLocation",
     "s3:GetBucketVersioning"
    ],
@@ -42,6 +54,7 @@ The *source* bucket should have following minimal permission policy:
  ]
 }
 ```
+
 The access key provided for the replication *target* cluster should have these minimal permissions:
 ```
 {
@@ -50,7 +63,12 @@ The access key provided for the replication *target* cluster should have these m
   {
    "Effect": "Allow",
    "Action": [
-    "s3:GetBucketVersioning"
+    "s3:GetReplicationConfiguration",
+    "s3:ListBucket",
+    "s3:ListBucketMultipartUploads",
+    "s3:GetBucketLocation",
+    "s3:GetBucketVersioning",
+    "s3:GetBucketObjectLockConfiguration"
    ],
    "Resource": [
     "arn:aws:s3:::destbucket"
@@ -59,12 +77,16 @@ The access key provided for the replication *target* cluster should have these m
   {
    "Effect": "Allow",
    "Action": [
+    "s3:GetReplicationConfiguration",
     "s3:ReplicateTags",
+    "s3:AbortMultipartUpload",
     "s3:GetObject",
     "s3:GetObjectVersion",
     "s3:GetObjectVersionTagging",
     "s3:PutObject",
-    "s3:ReplicateObject"
+    "s3:DeleteObject",
+    "s3:ReplicateObject",
+    "s3:ReplicateDelete"
    ],
    "Resource": [
     "arn:aws:s3:::destbucket/*"
@@ -72,8 +94,9 @@ The access key provided for the replication *target* cluster should have these m
   }
  ]
 }
-
 ```
+Please note that the permissions required by the admin user on the target cluster can be more fine grained to exclude permissions like "s3:ReplicateDelete", "s3:GetBucketObjectLockConfiguration" etc depending on whether delete replication rules are set up or if object locking is disabled on `destbucket`. The above policies assume that replication of objects, tags and delete marker replication are all enabled on object lock enabled buckets. A sample script to setup replication is provided [here](https://github.com/minio/minio/blob/master/docs/bucket/replication/setup_replication.sh)
+
 Once successfully created and authorized, the `mc admin bucket remote add` command generates a replication target ARN.  This command lists all the currently authorized replication targets:
 ```
 mc admin bucket remote ls myminio/srcbucket --service "replication"
@@ -119,17 +142,17 @@ The replication configuration follows [AWS S3 Spec](https://docs.aws.amazon.com/
 
 When object locking is used in conjunction with replication, both source and destination buckets needs to have [object locking](https://docs.min.io/docs/minio-bucket-object-lock-guide.html) enabled. Similarly objects encrypted on the server side, will be replicated if destination also supports encryption.
 
-Replication status can be seen in the metadata on the source and destination objects. On the source side, the `X-Amz-Replication-Status` changes from `PENDING` to `COMPLETE` or `FAILED` after replication attempt either succeeded or failed respectively. On the destination side, a `X-Amz-Replication-Status` status of `REPLICA` indicates that the object was replicated successfully. Any replication failures are automatically re-attempted during a periodic disk crawl cycle.
+Replication status can be seen in the metadata on the source and destination objects. On the source side, the `X-Amz-Replication-Status` changes from `PENDING` to `COMPLETED` or `FAILED` after replication attempt either succeeded or failed respectively. On the destination side, a `X-Amz-Replication-Status` status of `REPLICA` indicates that the object was replicated successfully. Any replication failures are automatically re-attempted during a periodic disk scanner cycle.
 
-To perform bi-directional replication, repeat the above process on the target site - this time setting the source bucket as the replication target.
-
-It is recommended that replication be run in a system with atleast two CPU's available to the process, so that replication can run in its own thread.
+To perform bi-directional replication, repeat the above process on the target site - this time setting the source bucket as the replication target. It is recommended that replication be run in a system with atleast two CPU's available to the process, so that replication can run in its own thread.
 
 ![put](https://raw.githubusercontent.com/minio/minio/master/docs/bucket/replication/PUT_bucket_replication.png)
 
 ![head](https://raw.githubusercontent.com/minio/minio/master/docs/bucket/replication/HEAD_bucket_replication.png)
 
 ## MinIO Extension
+### Replicating Deletes
+
 Delete marker replication is allowed in [AWS V1 Configuration](https://aws.amazon.com/blogs/storage/managing-delete-marker-replication-in-amazon-s3/) but not in V2 configuration. The MinIO implementation above is based on V2 configuration, however it has been extended to allow both DeleteMarker replication and replication of versioned deletes with the `DeleteMarkerReplication` and `DeleteReplication` fields in the replication configuration above. By default, this is set to `Disabled` unless the user specifies it while adding a replication rule.
 
 When an object is deleted from the source bucket, the corresponding replica version will be marked deleted if delete marker replication is enabled in the replication configuration. Replication of deletes that specify a version id (a.k.a hard deletes) can be enabled by setting the `DeleteReplication` status to enabled in the replication configuration. This is a MinIO specific extension that can be enabled using the `mc replicate add` or `mc replicate edit` command with the --replicate "delete" flag.
@@ -143,7 +166,8 @@ Additional permission of "s3:ReplicateDelete" action would need to be specified 
 mc replicate add myminio/srcbucket/Tax --priority 1 --arn "arn:minio:replication:us-east-1:c5be6b16-769d-432a-9ef1-4567081f3566:destbucket" --tags "Year=2019&Company=AcmeCorp" --storage-class "STANDARD" --remote-bucket "destbucket" --replicate "delete,delete-marker"
 Replication configuration applied successfully to myminio/srcbucket.
 ```
-Note that both source and target instance need to be upgraded to latest release to take advantage of Delete marker replication.
+
+> NOTE: Both source and target instance need to be upgraded to latest release to take advantage of Delete marker replication.
 
 Status of delete marker replication can be viewed by doing a GET/HEAD on the object version - it will return a `X-Minio-Replication-DeleteMarker-Status` header and http response code of `405`. In the case of permanent deletes, if the delete replication is pending or failed to propagate to the target cluster, GET/HEAD will return additional `X-Minio-Replication-Delete-Status` header and a http response code of `405`.
 
@@ -151,9 +175,16 @@ Status of delete marker replication can be viewed by doing a GET/HEAD on the obj
 
 The status of replication can be monitored by configuring event notifications on the source and target buckets using `mc event add`.On the source side, the `s3:PutObject`, `s3:Replication:OperationCompletedReplication` and `s3:Replication:OperationFailedReplication` events show the status of replication in the `X-Amz-Replication-Status` metadata.
 
-On the target bucket, `s3:PutObject` event shows `X-Amz-Replication-Status` status of `REPLICA` in the metadata. Additional metrics to monitor backlog state for the purpose of bandwidth management and resource allocation are  
-an upcoming feature.
+On the target bucket, `s3:PutObject` event shows `X-Amz-Replication-Status` status of `REPLICA` in the metadata. Additional metrics to monitor backlog state for the purpose of bandwidth management and resource allocation are exposed via Prometheus - see https://github.com/minio/minio/blob/master/docs/metrics/prometheus/list.md for more details.
+
+### Sync/Async Replication
+By default, replication is completed asynchronously. If synchronous replication is desired, set the --sync flag while adding a
+remote replication target using the `mc admin bucket remote add` command
+```
+ mc admin bucket remote add myminio/srcbucket https://accessKey:secretKey@replica-endpoint:9000/destbucket --service replication --region us-east-1 --sync --healthcheck-seconds 100
+```
 
 ## Explore Further
+- [MinIO Bucket Replication Design](https://raw.githubusercontent.com/minio/minio/master/docs/bucket/replication/DESIGN.md)
 - [MinIO Bucket Versioning Implementation](https://docs.minio.io/docs/minio-bucket-versioning-guide.html)
 - [MinIO Client Quickstart Guide](https://docs.minio.io/docs/minio-client-quickstart-guide.html)

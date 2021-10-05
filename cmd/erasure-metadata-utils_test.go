@@ -18,6 +18,9 @@ package cmd
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
 )
@@ -142,7 +145,7 @@ func TestShuffleDisks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	objLayer, _, err := initObjectLayer(ctx, mustGetZoneEndpoints(disks...))
+	objLayer, _, err := initObjectLayer(ctx, mustGetPoolEndpoints(disks...))
 	if err != nil {
 		removeRoots(disks)
 		t.Fatal(err)
@@ -190,7 +193,7 @@ func TestEvalDisks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	objLayer, _, err := initObjectLayer(ctx, mustGetZoneEndpoints(disks...))
+	objLayer, _, err := initObjectLayer(ctx, mustGetPoolEndpoints(disks...))
 	if err != nil {
 		removeRoots(disks)
 		t.Fatal(err)
@@ -198,4 +201,23 @@ func TestEvalDisks(t *testing.T) {
 	defer removeRoots(disks)
 	z := objLayer.(*erasureServerPools)
 	testShuffleDisks(t, z)
+}
+
+func Test_hashOrder(t *testing.T) {
+	for x := 1; x < 17; x++ {
+		t.Run(fmt.Sprintf("%d", x), func(t *testing.T) {
+			var first [17]int
+			rng := rand.New(rand.NewSource(0))
+			var tmp [16]byte
+			rng.Read(tmp[:])
+			prefix := hex.EncodeToString(tmp[:])
+			for i := 0; i < 10000; i++ {
+				rng.Read(tmp[:])
+
+				y := hashOrder(fmt.Sprintf("%s/%x", prefix, hex.EncodeToString(tmp[:3])), x)
+				first[y[0]]++
+			}
+			t.Log("first:", first[:x])
+		})
+	}
 }

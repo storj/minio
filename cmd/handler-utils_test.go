@@ -22,6 +22,7 @@ import (
 	"encoding/xml"
 	"io/ioutil"
 	"net/http"
+	"net/textproto"
 	"os"
 	"reflect"
 	"strings"
@@ -43,7 +44,7 @@ func TestIsValidLocationContraint(t *testing.T) {
 
 	// Corrupted XML
 	malformedReq := &http.Request{
-		Body:          ioutil.NopCloser(bytes.NewBuffer([]byte("<>"))),
+		Body:          ioutil.NopCloser(bytes.NewReader([]byte("<>"))),
 		ContentLength: int64(len("<>")),
 	}
 
@@ -58,7 +59,7 @@ func TestIsValidLocationContraint(t *testing.T) {
 		createBucketConfig := createBucketLocationConfiguration{}
 		createBucketConfig.Location = location
 		createBucketConfigBytes, _ := xml.Marshal(createBucketConfig)
-		createBucketConfigBuffer := bytes.NewBuffer(createBucketConfigBytes)
+		createBucketConfigBuffer := bytes.NewReader(createBucketConfigBytes)
 		req.Body = ioutil.NopCloser(createBucketConfigBuffer)
 		req.ContentLength = int64(createBucketConfigBuffer.Len())
 		return req
@@ -197,7 +198,7 @@ func TestExtractMetadataHeaders(t *testing.T) {
 	// Validate if the extracting headers.
 	for i, testCase := range testCases {
 		metadata := make(map[string]string)
-		err := extractMetadataFromMap(context.Background(), testCase.header, metadata)
+		err := extractMetadataFromMime(context.Background(), textproto.MIMEHeader(testCase.header), metadata)
 		if err != nil && !testCase.shouldFail {
 			t.Fatalf("Test %d failed to extract metadata: %v", i+1, err)
 		}

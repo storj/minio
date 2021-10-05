@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"hash/crc32"
 
 	"github.com/minio/minio/cmd/logger"
@@ -113,21 +114,9 @@ func hashOrder(key string, cardinality int) []int {
 	return nums
 }
 
-// Reads all `xl.meta` metadata as a FileInfo slice and checks if the data dir exists as well,
-// otherwise returns errFileNotFound (or errFileVersionNotFound)
-func getAllObjectFileInfo(ctx context.Context, disks []StorageAPI, bucket, object, versionID string) ([]FileInfo, []error) {
-	return readVersionFromDisks(ctx, disks, bucket, object, versionID, true)
-}
-
 // Reads all `xl.meta` metadata as a FileInfo slice.
 // Returns error slice indicating the failed metadata reads.
-func readAllFileInfo(ctx context.Context, disks []StorageAPI, bucket, object, versionID string) ([]FileInfo, []error) {
-	return readVersionFromDisks(ctx, disks, bucket, object, versionID, false)
-}
-
-// Reads all `xl.meta` metadata as a FileInfo slice and checks if the data dir
-// exists as well, if checkDataDir is set to true.
-func readVersionFromDisks(ctx context.Context, disks []StorageAPI, bucket, object, versionID string, checkDataDir bool) ([]FileInfo, []error) {
+func readAllFileInfo(ctx context.Context, disks []StorageAPI, bucket, object, versionID string, readData bool) ([]FileInfo, []error) {
 	metadataArray := make([]FileInfo, len(disks))
 
 	g := errgroup.WithNErrs(len(disks))
@@ -138,11 +127,17 @@ func readVersionFromDisks(ctx context.Context, disks []StorageAPI, bucket, objec
 			if disks[index] == nil {
 				return errDiskNotFound
 			}
-			metadataArray[index], err = disks[index].ReadVersion(ctx, bucket, object, versionID, checkDataDir)
+			metadataArray[index], err = disks[index].ReadVersion(ctx, bucket, object, versionID, readData)
 			if err != nil {
-				if err != errFileNotFound && err != errVolumeNotFound && err != errFileVersionNotFound {
-					logger.GetReqInfo(ctx).AppendTags("disk", disks[index].String())
-					logger.LogIf(ctx, err)
+				if !IsErr(err, []error{
+					errFileNotFound,
+					errVolumeNotFound,
+					errFileVersionNotFound,
+					errDiskNotFound,
+				}...) {
+					logger.LogOnceIf(ctx, fmt.Errorf("Drive %s, path (%s/%s) returned an error (%w)",
+						disks[index], bucket, object, err),
+						disks[index].String())
 				}
 			}
 			return err
@@ -153,15 +148,28 @@ func readVersionFromDisks(ctx context.Context, disks []StorageAPI, bucket, objec
 	return metadataArray, g.Wait()
 }
 
-func shuffleDisksAndPartsMetadataByIndex(disks []StorageAPI, metaArr []FileInfo, distribution []int) (shuffledDisks []StorageAPI, shuffledPartsMetadata []FileInfo) {
+// shuffleDisksAndPartsMetadataByIndex this function should be always used by GetObjectNInfo()
+// and CompleteMultipartUpload code path, it is not meant to be used with PutObject,
+// NewMultipartUpload metadata shuffling.
+func shuffleDisksAndPartsMetadataByIndex(disks []StorageAPI, metaArr []FileInfo, fi FileInfo) (shuffledDisks []StorageAPI, shuffledPartsMetadata []FileInfo) {
 	shuffledDisks = make([]StorageAPI, len(disks))
 	shuffledPartsMetadata = make([]FileInfo, len(disks))
+	distribution := fi.Erasure.Distribution
+
 	var inconsistent int
 	for i, meta := range metaArr {
 		if disks[i] == nil {
 			// Assuming offline drives as inconsistent,
 			// to be safe and fallback to original
 			// distribution order.
+			inconsistent++
+			continue
+		}
+		if !meta.IsValid() {
+			inconsistent++
+			continue
+		}
+		if len(fi.Data) != len(meta.Data) {
 			inconsistent++
 			continue
 		}
@@ -179,23 +187,41 @@ func shuffleDisksAndPartsMetadataByIndex(disks []StorageAPI, metaArr []FileInfo,
 	// Inconsistent meta info is with in the limit of
 	// expected quorum, proceed with EcIndex based
 	// disk order.
-	if inconsistent < len(disks)/2 {
+	if inconsistent < fi.Erasure.ParityBlocks {
 		return shuffledDisks, shuffledPartsMetadata
 	}
 
 	// fall back to original distribution based order.
-	return shuffleDisksAndPartsMetadata(disks, metaArr, distribution)
+	return shuffleDisksAndPartsMetadata(disks, metaArr, fi)
 }
 
-// Return shuffled partsMetadata depending on distribution.
-func shuffleDisksAndPartsMetadata(disks []StorageAPI, partsMetadata []FileInfo, distribution []int) (shuffledDisks []StorageAPI, shuffledPartsMetadata []FileInfo) {
-	if distribution == nil {
-		return disks, partsMetadata
-	}
+// Return shuffled partsMetadata depending on fi.Distribution.
+// additional validation is attempted and invalid metadata is
+// automatically skipped only when fi.ModTime is non-zero
+// indicating that this is called during read-phase
+func shuffleDisksAndPartsMetadata(disks []StorageAPI, partsMetadata []FileInfo, fi FileInfo) (shuffledDisks []StorageAPI, shuffledPartsMetadata []FileInfo) {
 	shuffledDisks = make([]StorageAPI, len(disks))
 	shuffledPartsMetadata = make([]FileInfo, len(partsMetadata))
+	distribution := fi.Erasure.Distribution
+
+	init := fi.ModTime.IsZero()
 	// Shuffle slice xl metadata for expected distribution.
 	for index := range partsMetadata {
+		if disks[index] == nil {
+			continue
+		}
+		if !init && !partsMetadata[index].IsValid() {
+			// Check for parts metadata validity for only
+			// fi.ModTime is not empty - ModTime is always set,
+			// if object was ever written previously.
+			continue
+		}
+		if !init && len(fi.Data) != len(partsMetadata[index].Data) {
+			// Check for length of data parts only when
+			// fi.ModTime is not empty - ModTime is always set,
+			// if object was ever written previously.
+			continue
+		}
 		blockIndex := distribution[index]
 		shuffledPartsMetadata[blockIndex-1] = partsMetadata[index]
 		shuffledDisks[blockIndex-1] = disks[index]

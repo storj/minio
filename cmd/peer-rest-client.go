@@ -78,6 +78,11 @@ func (client *peerRESTClient) String() string {
 	return client.host.String()
 }
 
+// IsOnline returns true if the peer client is online.
+func (client *peerRESTClient) IsOnline() bool {
+	return client.restClient.IsOnline()
+}
+
 // Close - marks the client as closed.
 func (client *peerRESTClient) Close() error {
 	client.restClient.Close()
@@ -429,6 +434,20 @@ func (client *peerRESTClient) DownloadProfileData() (data map[string][]byte, err
 	return data, err
 }
 
+// GetBucketStats - load bucket statistics
+func (client *peerRESTClient) GetBucketStats(bucket string) (BucketStats, error) {
+	values := make(url.Values)
+	values.Set(peerRESTBucket, bucket)
+	respBody, err := client.call(peerRESTMethodGetBucketStats, values, nil, -1)
+	if err != nil {
+		return BucketStats{}, err
+	}
+
+	var bs BucketStats
+	defer http.DrainBody(respBody)
+	return bs, msgp.Decode(respBody, &bs)
+}
+
 // LoadBucketMetadata - load bucket metadata
 func (client *peerRESTClient) LoadBucketMetadata(bucket string) error {
 	values := make(url.Values)
@@ -580,19 +599,21 @@ func (client *peerRESTClient) LoadGroup(group string) error {
 }
 
 type serverUpdateInfo struct {
-	URL       *url.URL
-	Sha256Sum []byte
-	Time      time.Time
+	URL         *url.URL
+	Sha256Sum   []byte
+	Time        time.Time
+	ReleaseInfo string
 }
 
 // ServerUpdate - sends server update message to remote peers.
-func (client *peerRESTClient) ServerUpdate(ctx context.Context, u *url.URL, sha256Sum []byte, lrTime time.Time) error {
+func (client *peerRESTClient) ServerUpdate(ctx context.Context, u *url.URL, sha256Sum []byte, lrTime time.Time, releaseInfo string) error {
 	values := make(url.Values)
 	var reader bytes.Buffer
 	if err := gob.NewEncoder(&reader).Encode(serverUpdateInfo{
-		URL:       u,
-		Sha256Sum: sha256Sum,
-		Time:      lrTime,
+		URL:         u,
+		Sha256Sum:   sha256Sum,
+		Time:        lrTime,
+		ReleaseInfo: releaseInfo,
 	}); err != nil {
 		return err
 	}
@@ -677,10 +698,14 @@ func (client *peerRESTClient) UpdateMetacacheListing(ctx context.Context, m meta
 
 }
 
-func (client *peerRESTClient) doTrace(traceCh chan interface{}, doneCh <-chan struct{}, trcAll, trcErr bool) {
+func (client *peerRESTClient) doTrace(traceCh chan interface{}, doneCh <-chan struct{}, traceOpts madmin.ServiceTraceOpts) {
 	values := make(url.Values)
-	values.Set(peerRESTTraceAll, strconv.FormatBool(trcAll))
-	values.Set(peerRESTTraceErr, strconv.FormatBool(trcErr))
+	values.Set(peerRESTTraceErr, strconv.FormatBool(traceOpts.OnlyErrors))
+	values.Set(peerRESTTraceS3, strconv.FormatBool(traceOpts.S3))
+	values.Set(peerRESTTraceStorage, strconv.FormatBool(traceOpts.Storage))
+	values.Set(peerRESTTraceOS, strconv.FormatBool(traceOpts.OS))
+	values.Set(peerRESTTraceInternal, strconv.FormatBool(traceOpts.Internal))
+	values.Set(peerRESTTraceThreshold, traceOpts.Threshold.String())
 
 	// To cancel the REST request in case doneCh gets closed.
 	ctx, cancel := context.WithCancel(GlobalContext)
@@ -744,7 +769,7 @@ func (client *peerRESTClient) doListen(listenCh chan interface{}, doneCh <-chan 
 	dec := gob.NewDecoder(respBody)
 	for {
 		var ev event.Event
-		if err = dec.Decode(&ev); err != nil {
+		if err := dec.Decode(&ev); err != nil {
 			return
 		}
 		if len(ev.EventVersion) > 0 {
@@ -774,10 +799,10 @@ func (client *peerRESTClient) Listen(listenCh chan interface{}, doneCh <-chan st
 }
 
 // Trace - send http trace request to peer nodes
-func (client *peerRESTClient) Trace(traceCh chan interface{}, doneCh <-chan struct{}, trcAll, trcErr bool) {
+func (client *peerRESTClient) Trace(traceCh chan interface{}, doneCh <-chan struct{}, traceOpts madmin.ServiceTraceOpts) {
 	go func() {
 		for {
-			client.doTrace(traceCh, doneCh, trcAll, trcErr)
+			client.doTrace(traceCh, doneCh, traceOpts)
 			select {
 			case <-doneCh:
 				return
@@ -859,7 +884,7 @@ func newPeerRestClients(endpoints EndpointServerPools) (remote, all []*peerRESTC
 // Returns a peer rest client.
 func newPeerRESTClient(peer *xnet.Host) *peerRESTClient {
 	scheme := "http"
-	if globalIsSSL {
+	if globalIsTLS {
 		scheme = "https"
 	}
 
@@ -876,7 +901,7 @@ func newPeerRESTClient(peer *xnet.Host) *peerRESTClient {
 
 	// Construct a new health function.
 	restClient.HealthCheckFn = func() bool {
-		ctx, cancel := context.WithTimeout(GlobalContext, restClient.HealthCheckTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), restClient.HealthCheckTimeout)
 		defer cancel()
 		respBody, err := healthClient.Call(ctx, peerRESTMethodHealth, nil, nil, -1)
 		xhttp.DrainBody(respBody)
@@ -900,4 +925,25 @@ func (client *peerRESTClient) MonitorBandwidth(ctx context.Context, buckets []st
 	var bandwidthReport bandwidth.Report
 	err = dec.Decode(&bandwidthReport)
 	return &bandwidthReport, err
+}
+
+func (client *peerRESTClient) GetPeerMetrics(ctx context.Context) (<-chan Metric, error) {
+	respBody, err := client.callWithContext(ctx, peerRESTMethodGetPeerMetrics, nil, nil, -1)
+	if err != nil {
+		return nil, err
+	}
+	dec := gob.NewDecoder(respBody)
+	ch := make(chan Metric)
+	go func(ch chan<- Metric) {
+		for {
+			var metric Metric
+			if err := dec.Decode(&metric); err != nil {
+				http.DrainBody(respBody)
+				close(ch)
+				return
+			}
+			ch <- metric
+		}
+	}(ch)
+	return ch, nil
 }

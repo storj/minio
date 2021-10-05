@@ -29,12 +29,11 @@ import (
 	"github.com/minio/minio/pkg/net"
 
 	smart "github.com/minio/minio/pkg/smart"
-	"github.com/shirou/gopsutil/cpu"
-	diskhw "github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/mem"
-	nethw "github.com/shirou/gopsutil/net"
-	"github.com/shirou/gopsutil/process"
+	"github.com/shirou/gopsutil/v3/cpu"
+	diskhw "github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 // HealthInfo - MinIO cluster's health Info
@@ -65,36 +64,34 @@ type ServerProcInfo struct {
 
 // SysProcess - Includes process lvl information about a single process
 type SysProcess struct {
-	Pid            int32                       `json:"pid"`
-	Background     bool                        `json:"background,omitempty"`
-	CPUPercent     float64                     `json:"cpupercent,omitempty"`
-	Children       []int32                     `json:"children,omitempty"`
-	CmdLine        string                      `json:"cmd,omitempty"`
-	Connections    []nethw.ConnectionStat      `json:"connections,omitempty"`
-	CreateTime     int64                       `json:"createtime,omitempty"`
-	Cwd            string                      `json:"cwd,omitempty"`
-	Exe            string                      `json:"exe,omitempty"`
-	Gids           []int32                     `json:"gids,omitempty"`
-	IOCounters     *process.IOCountersStat     `json:"iocounters,omitempty"`
-	IsRunning      bool                        `json:"isrunning,omitempty"`
-	MemInfo        *process.MemoryInfoStat     `json:"meminfo,omitempty"`
-	MemMaps        *[]process.MemoryMapsStat   `json:"memmaps,omitempty"`
-	MemPercent     float32                     `json:"mempercent,omitempty"`
-	Name           string                      `json:"name,omitempty"`
-	NetIOCounters  []nethw.IOCountersStat      `json:"netiocounters,omitempty"`
-	Nice           int32                       `json:"nice,omitempty"`
-	NumCtxSwitches *process.NumCtxSwitchesStat `json:"numctxswitches,omitempty"`
-	NumFds         int32                       `json:"numfds,omitempty"`
-	NumThreads     int32                       `json:"numthreads,omitempty"`
-	PageFaults     *process.PageFaultsStat     `json:"pagefaults,omitempty"`
-	Parent         int32                       `json:"parent,omitempty"`
-	Ppid           int32                       `json:"ppid,omitempty"`
-	Rlimit         []process.RlimitStat        `json:"rlimit,omitempty"`
-	Status         string                      `json:"status,omitempty"`
-	Tgid           int32                       `json:"tgid,omitempty"`
-	Times          *cpu.TimesStat              `json:"cputimes,omitempty"`
-	Uids           []int32                     `json:"uids,omitempty"`
-	Username       string                      `json:"username,omitempty"`
+	Pid             int32                       `json:"pid"`
+	Background      bool                        `json:"background,omitempty"`
+	CPUPercent      float64                     `json:"cpupercent,omitempty"`
+	Children        []int32                     `json:"children,omitempty"`
+	CmdLine         string                      `json:"cmd,omitempty"`
+	ConnectionCount int                         `json:"connection_count,omitempty"`
+	CreateTime      int64                       `json:"createtime,omitempty"`
+	Cwd             string                      `json:"cwd,omitempty"`
+	Exe             string                      `json:"exe,omitempty"`
+	Gids            []int32                     `json:"gids,omitempty"`
+	IOCounters      *process.IOCountersStat     `json:"iocounters,omitempty"`
+	IsRunning       bool                        `json:"isrunning,omitempty"`
+	MemInfo         *process.MemoryInfoStat     `json:"meminfo,omitempty"`
+	MemMaps         *[]process.MemoryMapsStat   `json:"memmaps,omitempty"`
+	MemPercent      float32                     `json:"mempercent,omitempty"`
+	Name            string                      `json:"name,omitempty"`
+	Nice            int32                       `json:"nice,omitempty"`
+	NumCtxSwitches  *process.NumCtxSwitchesStat `json:"numctxswitches,omitempty"`
+	NumFds          int32                       `json:"numfds,omitempty"`
+	NumThreads      int32                       `json:"numthreads,omitempty"`
+	PageFaults      *process.PageFaultsStat     `json:"pagefaults,omitempty"`
+	Parent          int32                       `json:"parent,omitempty"`
+	Ppid            int32                       `json:"ppid,omitempty"`
+	Status          string                      `json:"status,omitempty"`
+	Tgid            int32                       `json:"tgid,omitempty"`
+	Times           *cpu.TimesStat              `json:"cputimes,omitempty"`
+	Uids            []int32                     `json:"uids,omitempty"`
+	Username        string                      `json:"username,omitempty"`
 }
 
 // ServerMemInfo - Includes host virtual and swap mem information
@@ -158,8 +155,8 @@ type PerfInfo struct {
 // ServerDrivesInfo - Drive info about all drives in a single MinIO node
 type ServerDrivesInfo struct {
 	Addr     string          `json:"addr"`
-	Serial   []DrivePerfInfo `json:"serial,omitempty"`
-	Parallel []DrivePerfInfo `json:"parallel,omitempty"`
+	Serial   []DrivePerfInfo `json:"serial,omitempty"`   // Drive perf info collected one drive at a time
+	Parallel []DrivePerfInfo `json:"parallel,omitempty"` // Drive perf info collected in parallel
 	Error    string          `json:"error,omitempty"`
 }
 
@@ -259,18 +256,6 @@ func (adm *AdminClient) ServerHealthInfo(ctx context.Context, healthDataTypes []
 		var healthInfoMessage HealthInfo
 		healthInfoMessage.TimeStamp = time.Now()
 
-		if v.Get(string(HealthDataTypeMinioInfo)) == "true" {
-			info, err := adm.ServerInfo(ctx)
-			if err != nil {
-				respChan <- HealthInfo{
-					Error: err.Error(),
-				}
-				return
-			}
-			healthInfoMessage.Minio.Info = info
-			respChan <- healthInfoMessage
-		}
-
 		resp, err := adm.executeMethod(ctx, "GET", requestData{
 			relPath:     adminAPIPrefix + "/healthinfo",
 			queryValues: v,
@@ -311,8 +296,44 @@ func (adm *AdminClient) ServerHealthInfo(ctx context.Context, healthDataTypes []
 		}
 
 		respChan <- healthInfoMessage
+
+		if v.Get(string(HealthDataTypeMinioInfo)) == "true" {
+			info, err := adm.ServerInfo(ctx)
+			if err != nil {
+				respChan <- HealthInfo{
+					Error: err.Error(),
+				}
+				return
+			}
+			healthInfoMessage.Minio.Info = info
+			respChan <- healthInfoMessage
+		}
+
 		close(respChan)
 	}()
 	return respChan
+}
 
+// GetTotalCapacity gets the total capacity a server holds.
+func (s *ServerDiskHwInfo) GetTotalCapacity() (capacity uint64) {
+	for _, u := range s.Usage {
+		capacity += u.Total
+	}
+	return
+}
+
+// GetTotalFreeCapacity gets the total capacity that is free.
+func (s *ServerDiskHwInfo) GetTotalFreeCapacity() (capacity uint64) {
+	for _, u := range s.Usage {
+		capacity += u.Free
+	}
+	return
+}
+
+// GetTotalUsedCapacity gets the total capacity used.
+func (s *ServerDiskHwInfo) GetTotalUsedCapacity() (capacity uint64) {
+	for _, u := range s.Usage {
+		capacity += u.Used
+	}
+	return
 }

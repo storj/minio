@@ -17,14 +17,19 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bcicen/jstream"
+	"github.com/minio/minio-go/v7/pkg/set"
 )
 
 // startWithConds - map which indicates if a given condition supports starts-with policy operator
@@ -110,8 +115,45 @@ type PostPolicyForm struct {
 	}
 }
 
+// implemented to ensure that duplicate keys in JSON
+// are merged together into a single JSON key, also
+// to remove any extraneous JSON bodies.
+//
+// Go stdlib doesn't support parsing JSON with duplicate
+// keys, so we need to use this technique to merge the
+// keys.
+func sanitizePolicy(r io.Reader) (io.Reader, error) {
+	var buf bytes.Buffer
+	e := json.NewEncoder(&buf)
+	d := jstream.NewDecoder(r, 0).ObjectAsKVS()
+	sset := set.NewStringSet()
+	for mv := range d.Stream() {
+		var kvs jstream.KVS
+		if mv.ValueType == jstream.Object {
+			// This is a JSON object type (that preserves key order)
+			kvs = mv.Value.(jstream.KVS)
+			for _, kv := range kvs {
+				if sset.Contains(kv.Key) {
+					// Reject duplicate conditions or expiration.
+					return nil, fmt.Errorf("input policy has multiple %s, please fix your client code", kv.Key)
+				}
+				sset.Add(kv.Key)
+			}
+			e.Encode(kvs)
+		}
+	}
+	return &buf, d.Err()
+}
+
 // parsePostPolicyForm - Parse JSON policy string into typed PostPolicyForm structure.
-func parsePostPolicyForm(policy string) (ppf PostPolicyForm, e error) {
+func parsePostPolicyForm(r io.Reader) (PostPolicyForm, error) {
+	reader, err := sanitizePolicy(r)
+	if err != nil {
+		return PostPolicyForm{}, err
+	}
+
+	d := json.NewDecoder(reader)
+
 	// Convert po into interfaces and
 	// perform strict type conversion using reflection.
 	var rawPolicy struct {
@@ -119,9 +161,9 @@ func parsePostPolicyForm(policy string) (ppf PostPolicyForm, e error) {
 		Conditions []interface{} `json:"conditions"`
 	}
 
-	err := json.Unmarshal([]byte(policy), &rawPolicy)
-	if err != nil {
-		return ppf, err
+	d.DisallowUnknownFields()
+	if err := d.Decode(&rawPolicy); err != nil {
+		return PostPolicyForm{}, err
 	}
 
 	parsedPolicy := PostPolicyForm{}
@@ -129,7 +171,7 @@ func parsePostPolicyForm(policy string) (ppf PostPolicyForm, e error) {
 	// Parse expiry time.
 	parsedPolicy.Expiration, err = time.Parse(time.RFC3339Nano, rawPolicy.Expiration)
 	if err != nil {
-		return ppf, err
+		return PostPolicyForm{}, err
 	}
 
 	// Parse conditions.

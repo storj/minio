@@ -115,7 +115,7 @@ func (statement Statement) isValid() error {
 		}
 
 		keys := statement.Conditions.Keys()
-		keyDiff := keys.Difference(actionConditionKeyMap[action])
+		keyDiff := keys.Difference(iamActionConditionKeyMap.Lookup(action))
 		if !keyDiff.IsEmpty() {
 			return Errorf("unsupported condition keys '%v' used for action '%v'", keyDiff, action)
 		}
@@ -127,6 +127,29 @@ func (statement Statement) isValid() error {
 // Validate - validates Statement is for given bucket or not.
 func (statement Statement) Validate() error {
 	return statement.isValid()
+}
+
+// Equals checks if two statements are equal
+func (statement Statement) Equals(st Statement) bool {
+	if statement.Effect != st.Effect {
+		return false
+	}
+	if !statement.Actions.Equals(st.Actions) {
+		return false
+	}
+	if !statement.Resources.Equals(st.Resources) {
+		return false
+	}
+	if !statement.Conditions.Equals(st.Conditions) {
+		return false
+	}
+	return true
+}
+
+// Clone clones Statement structure
+func (statement Statement) Clone() Statement {
+	return NewStatement(statement.Effect, statement.Actions.Clone(),
+		statement.Resources.Clone(), statement.Conditions.Clone())
 }
 
 // NewStatement - creates new statement.

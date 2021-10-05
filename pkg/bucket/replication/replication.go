@@ -31,8 +31,8 @@ const (
 	// Pending - replication is pending.
 	Pending StatusType = "PENDING"
 
-	// Complete - replication completed ok.
-	Complete StatusType = "COMPLETE"
+	// Completed - replication completed ok.
+	Completed StatusType = "COMPLETED"
 
 	// Failed - replication failed.
 	Failed StatusType = "FAILED"
@@ -114,6 +114,17 @@ func (c Config) Validate(bucket string, sameTarget bool) error {
 	return nil
 }
 
+// Type - replication type enum
+type Type int
+
+// Types of replication
+const (
+	ObjectReplicationType Type = 1 + iota
+	DeleteReplicationType
+	MetadataReplicationType
+	HealReplicationType
+)
+
 // ObjectOpts provides information to deduce whether replication
 // can be triggered on the resultant object.
 type ObjectOpts struct {
@@ -123,6 +134,7 @@ type ObjectOpts struct {
 	IsLatest     bool
 	DeleteMarker bool
 	SSEC         bool
+	OpType       Type
 }
 
 // FilterActionableRules returns the rules actions that need to be executed
@@ -159,24 +171,24 @@ func (c Config) GetDestination() Destination {
 
 // Replicate returns true if the object should be replicated.
 func (c Config) Replicate(obj ObjectOpts) bool {
-
+	if obj.SSEC {
+		return false
+	}
 	for _, rule := range c.FilterActionableRules(obj) {
-		// check MinIO extension for versioned deletes
-		if !obj.DeleteMarker && obj.VersionID != "" && rule.DeleteReplication.Status == Disabled {
-			return false
-		}
-		if obj.DeleteMarker && rule.DeleteMarkerReplication.Status == Disabled {
-			// Indicates whether MinIO will remove a delete marker. By default, delete markers
-			// are not replicated.
-			return false
-		}
-		if obj.SSEC {
-			return false
-		}
 		if rule.Status == Disabled {
 			continue
 		}
-		return true
+		if obj.OpType == DeleteReplicationType {
+			switch {
+			case obj.VersionID != "":
+				// // check MinIO extension for versioned deletes
+				return rule.DeleteReplication.Status == Enabled
+			default:
+				return rule.DeleteMarkerReplication.Status == Enabled
+			}
+		} else { // regular object/metadata replication
+			return true
+		}
 	}
 	return false
 }
@@ -198,8 +210,9 @@ func (c Config) HasActiveRules(prefix string, recursive bool) bool {
 			if !recursive && !strings.HasPrefix(prefix, rule.Filter.Prefix) {
 				continue
 			}
-			// If recursive, we can skip this rule if it doesn't match the tested prefix.
-			if recursive && !strings.HasPrefix(rule.Filter.Prefix, prefix) {
+			// If recursive, we can skip this rule if it doesn't match the tested prefix or level below prefix
+			// does not match
+			if recursive && !strings.HasPrefix(rule.Prefix(), prefix) && !strings.HasPrefix(prefix, rule.Prefix()) {
 				continue
 			}
 		}

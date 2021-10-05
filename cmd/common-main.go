@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/gob"
 	"errors"
@@ -27,9 +28,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	dns2 "github.com/miekg/dns"
 	"github.com/minio/cli"
 	"github.com/minio/minio-go/v7/pkg/set"
@@ -38,20 +41,49 @@ import (
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/auth"
 	"github.com/minio/minio/pkg/certs"
+	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/env"
+	"github.com/minio/minio/pkg/handlers"
 )
 
+// serverDebugLog will enable debug printing
+var serverDebugLog = env.Get("_MINIO_SERVER_DEBUG", config.EnableOff) == config.EnableOn
+
 func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	logger.Init(GOPATH, GOROOT)
 	logger.RegisterError(config.FmtError)
 
-	rand.Seed(time.Now().UTC().UnixNano())
-	globalDNSCache = xhttp.NewDNSCache(3*time.Second, 10*time.Second)
+	// Inject into config package.
+	config.Logger.Info = logger.Info
+	config.Logger.LogIf = logger.LogIf
+
+	if IsKubernetes() || IsDocker() || IsBOSH() || IsDCOS() || IsKubernetesReplicaSet() || IsPCFTile() {
+		// 30 seconds matches the orchestrator DNS TTLs, have
+		// a 5 second timeout to lookup from DNS servers.
+		globalDNSCache = xhttp.NewDNSCache(30*time.Second, 5*time.Second, logger.LogOnceIf)
+	} else {
+		// On bare-metals DNS do not change often, so it is
+		// safe to assume a higher timeout upto 10 minutes.
+		globalDNSCache = xhttp.NewDNSCache(10*time.Minute, 5*time.Second, logger.LogOnceIf)
+	}
 
 	initGlobalContext()
 
-	globalReplicationState = newReplicationState()
+	globalForwarder = handlers.NewForwarder(&handlers.Forwarder{
+		PassHost:     true,
+		RoundTripper: newGatewayHTTPTransport(1 * time.Hour),
+		Logger: func(err error) {
+			if err != nil && !errors.Is(err, context.Canceled) {
+				logger.LogIf(GlobalContext, err)
+			}
+		},
+	})
+
 	globalTransitionState = newTransitionState()
+
+	console.SetColor("Debug", color.New())
 
 	gob.Register(StorageErr(""))
 }
@@ -234,6 +266,14 @@ func handleCommonEnvVars() {
 			}
 			globalDomainNames = append(globalDomainNames, domainName)
 		}
+		sort.Strings(globalDomainNames)
+		lcpSuf := lcpSuffix(globalDomainNames)
+		for _, domainName := range globalDomainNames {
+			if domainName == lcpSuf && len(globalDomainNames) > 1 {
+				logger.Fatal(config.ErrOverlappingDomainValue(nil).Msg("Overlapping domains `%s` not allowed", globalDomainNames),
+					"Invalid MINIO_DOMAIN value in environment variable")
+			}
+		}
 	}
 
 	publicIPs := env.Get(config.EnvPublicIPs, "")
@@ -279,6 +319,16 @@ func handleCommonEnvVars() {
 		globalConfigEncrypted = true
 	}
 
+	if env.IsSet(config.EnvRootUser) || env.IsSet(config.EnvRootPassword) {
+		cred, err := auth.CreateCredentials(env.Get(config.EnvRootUser, ""), env.Get(config.EnvRootPassword, ""))
+		if err != nil {
+			logger.Fatal(config.ErrInvalidCredentials(err),
+				"Unable to validate credentials inherited from the shell environment")
+		}
+		globalActiveCred = cred
+		globalConfigEncrypted = true
+	}
+
 	if env.IsSet(config.EnvAccessKeyOld) && env.IsSet(config.EnvSecretKeyOld) {
 		oldCred, err := auth.CreateCredentials(env.Get(config.EnvAccessKeyOld, ""), env.Get(config.EnvSecretKeyOld, ""))
 		if err != nil {
@@ -288,6 +338,17 @@ func handleCommonEnvVars() {
 		globalOldCred = oldCred
 		os.Unsetenv(config.EnvAccessKeyOld)
 		os.Unsetenv(config.EnvSecretKeyOld)
+	}
+
+	if env.IsSet(config.EnvRootUserOld) && env.IsSet(config.EnvRootPasswordOld) {
+		oldCred, err := auth.CreateCredentials(env.Get(config.EnvRootUserOld, ""), env.Get(config.EnvRootPasswordOld, ""))
+		if err != nil {
+			logger.Fatal(config.ErrInvalidCredentials(err),
+				"Unable to validate the old credentials inherited from the shell environment")
+		}
+		globalOldCred = oldCred
+		os.Unsetenv(config.EnvRootUserOld)
+		os.Unsetenv(config.EnvRootPasswordOld)
 	}
 }
 
@@ -374,4 +435,14 @@ func getTLSConfig() (x509Certs []*x509.Certificate, manager *certs.Manager, secu
 	}
 	secureConn = true
 	return x509Certs, manager, secureConn, nil
+}
+
+// contextCanceled returns whether a context is canceled.
+func contextCanceled(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
 }

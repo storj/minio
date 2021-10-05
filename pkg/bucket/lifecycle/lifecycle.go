@@ -18,6 +18,7 @@ package lifecycle
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -44,7 +45,7 @@ type Action int
 //go:generate stringer -type Action $GOFILE
 
 const (
-	// NoneAction means no action required after evaluting lifecycle rules
+	// NoneAction means no action required after evaluating lifecycle rules
 	NoneAction Action = iota
 	// DeleteAction means the object needs to be removed after evaluating lifecycle rules
 	DeleteAction
@@ -66,6 +67,41 @@ type Lifecycle struct {
 	Rules   []Rule   `xml:"Rule"`
 }
 
+// UnmarshalXML - decodes XML data.
+func (lc *Lifecycle) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+	switch start.Name.Local {
+	case "LifecycleConfiguration", "BucketLifecycleConfiguration":
+	default:
+		return xml.UnmarshalError(fmt.Sprintf("expected element type <LifecycleConfiguration>/<BucketLifecycleConfiguration> but have <%s>",
+			start.Name.Local))
+	}
+	for {
+		// Read tokens from the XML document in a stream.
+		t, err := d.Token()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		switch se := t.(type) {
+		case xml.StartElement:
+			switch se.Name.Local {
+			case "Rule":
+				var r Rule
+				if err = d.DecodeElement(&r, &se); err != nil {
+					return err
+				}
+				lc.Rules = append(lc.Rules, r)
+			default:
+				return xml.UnmarshalError(fmt.Sprintf("expected element type <Rule> but have <%s>", se.Name.Local))
+			}
+		}
+	}
+	return nil
+}
+
 // HasActiveRules - returns whether policy has active rules for.
 // Optionally a prefix can be supplied.
 // If recursive is specified the function will also return true if any level below the
@@ -79,16 +115,16 @@ func (lc Lifecycle) HasActiveRules(prefix string, recursive bool) bool {
 			continue
 		}
 
-		if len(prefix) > 0 && len(rule.Filter.Prefix) > 0 {
+		if len(prefix) > 0 && len(rule.GetPrefix()) > 0 {
 			if !recursive {
 				// If not recursive, incoming prefix must be in rule prefix
-				if !strings.HasPrefix(prefix, rule.Filter.Prefix) {
+				if !strings.HasPrefix(prefix, rule.GetPrefix()) {
 					continue
 				}
 			}
 			if recursive {
 				// If recursive, we can skip this rule if it doesn't match the tested prefix.
-				if !strings.HasPrefix(prefix, rule.Filter.Prefix) && !strings.HasPrefix(rule.Filter.Prefix, prefix) {
+				if !strings.HasPrefix(prefix, rule.GetPrefix()) && !strings.HasPrefix(rule.GetPrefix(), prefix) {
 					continue
 				}
 			}
@@ -167,7 +203,7 @@ func (lc Lifecycle) FilterActionableRules(obj ObjectOpts) []Rule {
 		if rule.Status == Disabled {
 			continue
 		}
-		if !strings.HasPrefix(obj.Name, rule.Prefix()) {
+		if !strings.HasPrefix(obj.Name, rule.GetPrefix()) {
 			continue
 		}
 		// Indicates whether MinIO will remove a delete marker with no
@@ -220,6 +256,13 @@ type ObjectOpts struct {
 	RestoreExpires   time.Time
 }
 
+// ExpiredObjectDeleteMarker returns true if an object version referred to by o
+// is the only version remaining and is a delete marker. It returns false
+// otherwise.
+func (o ObjectOpts) ExpiredObjectDeleteMarker() bool {
+	return o.DeleteMarker && o.NumVersions == 1
+}
+
 // ComputeAction returns the action to perform by evaluating all lifecycle rules
 // against the object name and its modification time.
 func (lc Lifecycle) ComputeAction(obj ObjectOpts) Action {
@@ -229,7 +272,7 @@ func (lc Lifecycle) ComputeAction(obj ObjectOpts) Action {
 	}
 
 	for _, rule := range lc.FilterActionableRules(obj) {
-		if obj.DeleteMarker && obj.NumVersions == 1 && rule.Expiration.DeleteMarker.val {
+		if obj.ExpiredObjectDeleteMarker() && rule.Expiration.DeleteMarker.val {
 			// Indicates whether MinIO will remove a delete marker with no noncurrent versions.
 			// Only latest marker is removed. If set to true, the delete marker will be expired;
 			// if set to false the policy takes no action. This cannot be specified with Days or
@@ -245,9 +288,21 @@ func (lc Lifecycle) ComputeAction(obj ObjectOpts) Action {
 					return DeleteVersionAction
 				}
 			}
+
+			if obj.VersionID != "" && obj.ExpiredObjectDeleteMarker() {
+				// From https: //docs.aws.amazon.com/AmazonS3/latest/dev/lifecycle-configuration-examples.html :
+				//   The NoncurrentVersionExpiration action in the same Lifecycle configuration removes noncurrent objects X days
+				//   after they become noncurrent. Thus, in this example, all object versions are permanently removed X days after
+				//   object creation. You will have expired object delete markers, but Amazon S3 detects and removes the expired
+				//   object delete markers for you.
+				if time.Now().After(ExpectedExpiryTime(obj.ModTime, int(rule.NoncurrentVersionExpiration.NoncurrentDays))) {
+					return DeleteVersionAction
+				}
+			}
 		}
+
 		if !rule.NoncurrentVersionTransition.IsDaysNull() {
-			if obj.VersionID != "" && !obj.IsLatest && !obj.SuccessorModTime.IsZero() && obj.TransitionStatus != TransitionComplete {
+			if obj.VersionID != "" && !obj.IsLatest && !obj.SuccessorModTime.IsZero() && !obj.DeleteMarker && obj.TransitionStatus != TransitionComplete {
 				// Non current versions should be deleted if their age exceeds non current days configuration
 				// https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html#intro-lifecycle-rules-actions
 				if time.Now().After(ExpectedExpiryTime(obj.SuccessorModTime, int(rule.NoncurrentVersionTransition.NoncurrentDays))) {
@@ -261,34 +316,34 @@ func (lc Lifecycle) ComputeAction(obj ObjectOpts) Action {
 			switch {
 			case !rule.Expiration.IsDateNull():
 				if time.Now().UTC().After(rule.Expiration.Date.Time) {
-					action = DeleteAction
+					return DeleteAction
 				}
 			case !rule.Expiration.IsDaysNull():
 				if time.Now().UTC().After(ExpectedExpiryTime(obj.ModTime, int(rule.Expiration.Days))) {
-					action = DeleteAction
+					return DeleteAction
 				}
 			}
-			if action == NoneAction {
-				if obj.TransitionStatus != TransitionComplete {
-					switch {
-					case !rule.Transition.IsDateNull():
-						if time.Now().UTC().After(rule.Transition.Date.Time) {
-							action = TransitionAction
-						}
-					case !rule.Transition.IsDaysNull():
-						if time.Now().UTC().After(ExpectedExpiryTime(obj.ModTime, int(rule.Transition.Days))) {
-							action = TransitionAction
-						}
+
+			if obj.TransitionStatus != TransitionComplete {
+				switch {
+				case !rule.Transition.IsDateNull():
+					if time.Now().UTC().After(rule.Transition.Date.Time) {
+						action = TransitionAction
 					}
-				}
-				if !obj.RestoreExpires.IsZero() && time.Now().After(obj.RestoreExpires) {
-					if obj.VersionID != "" {
-						action = DeleteRestoredVersionAction
-					} else {
-						action = DeleteRestoredAction
+				case !rule.Transition.IsDaysNull():
+					if time.Now().UTC().After(ExpectedExpiryTime(obj.ModTime, int(rule.Transition.Days))) {
+						action = TransitionAction
 					}
 				}
 			}
+			if !obj.RestoreExpires.IsZero() && time.Now().After(obj.RestoreExpires) {
+				if obj.VersionID != "" {
+					action = DeleteRestoredVersionAction
+				} else {
+					action = DeleteRestoredAction
+				}
+			}
+
 		}
 	}
 	return action
@@ -319,7 +374,7 @@ func (lc Lifecycle) PredictExpiryTime(obj ObjectOpts) (string, time.Time) {
 	// expiration date and its associated rule ID.
 	for _, rule := range lc.FilterActionableRules(obj) {
 		if !rule.NoncurrentVersionExpiration.IsDaysNull() && !obj.IsLatest && obj.VersionID != "" {
-			return rule.ID, ExpectedExpiryTime(time.Now(), int(rule.NoncurrentVersionExpiration.NoncurrentDays))
+			return rule.ID, ExpectedExpiryTime(obj.SuccessorModTime, int(rule.NoncurrentVersionExpiration.NoncurrentDays))
 		}
 
 		if !rule.Expiration.IsDateNull() {

@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"sync"
@@ -26,22 +27,22 @@ import (
 
 	"github.com/minio/minio/pkg/disk"
 	"github.com/minio/minio/pkg/madmin"
-	cpuhw "github.com/shirou/gopsutil/cpu"
-	memhw "github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/process"
+	cpuhw "github.com/shirou/gopsutil/v3/cpu"
+	memhw "github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 func getLocalCPUInfo(ctx context.Context, r *http.Request) madmin.ServerCPUInfo {
 	addr := r.Host
 	if globalIsDistErasure {
-		addr = GetLocalPeer(globalEndpoints)
+		addr = globalLocalNodeName
 	}
 
 	info, err := cpuhw.InfoWithContext(ctx)
 	if err != nil {
 		return madmin.ServerCPUInfo{
 			Addr:  addr,
-			Error: err.Error(),
+			Error: fmt.Sprintf("info: %v", err),
 		}
 	}
 
@@ -49,7 +50,7 @@ func getLocalCPUInfo(ctx context.Context, r *http.Request) madmin.ServerCPUInfo 
 	if err != nil {
 		return madmin.ServerCPUInfo{
 			Addr:  addr,
-			Error: err.Error(),
+			Error: fmt.Sprintf("times: %v", err),
 		}
 	}
 
@@ -72,7 +73,7 @@ func getLocalDrives(ctx context.Context, parallel bool, endpointServerPools Endp
 					// Since this drive is not available, add relevant details and proceed
 					drivesPerfInfo = append(drivesPerfInfo, madmin.DrivePerfInfo{
 						Path:  endpoint.Path,
-						Error: err.Error(),
+						Error: fmt.Sprintf("stat: %v", err),
 					})
 					continue
 				}
@@ -84,7 +85,7 @@ func getLocalDrives(ctx context.Context, parallel bool, endpointServerPools Endp
 					}
 					latency, throughput, err := disk.GetHealthInfo(ctx, path, pathJoin(path, measurePath))
 					if err != nil {
-						driveInfo.Error = err.Error()
+						driveInfo.Error = fmt.Sprintf("health-info: %v", err)
 					} else {
 						driveInfo.Latency = latency
 						driveInfo.Throughput = throughput
@@ -105,7 +106,7 @@ func getLocalDrives(ctx context.Context, parallel bool, endpointServerPools Endp
 
 	addr := r.Host
 	if globalIsDistErasure {
-		addr = GetLocalPeer(endpointServerPools)
+		addr = globalLocalNodeName
 	}
 	if parallel {
 		return madmin.ServerDrivesInfo{
@@ -122,14 +123,14 @@ func getLocalDrives(ctx context.Context, parallel bool, endpointServerPools Endp
 func getLocalMemInfo(ctx context.Context, r *http.Request) madmin.ServerMemInfo {
 	addr := r.Host
 	if globalIsDistErasure {
-		addr = GetLocalPeer(globalEndpoints)
+		addr = globalLocalNodeName
 	}
 
 	swap, err := memhw.SwapMemoryWithContext(ctx)
 	if err != nil {
 		return madmin.ServerMemInfo{
 			Addr:  addr,
-			Error: err.Error(),
+			Error: fmt.Sprintf("swap: %v", err),
 		}
 	}
 
@@ -137,7 +138,7 @@ func getLocalMemInfo(ctx context.Context, r *http.Request) madmin.ServerMemInfo 
 	if err != nil {
 		return madmin.ServerMemInfo{
 			Addr:  addr,
-			Error: err.Error(),
+			Error: fmt.Sprintf("virtual-mem: %v", err),
 		}
 	}
 
@@ -151,26 +152,23 @@ func getLocalMemInfo(ctx context.Context, r *http.Request) madmin.ServerMemInfo 
 func getLocalProcInfo(ctx context.Context, r *http.Request) madmin.ServerProcInfo {
 	addr := r.Host
 	if globalIsDistErasure {
-		addr = GetLocalPeer(globalEndpoints)
+		addr = globalLocalNodeName
 	}
 
-	errProcInfo := func(err error) madmin.ServerProcInfo {
+	errProcInfo := func(tag string, err error) madmin.ServerProcInfo {
 		return madmin.ServerProcInfo{
 			Addr:  addr,
-			Error: err.Error(),
+			Error: fmt.Sprintf("%s: %v", tag, err),
 		}
 	}
 
 	selfPid := int32(syscall.Getpid())
 	self, err := process.NewProcess(selfPid)
 	if err != nil {
-		return errProcInfo(err)
+		return errProcInfo("new-process", err)
 	}
 
 	processes := []*process.Process{self}
-	if err != nil {
-		return errProcInfo(err)
-	}
 
 	sysProcs := []madmin.SysProcess{}
 	for _, proc := range processes {
@@ -179,13 +177,13 @@ func getLocalProcInfo(ctx context.Context, r *http.Request) madmin.ServerProcInf
 
 		bg, err := proc.BackgroundWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("background", err)
 		}
 		sysProc.Background = bg
 
 		cpuPercent, err := proc.CPUPercentWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("cpu-percent", err)
 		}
 		sysProc.CPUPercent = cpuPercent
 
@@ -196,109 +194,106 @@ func getLocalProcInfo(ctx context.Context, r *http.Request) madmin.ServerProcInf
 		}
 		cmdLine, err := proc.CmdlineWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("cmdline", err)
 		}
 		sysProc.CmdLine = cmdLine
 
 		conns, err := proc.ConnectionsWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("conns", err)
 		}
-		sysProc.Connections = conns
+		sysProc.ConnectionCount = len(conns)
 
 		createTime, err := proc.CreateTimeWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("create-time", err)
 		}
 		sysProc.CreateTime = createTime
 
 		cwd, err := proc.CwdWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("cwd", err)
 		}
 		sysProc.Cwd = cwd
 
 		exe, err := proc.ExeWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("exe", err)
 		}
 		sysProc.Exe = exe
 
 		gids, err := proc.GidsWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("gids", err)
 		}
 		sysProc.Gids = gids
 
 		ioCounters, err := proc.IOCountersWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("iocounters", err)
 		}
 		sysProc.IOCounters = ioCounters
 
 		isRunning, err := proc.IsRunningWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("is-running", err)
 		}
 		sysProc.IsRunning = isRunning
 
 		memInfo, err := proc.MemoryInfoWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("mem-info", err)
 		}
 		sysProc.MemInfo = memInfo
 
 		memMaps, err := proc.MemoryMapsWithContext(ctx, true)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("mem-maps", err)
 		}
 		sysProc.MemMaps = memMaps
 
 		memPercent, err := proc.MemoryPercentWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("mem-percent", err)
 		}
 		sysProc.MemPercent = memPercent
 
 		name, err := proc.NameWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("name", err)
 		}
 		sysProc.Name = name
 
-		netIOCounters, err := proc.NetIOCountersWithContext(ctx, false)
-		if err != nil {
-			return errProcInfo(err)
-		}
-		sysProc.NetIOCounters = netIOCounters
+		// Refer for more information on NetIOCounters
+		// is useless https://github.com/shirou/gopsutil/issues/429
 
 		nice, err := proc.NiceWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("nice", err)
 		}
 		sysProc.Nice = nice
 
 		numCtxSwitches, err := proc.NumCtxSwitchesWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("num-ctx-switches", err)
 		}
 		sysProc.NumCtxSwitches = numCtxSwitches
 
 		numFds, err := proc.NumFDsWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("num-fds", err)
 		}
 		sysProc.NumFds = numFds
 
 		numThreads, err := proc.NumThreadsWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("num-threads", err)
 		}
 		sysProc.NumThreads = numThreads
 
 		pageFaults, err := proc.PageFaultsWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("page-faults", err)
 		}
 		sysProc.PageFaults = pageFaults
 
@@ -312,39 +307,33 @@ func getLocalProcInfo(ctx context.Context, r *http.Request) madmin.ServerProcInf
 			sysProc.Ppid = ppid
 		}
 
-		rlimit, err := proc.RlimitWithContext(ctx)
-		if err != nil {
-			return errProcInfo(err)
-		}
-		sysProc.Rlimit = rlimit
-
 		status, err := proc.StatusWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("status", err)
 		}
-		sysProc.Status = status
+		sysProc.Status = status[0]
 
 		tgid, err := proc.Tgid()
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("tgid", err)
 		}
 		sysProc.Tgid = tgid
 
 		times, err := proc.TimesWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("times", err)
 		}
 		sysProc.Times = times
 
 		uids, err := proc.UidsWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("uids", err)
 		}
 		sysProc.Uids = uids
 
 		username, err := proc.UsernameWithContext(ctx)
 		if err != nil {
-			return errProcInfo(err)
+			return errProcInfo("username", err)
 		}
 		sysProc.Username = username
 

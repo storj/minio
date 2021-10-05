@@ -19,6 +19,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
 	"encoding/xml"
@@ -28,6 +29,7 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/tags"
+	"github.com/minio/minio/cmd/crypto"
 	"github.com/minio/minio/cmd/logger"
 	bucketsse "github.com/minio/minio/pkg/bucket/encryption"
 	"github.com/minio/minio/pkg/bucket/lifecycle"
@@ -36,7 +38,10 @@ import (
 	"github.com/minio/minio/pkg/bucket/replication"
 	"github.com/minio/minio/pkg/bucket/versioning"
 	"github.com/minio/minio/pkg/event"
+	"github.com/minio/minio/pkg/fips"
+	"github.com/minio/minio/pkg/kms"
 	"github.com/minio/minio/pkg/madmin"
+	"github.com/minio/sio"
 )
 
 const (
@@ -61,31 +66,33 @@ var (
 // bucketMetadataFormat refers to the format.
 // bucketMetadataVersion can be used to track a rolling upgrade of a field.
 type BucketMetadata struct {
-	Name                    string
-	Created                 time.Time
-	LockEnabled             bool // legacy not used anymore.
-	PolicyConfigJSON        []byte
-	NotificationConfigXML   []byte
-	LifecycleConfigXML      []byte
-	ObjectLockConfigXML     []byte
-	VersioningConfigXML     []byte
-	EncryptionConfigXML     []byte
-	TaggingConfigXML        []byte
-	QuotaConfigJSON         []byte
-	ReplicationConfigXML    []byte
-	BucketTargetsConfigJSON []byte
+	Name                        string
+	Created                     time.Time
+	LockEnabled                 bool // legacy not used anymore.
+	PolicyConfigJSON            []byte
+	NotificationConfigXML       []byte
+	LifecycleConfigXML          []byte
+	ObjectLockConfigXML         []byte
+	VersioningConfigXML         []byte
+	EncryptionConfigXML         []byte
+	TaggingConfigXML            []byte
+	QuotaConfigJSON             []byte
+	ReplicationConfigXML        []byte
+	BucketTargetsConfigJSON     []byte
+	BucketTargetsConfigMetaJSON []byte
 
 	// Unexported fields. Must be updated atomically.
-	policyConfig       *policy.Policy
-	notificationConfig *event.Config
-	lifecycleConfig    *lifecycle.Lifecycle
-	objectLockConfig   *objectlock.Config
-	versioningConfig   *versioning.Versioning
-	sseConfig          *bucketsse.BucketSSEConfig
-	taggingConfig      *tags.Tags
-	quotaConfig        *madmin.BucketQuota
-	replicationConfig  *replication.Config
-	bucketTargetConfig *madmin.BucketTargets
+	policyConfig           *policy.Policy
+	notificationConfig     *event.Config
+	lifecycleConfig        *lifecycle.Lifecycle
+	objectLockConfig       *objectlock.Config
+	versioningConfig       *versioning.Versioning
+	sseConfig              *bucketsse.BucketSSEConfig
+	taggingConfig          *tags.Tags
+	quotaConfig            *madmin.BucketQuota
+	replicationConfig      *replication.Config
+	bucketTargetConfig     *madmin.BucketTargets
+	bucketTargetConfigMeta map[string]string
 }
 
 // newBucketMetadata creates BucketMetadata with the supplied name and Created to Now.
@@ -100,7 +107,8 @@ func newBucketMetadata(name string) BucketMetadata {
 		versioningConfig: &versioning.Versioning{
 			XMLNS: "http://s3.amazonaws.com/doc/2006-03-01/",
 		},
-		bucketTargetConfig: &madmin.BucketTargets{},
+		bucketTargetConfig:     &madmin.BucketTargets{},
+		bucketTargetConfigMeta: make(map[string]string),
 	}
 }
 
@@ -140,16 +148,16 @@ func (b *BucketMetadata) Load(ctx context.Context, api ObjectLayer, name string)
 func loadBucketMetadata(ctx context.Context, objectAPI ObjectLayer, bucket string) (BucketMetadata, error) {
 	b := newBucketMetadata(bucket)
 	err := b.Load(ctx, objectAPI, b.Name)
-	if err == nil {
-		return b, b.convertLegacyConfigs(ctx, objectAPI)
-	}
-
-	if !errors.Is(err, errConfigNotFound) {
+	if err != nil && !errors.Is(err, errConfigNotFound) {
 		return b, err
 	}
 
 	// Old bucket without bucket metadata. Hence we migrate existing settings.
-	return b, b.convertLegacyConfigs(ctx, objectAPI)
+	if err := b.convertLegacyConfigs(ctx, objectAPI); err != nil {
+		return b, err
+	}
+	// migrate unencrypted remote targets
+	return b, b.migrateTargetConfig(ctx, objectAPI)
 }
 
 // parseAllConfigs will parse all configs and populate the private fields.
@@ -234,7 +242,8 @@ func (b *BucketMetadata) parseAllConfigs(ctx context.Context, objectAPI ObjectLa
 	}
 
 	if len(b.BucketTargetsConfigJSON) != 0 {
-		if err = json.Unmarshal(b.BucketTargetsConfigJSON, b.bucketTargetConfig); err != nil {
+		b.bucketTargetConfig, err = parseBucketTargetConfig(b.Name, b.BucketTargetsConfigJSON, b.BucketTargetsConfigMetaJSON)
+		if err != nil {
 			return err
 		}
 	} else {
@@ -354,6 +363,7 @@ func (b *BucketMetadata) Save(ctx context.Context, api ObjectLayer) error {
 	if err != nil {
 		return err
 	}
+
 	configFile := path.Join(bucketConfigPrefix, b.Name, bucketMetadataFile)
 	return saveConfig(ctx, api, configFile, data)
 }
@@ -372,4 +382,73 @@ func deleteBucketMetadata(ctx context.Context, obj objectDeleter, bucket string)
 		}
 	}
 	return nil
+}
+
+// migrate config for remote targets by encrypting data if currently unencrypted and kms is configured.
+func (b *BucketMetadata) migrateTargetConfig(ctx context.Context, objectAPI ObjectLayer) error {
+	var err error
+	// early return if no targets or already encrypted
+	if len(b.BucketTargetsConfigJSON) == 0 || GlobalKMS == nil || len(b.BucketTargetsConfigMetaJSON) != 0 {
+		return nil
+	}
+
+	encBytes, metaBytes, err := encryptBucketMetadata(b.Name, b.BucketTargetsConfigJSON, kms.Context{b.Name: b.Name, bucketTargetsFile: bucketTargetsFile})
+	if err != nil {
+		return err
+	}
+
+	b.BucketTargetsConfigJSON = encBytes
+	b.BucketTargetsConfigMetaJSON = metaBytes
+	return b.Save(ctx, objectAPI)
+}
+
+// encrypt bucket metadata if kms is configured.
+func encryptBucketMetadata(bucket string, input []byte, kmsContext kms.Context) (output, metabytes []byte, err error) {
+	if GlobalKMS == nil {
+		output = input
+		return
+	}
+
+	metadata := make(map[string]string)
+	key, err := GlobalKMS.GenerateKey("", kmsContext)
+	if err != nil {
+		return
+	}
+
+	outbuf := bytes.NewBuffer(nil)
+	objectKey := crypto.GenerateKey(key.Plaintext, rand.Reader)
+	sealedKey := objectKey.Seal(key.Plaintext, crypto.GenerateIV(rand.Reader), crypto.S3.String(), bucket, "")
+	crypto.S3.CreateMetadata(metadata, key.KeyID, key.Ciphertext, sealedKey)
+	_, err = sio.Encrypt(outbuf, bytes.NewBuffer(input), sio.Config{Key: objectKey[:], MinVersion: sio.Version20, CipherSuites: fips.CipherSuitesDARE()})
+	if err != nil {
+		return output, metabytes, err
+	}
+	metabytes, err = json.Marshal(metadata)
+	if err != nil {
+		return
+	}
+	return outbuf.Bytes(), metabytes, nil
+}
+
+// decrypt bucket metadata if kms is configured.
+func decryptBucketMetadata(input []byte, bucket string, meta map[string]string, kmsContext kms.Context) ([]byte, error) {
+	if GlobalKMS == nil {
+		return nil, errKMSNotConfigured
+	}
+	keyID, kmsKey, sealedKey, err := crypto.S3.ParseMetadata(meta)
+	if err != nil {
+		return nil, err
+	}
+	extKey, err := GlobalKMS.DecryptKey(keyID, kmsKey, kmsContext)
+	if err != nil {
+		return nil, err
+	}
+	var objectKey crypto.ObjectKey
+	if err = objectKey.Unseal(extKey, sealedKey, crypto.S3.String(), bucket, ""); err != nil {
+		return nil, err
+	}
+
+	outbuf := bytes.NewBuffer(nil)
+	_, err = sio.Decrypt(outbuf, bytes.NewBuffer(input), sio.Config{Key: objectKey[:], MinVersion: sio.Version20, CipherSuites: fips.CipherSuitesDARE()})
+	return outbuf.Bytes(), err
 }

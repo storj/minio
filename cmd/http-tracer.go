@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -80,6 +81,17 @@ func (r *recordRequest) Data() []byte {
 	return logger.BodyPlaceHolder
 }
 
+var ldapPwdRegex = regexp.MustCompile("(^.*?)LDAPPassword=([^&]*?)(&(.*?))?$")
+
+// redact LDAP password if part of string
+func redactLDAPPwd(s string) string {
+	parts := ldapPwdRegex.FindStringSubmatch(s)
+	if len(parts) > 0 {
+		return parts[1] + "LDAPPassword=*REDACTED*" + parts[3]
+	}
+	return s
+}
+
 // getOpName sanitizes the operation name for mc
 func getOpName(name string) (op string) {
 	op = strings.TrimPrefix(name, "github.com/minio/minio/cmd.")
@@ -112,24 +124,30 @@ func WebTrace(ri *jsonrpc.RequestInfo) trace.Info {
 		reqHeaders.Set("Transfer-Encoding", strings.Join(r.TransferEncoding, ","))
 	}
 
-	t := trace.Info{FuncName: name}
+	now := time.Now().UTC()
+	t := trace.Info{TraceType: trace.HTTP, FuncName: name, Time: now}
 	t.NodeName = r.Host
 	if globalIsDistErasure {
-		t.NodeName = GetLocalPeer(globalEndpoints)
+		t.NodeName = globalLocalNodeName
+	}
+	if t.NodeName == "" {
+		t.NodeName = globalLocalNodeName
 	}
 
-	// strip port from the host address
-	if host, _, err := net.SplitHostPort(t.NodeName); err == nil {
-		t.NodeName = host
+	// strip only standard port from the host address
+	if host, port, err := net.SplitHostPort(t.NodeName); err == nil {
+		if port == "443" || port == "80" {
+			t.NodeName = host
+		}
 	}
 
 	vars := mux.Vars(r)
 	rq := trace.RequestInfo{
-		Time:     time.Now().UTC(),
+		Time:     now,
 		Proto:    r.Proto,
 		Method:   r.Method,
 		Path:     SlashSeparator + pathJoin(vars["bucket"], vars["object"]),
-		RawQuery: r.URL.RawQuery,
+		RawQuery: redactLDAPPwd(r.URL.RawQuery),
 		Client:   handlers.GetSourceIP(r),
 		Headers:  reqHeaders,
 	}
@@ -173,25 +191,34 @@ func Trace(f http.HandlerFunc, logBody bool, w http.ResponseWriter, r *http.Requ
 		reqHeaders.Set("Transfer-Encoding", strings.Join(r.TransferEncoding, ","))
 	}
 
-	var reqBodyRecorder *recordRequest
-	t := trace.Info{FuncName: name}
-	reqBodyRecorder = &recordRequest{Reader: r.Body, logBody: logBody, headers: reqHeaders}
+	reqBodyRecorder := &recordRequest{Reader: r.Body, logBody: logBody, headers: reqHeaders}
 	r.Body = ioutil.NopCloser(reqBodyRecorder)
+
+	now := time.Now().UTC()
+	t := trace.Info{TraceType: trace.HTTP, FuncName: name, Time: now}
+
 	t.NodeName = r.Host
 	if globalIsDistErasure {
-		t.NodeName = GetLocalPeer(globalEndpoints)
+		t.NodeName = globalLocalNodeName
 	}
-	// strip port from the host address
-	if host, _, err := net.SplitHostPort(t.NodeName); err == nil {
-		t.NodeName = host
+
+	if t.NodeName == "" {
+		t.NodeName = globalLocalNodeName
+	}
+
+	// strip only standard port from the host address
+	if host, port, err := net.SplitHostPort(t.NodeName); err == nil {
+		if port == "443" || port == "80" {
+			t.NodeName = host
+		}
 	}
 
 	rq := trace.RequestInfo{
-		Time:     time.Now().UTC(),
+		Time:     now,
 		Proto:    r.Proto,
 		Method:   r.Method,
 		Path:     r.URL.Path,
-		RawQuery: r.URL.RawQuery,
+		RawQuery: redactLDAPPwd(r.URL.RawQuery),
 		Client:   handlers.GetSourceIP(r),
 		Headers:  reqHeaders,
 	}
