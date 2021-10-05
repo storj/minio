@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -64,7 +65,7 @@ func authenticateJWTUsersWithCredentials(credentials auth.Credentials, expiresAt
 	serverCred := globalActiveCred
 	if serverCred.AccessKey != credentials.AccessKey {
 		var ok bool
-		serverCred, ok = globalIAMSys.GetUser(credentials.AccessKey)
+		serverCred, ok = globalIAMSys.GetUser(context.Background(), credentials.AccessKey)
 		if !ok {
 			return "", errInvalidAccessKeyID
 		}
@@ -115,7 +116,7 @@ func webTokenCallback(claims *xjwt.MapClaims) ([]byte, error) {
 	if ok {
 		return []byte(globalActiveCred.SecretKey), nil
 	}
-	cred, ok := globalIAMSys.GetUser(claims.AccessKey)
+	cred, ok := globalIAMSys.GetUser(context.Background(), claims.AccessKey)
 	if !ok {
 		return nil, errInvalidAccessKeyID
 	}

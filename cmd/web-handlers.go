@@ -124,7 +124,7 @@ func (web *webAPIHandlers) ServerInfo(r *http.Request, args *WebGenericArgs, rep
 	}
 
 	if !owner {
-		creds, ok := globalIAMSys.GetUser(claims.AccessKey)
+		creds, ok := globalIAMSys.GetUser(ctx, claims.AccessKey)
 		if ok && creds.SessionToken != "" {
 			reply.MinioUserInfo["isTempUser"] = true
 		}
@@ -1000,7 +1000,7 @@ func (web *webAPIHandlers) SetAuth(r *http.Request, args *SetAuthArgs, reply *Se
 
 	// for IAM users, access key cannot be updated
 	// claims.AccessKey is used instead of accesskey from args
-	prevCred, ok := globalIAMSys.GetUser(claims.AccessKey)
+	prevCred, ok := globalIAMSys.GetUser(ctx, claims.AccessKey)
 	if !ok {
 		return errInvalidAccessKeyID
 	}
@@ -1047,7 +1047,7 @@ func (web *webAPIHandlers) CreateURLToken(r *http.Request, args *WebGenericArgs,
 	creds := globalActiveCred
 	if !owner {
 		var ok bool
-		creds, ok = globalIAMSys.GetUser(claims.AccessKey)
+		creds, ok = globalIAMSys.GetUser(ctx, claims.AccessKey)
 		if !ok {
 			return toJSONError(ctx, errInvalidAccessKeyID)
 		}
@@ -2094,7 +2094,7 @@ func (web *webAPIHandlers) PresignedGet(r *http.Request, args *PresignedGetArgs,
 	var creds auth.Credentials
 	if !owner {
 		var ok bool
-		creds, ok = globalIAMSys.GetUser(claims.AccessKey)
+		creds, ok = globalIAMSys.GetUser(ctx, claims.AccessKey)
 		if !ok {
 			return toJSONError(ctx, errInvalidAccessKeyID)
 		}

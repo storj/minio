@@ -155,7 +155,7 @@ func getSignature(signingKey []byte, stringToSign string) string {
 func doesPolicySignatureMatch(ctx context.Context, formValues http.Header) APIErrorCode {
 	// For SignV2 - Signature field will be valid
 	if _, ok := formValues["Signature"]; ok {
-		return doesPolicySignatureV2Match(formValues)
+		return doesPolicySignatureV2Match(ctx, formValues)
 	}
 	return doesPolicySignatureV4Match(ctx, formValues)
 }
@@ -182,7 +182,7 @@ func doesPolicySignatureV4Match(ctx context.Context, formValues http.Header) API
 		return s3Err
 	}
 
-	cred, _, s3Err := checkKeyValid(credHeader.accessKey)
+	cred, _, s3Err := checkKeyValid(ctx, credHeader.accessKey)
 	if s3Err != ErrNone {
 		return s3Err
 	}
@@ -221,7 +221,7 @@ func doesPresignedSignatureMatch(hashedPayload string, r *http.Request, region s
 		return err
 	}
 
-	cred, _, s3Err := checkKeyValid(pSignValues.Credential.accessKey)
+	cred, _, s3Err := checkKeyValid(req.Context(), pSignValues.Credential.accessKey)
 	if s3Err != ErrNone {
 		return s3Err
 	}
@@ -356,7 +356,7 @@ func doesSignatureMatch(hashedPayload string, r *http.Request, region string, st
 		return errCode
 	}
 
-	cred, _, s3Err := checkKeyValid(signV4Values.Credential.accessKey)
+	cred, _, s3Err := checkKeyValid(req.Context(), signV4Values.Credential.accessKey)
 	if s3Err != ErrNone {
 		return s3Err
 	}

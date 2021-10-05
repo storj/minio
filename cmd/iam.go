@@ -1155,7 +1155,7 @@ func (sys *IAMSys) SetUserSecretKey(accessKey string, secretKey string) error {
 }
 
 // GetUser - get user credentials
-func (sys *IAMSys) GetUser(accessKey string) (cred auth.Credentials, ok bool) {
+func (sys *IAMSys) GetUser(ctx context.Context, accessKey string) (cred auth.Credentials, ok bool) {
 	if !sys.Initialized() {
 		return cred, false
 	}
@@ -1167,21 +1167,21 @@ func (sys *IAMSys) GetUser(accessKey string) (cred auth.Credentials, ok bool) {
 		sys.store.lock()
 		// If user is already found proceed.
 		if _, found := sys.iamUsersMap[accessKey]; !found {
-			sys.store.loadUser(context.Background(), accessKey, regularUser, sys.iamUsersMap)
+			sys.store.loadUser(ctx, accessKey, regularUser, sys.iamUsersMap)
 			if _, found = sys.iamUsersMap[accessKey]; found {
 				// found user, load its mapped policies
-				sys.store.loadMappedPolicy(context.Background(), accessKey, regularUser, false, sys.iamUserPolicyMap)
+				sys.store.loadMappedPolicy(ctx, accessKey, regularUser, false, sys.iamUserPolicyMap)
 			} else {
-				sys.store.loadUser(context.Background(), accessKey, srvAccUser, sys.iamUsersMap)
+				sys.store.loadUser(ctx, accessKey, srvAccUser, sys.iamUsersMap)
 				if svc, found := sys.iamUsersMap[accessKey]; found {
 					// Found service account, load its parent user and its mapped policies.
 					if sys.usersSysType == MinIOUsersSysType {
-						sys.store.loadUser(context.Background(), svc.ParentUser, regularUser, sys.iamUsersMap)
+						sys.store.loadUser(ctx, svc.ParentUser, regularUser, sys.iamUsersMap)
 					}
 					sys.store.loadMappedPolicy(context.Background(), svc.ParentUser, regularUser, false, sys.iamUserPolicyMap)
 				} else {
 					// None found fall back to STS users.
-					sys.store.loadUser(context.Background(), accessKey, stsUser, sys.iamUsersMap)
+					sys.store.loadUser(ctx, accessKey, stsUser, sys.iamUsersMap)
 					if _, found = sys.iamUsersMap[accessKey]; found {
 						// STS user found, load its mapped policy.
 						sys.store.loadMappedPolicy(context.Background(), accessKey, stsUser, false, sys.iamUserPolicyMap)
