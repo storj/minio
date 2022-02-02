@@ -34,11 +34,12 @@ import (
 	"strings"
 	"time"
 
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/env"
-	xnet "github.com/minio/minio/pkg/net"
 	"github.com/minio/selfupdate"
+
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/env"
+	xnet "storj.io/minio/pkg/net"
 )
 
 const (

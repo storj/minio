@@ -29,18 +29,19 @@ import (
 
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"github.com/minio/minio/cmd/config/dns"
-	"github.com/minio/minio/cmd/crypto"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/bucket/lifecycle"
-	"github.com/minio/minio/pkg/bucket/replication"
 
-	objectlock "github.com/minio/minio/pkg/bucket/object/lock"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/bucket/versioning"
-	"github.com/minio/minio/pkg/event"
-	"github.com/minio/minio/pkg/hash"
+	"storj.io/minio/cmd/config/dns"
+	"storj.io/minio/cmd/crypto"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/bucket/lifecycle"
+	"storj.io/minio/pkg/bucket/replication"
+
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/bucket/versioning"
+	"storj.io/minio/pkg/event"
+	"storj.io/minio/pkg/hash"
 )
 
 // APIError structure

@@ -25,7 +25,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/minio/minio/pkg/disk"
+	"storj.io/minio/pkg/disk"
 )
 
 // WriteOnCloser implements io.WriteCloser and always

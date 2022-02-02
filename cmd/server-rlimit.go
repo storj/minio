@@ -19,7 +19,7 @@ package cmd
 import (
 	"runtime/debug"
 
-	"github.com/minio/minio/pkg/sys"
+	"storj.io/minio/pkg/sys"
 )
 
 func setMaxResources() (err error) {

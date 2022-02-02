@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	"github.com/minio/minio/pkg/madmin"
+	"storj.io/minio/pkg/madmin"
 )
 
 // GetTotalCapacity gets the total capacity in the cluster.

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio/minio/cmd/config"
+	"storj.io/minio/cmd/config"
 )
 
 const (

@@ -30,10 +30,11 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/handlers"
-	jsonrpc "github.com/minio/minio/pkg/rpc"
-	trace "github.com/minio/minio/pkg/trace"
+
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/handlers"
+	jsonrpc "storj.io/minio/pkg/rpc"
+	trace "storj.io/minio/pkg/trace"
 )
 
 // recordRequest - records the first recLen bytes

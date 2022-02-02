@@ -28,14 +28,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/minio/minio/cmd/config/cache"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	objectlock "github.com/minio/minio/pkg/bucket/object/lock"
-	"github.com/minio/minio/pkg/color"
-	"github.com/minio/minio/pkg/hash"
-	"github.com/minio/minio/pkg/sync/errgroup"
-	"github.com/minio/minio/pkg/wildcard"
+	"storj.io/minio/cmd/config/cache"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
+	"storj.io/minio/pkg/color"
+	"storj.io/minio/pkg/hash"
+	"storj.io/minio/pkg/sync/errgroup"
+	"storj.io/minio/pkg/wildcard"
 )
 
 const (

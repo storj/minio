@@ -1,3 +1,4 @@
+//go:build windows || plan9 || solaris
 // +build windows plan9 solaris
 
 /*

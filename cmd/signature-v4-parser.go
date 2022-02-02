@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/pkg/auth"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/pkg/auth"
 )
 
 // credentialHeader data type represents structured form of Credential
@@ -62,7 +62,7 @@ func getReqAccessKeyV4(r *http.Request, region string, stype serviceType) (auth.
 			return auth.Credentials{}, false, s3Err
 		}
 	}
-	return checkKeyValid(ch.accessKey)
+	return checkKeyValid(r.Context(), ch.accessKey)
 }
 
 // parse credentialHeader string into its structured form.

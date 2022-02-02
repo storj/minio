@@ -29,6 +29,7 @@ import (
 // underlying storage layer.
 func toObjectErr(err error, params ...string) error {
 	switch err {
+
 	case errVolumeNotFound:
 		apiErr := BucketNotFound{}
 		if len(params) >= 1 {

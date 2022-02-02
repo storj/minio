@@ -25,15 +25,15 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/minio/minio/pkg/disk"
-	"github.com/minio/minio/pkg/net"
-
-	smart "github.com/minio/minio/pkg/smart"
 	"github.com/shirou/gopsutil/v3/cpu"
 	diskhw "github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
+
+	"storj.io/minio/pkg/disk"
+	"storj.io/minio/pkg/net"
+	smart "storj.io/minio/pkg/smart"
 )
 
 // HealthInfo - MinIO cluster's health Info

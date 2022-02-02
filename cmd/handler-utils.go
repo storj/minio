@@ -31,11 +31,11 @@ import (
 	"regexp"
 	"strings"
 
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/handlers"
-	"github.com/minio/minio/pkg/madmin"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/handlers"
+	"storj.io/minio/pkg/madmin"
 )
 
 const (
@@ -218,7 +218,7 @@ func getReqAccessCred(r *http.Request, region string) (cred auth.Credentials) {
 			return globalActiveCred
 		}
 		if claims != nil {
-			cred, _ = globalIAMSys.GetUser(claims.AccessKey)
+			cred, _ = globalIAMSys.GetUser(r.Context(), claims.AccessKey)
 		}
 	}
 	return cred

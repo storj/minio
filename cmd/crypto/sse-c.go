@@ -23,8 +23,8 @@ import (
 	"encoding/base64"
 	"net/http"
 
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
 )
 
 type ssec struct{}

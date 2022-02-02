@@ -21,7 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/minio/minio/pkg/bucket/replication"
+	"storj.io/minio/pkg/bucket/replication"
 )
 
 func (b *BucketReplicationStats) hasReplicationUsage() bool {

@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/minio/minio/pkg/kms"
+	"storj.io/minio/pkg/kms"
 )
 
 var encryptDecryptTests = []struct {

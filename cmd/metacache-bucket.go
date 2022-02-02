@@ -30,10 +30,11 @@ import (
 	"time"
 
 	"github.com/klauspost/compress/s2"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/hash"
 	"github.com/tinylib/msgp/msgp"
+
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/console"
+	"storj.io/minio/pkg/hash"
 )
 
 //go:generate msgp -file $GOFILE -unexported

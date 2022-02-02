@@ -44,6 +44,7 @@ type ReqInfo struct {
 	BucketName   string   // Bucket name
 	ObjectName   string   // Object name
 	AccessKey    string   // Access Key
+	AccessGrant  string   // Access Grant
 	tags         []KeyVal // Any additional info not accommodated by above fields
 	sync.RWMutex
 }

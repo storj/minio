@@ -15,7 +15,7 @@
 package crypto
 
 import (
-	"github.com/minio/minio/pkg/kms"
+	"storj.io/minio/pkg/kms"
 )
 
 // Context is a list of key-value pairs cryptographically

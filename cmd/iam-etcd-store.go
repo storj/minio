@@ -28,15 +28,17 @@ import (
 	"unicode/utf8"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
-	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/kms"
-	"github.com/minio/minio/pkg/madmin"
 	etcd "go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/mvcc/mvccpb"
+
+	"github.com/minio/minio-go/v7/pkg/set"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	iampolicy "storj.io/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/kms"
+	"storj.io/minio/pkg/madmin"
 )
 
 var defaultContextTimeout = 30 * time.Second

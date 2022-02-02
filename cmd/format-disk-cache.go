@@ -29,8 +29,9 @@ import (
 	"strings"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/sio"
+
+	"storj.io/minio/cmd/logger"
 )
 
 const (

@@ -32,12 +32,13 @@ import (
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	minio "github.com/minio/minio/cmd"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/madmin"
+
+	minio "storj.io/minio/cmd"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/madmin"
 )
 
 func init() {

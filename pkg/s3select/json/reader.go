@@ -21,7 +21,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/minio/minio/pkg/s3select/sql"
+	"storj.io/minio/pkg/s3select/sql"
 
 	"github.com/bcicen/jstream"
 )

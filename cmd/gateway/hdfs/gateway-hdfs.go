@@ -39,12 +39,13 @@ import (
 	"github.com/jcmturner/gokrb5/v8/keytab"
 	"github.com/minio/cli"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
-	minio "github.com/minio/minio/cmd"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/env"
-	"github.com/minio/minio/pkg/madmin"
-	xnet "github.com/minio/minio/pkg/net"
+
+	minio "storj.io/minio/cmd"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/env"
+	"storj.io/minio/pkg/madmin"
+	xnet "storj.io/minio/pkg/net"
 )
 
 const (

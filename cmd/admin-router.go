@@ -20,7 +20,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/pkg/madmin"
+
+	"storj.io/minio/pkg/madmin"
 )
 
 const (

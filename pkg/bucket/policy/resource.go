@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/minio/minio/pkg/bucket/policy/condition"
-	"github.com/minio/minio/pkg/wildcard"
+	"storj.io/minio/pkg/bucket/policy/condition"
+	"storj.io/minio/pkg/wildcard"
 )
 
 // ResourceARNPrefix - resource ARN prefix as per AWS S3 specification.

@@ -22,7 +22,7 @@ import (
 	"net"
 	"syscall"
 
-	"github.com/minio/minio/pkg/color"
+	"storj.io/minio/pkg/color"
 )
 
 // Err is a structure which contains all information

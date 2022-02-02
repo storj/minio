@@ -22,7 +22,8 @@ import (
 	"sync"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/minio/minio/pkg/sync/errgroup"
+
+	"storj.io/minio/pkg/sync/errgroup"
 )
 
 const (

@@ -38,16 +38,17 @@ import (
 	dns2 "github.com/miekg/dns"
 	"github.com/minio/cli"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/crypto"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/certs"
-	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/env"
-	"github.com/minio/minio/pkg/handlers"
-	"github.com/minio/minio/pkg/kms"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/cmd/crypto"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/certs"
+	"storj.io/minio/pkg/console"
+	"storj.io/minio/pkg/env"
+	"storj.io/minio/pkg/handlers"
+	"storj.io/minio/pkg/kms"
 )
 
 // serverDebugLog will enable debug printing
@@ -248,7 +249,7 @@ func handleCommonEnvVars() {
 		logger.Fatal(config.ErrInvalidWormValue(err), "Invalid worm configuration")
 	}
 	if wormEnabled {
-		logger.Fatal(errors.New("WORM is deprecated"), "global MINIO_WORM support is removed, please downgrade your server or migrate to https://github.com/minio/minio/tree/master/docs/retention")
+		logger.Fatal(errors.New("WORM is deprecated"), "global MINIO_WORM support is removed, please downgrade your server or migrate to https://storj.io/minio/tree/master/docs/retention")
 	}
 
 	globalBrowserEnabled, err = config.ParseBool(env.Get(config.EnvBrowser, config.EnableOn))

@@ -25,9 +25,10 @@ import (
 	"io"
 	"path"
 
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/fips"
 	"github.com/minio/sio"
+
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/fips"
 )
 
 // ObjectKey is a 256 bit secret key used to encrypt the object.

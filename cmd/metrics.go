@@ -22,11 +22,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/minio/minio/cmd/logger"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/madmin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"storj.io/minio/cmd/logger"
+	iampolicy "storj.io/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/madmin"
 )
 
 var (

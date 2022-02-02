@@ -26,11 +26,12 @@ import (
 	"sort"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/cmd/config/dns"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/madmin"
+
+	"storj.io/minio/cmd/config/dns"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	iampolicy "storj.io/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/madmin"
 )
 
 func validateAdminUsersReq(ctx context.Context, w http.ResponseWriter, r *http.Request, action iampolicy.AdminAction) (ObjectLayer, auth.Credentials) {
@@ -168,7 +169,7 @@ func (a adminAPIHandlers) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	userInfo, err := globalIAMSys.GetUserInfo(name)
+	userInfo, err := globalIAMSys.GetUserInfo(ctx, name)
 	if err != nil {
 		writeErrorResponseJSON(ctx, w, toAdminAPIErr(ctx, err), r.URL)
 		return

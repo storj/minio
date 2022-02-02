@@ -17,7 +17,7 @@
 
 package config
 
-import "github.com/minio/minio/pkg/auth"
+import "storj.io/minio/pkg/auth"
 
 //// One time migration code section
 

@@ -1,3 +1,4 @@
+//go:build darwin || dragonfly
 // +build darwin dragonfly
 
 /*
