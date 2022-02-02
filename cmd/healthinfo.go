@@ -25,11 +25,12 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/minio/minio/pkg/disk"
-	"github.com/minio/minio/pkg/madmin"
 	cpuhw "github.com/shirou/gopsutil/v3/cpu"
 	memhw "github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
+
+	"storj.io/minio/pkg/disk"
+	"storj.io/minio/pkg/madmin"
 )
 
 func getLocalCPUInfo(ctx context.Context, r *http.Request) madmin.ServerCPUInfo {

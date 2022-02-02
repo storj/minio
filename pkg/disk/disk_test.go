@@ -1,3 +1,4 @@
+//go:build !netbsd && !solaris
 // +build !netbsd,!solaris
 
 /*
@@ -23,7 +24,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/minio/minio/pkg/disk"
+	"storj.io/minio/pkg/disk"
 )
 
 func TestFree(t *testing.T) {

@@ -1,3 +1,4 @@
+//go:build testrunmain
 // +build testrunmain
 
 /*
@@ -26,8 +27,8 @@ import (
 	"syscall"
 	"testing"
 
-	minio "github.com/minio/minio/cmd"
-	_ "github.com/minio/minio/cmd/gateway"
+	minio "storj.io/minio/cmd"
+	_ "storj.io/minio/cmd/gateway"
 )
 
 // TestRunMain takes arguments from APP_ARGS env variable and calls minio.Main(args)

@@ -30,10 +30,11 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/madmin"
+
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	iampolicy "storj.io/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/madmin"
 )
 
 // UsersSysType - defines the type of users and groups system that is
@@ -767,7 +768,7 @@ func (sys *IAMSys) DeleteUser(accessKey string) error {
 	}
 
 	// First we remove the user from their groups.
-	userInfo, getErr := sys.GetUserInfo(accessKey)
+	userInfo, getErr := sys.GetUserInfo(context.Background(), accessKey)
 	if getErr != nil {
 		return getErr
 	}
@@ -955,7 +956,7 @@ func (sys *IAMSys) IsServiceAccount(name string) (bool, string, error) {
 }
 
 // GetUserInfo - get info on a user.
-func (sys *IAMSys) GetUserInfo(name string) (u madmin.UserInfo, err error) {
+func (sys *IAMSys) GetUserInfo(ctx context.Context, name string) (u madmin.UserInfo, err error) {
 	if !sys.Initialized() {
 		return u, errServerNotInitialized
 	}
@@ -963,7 +964,7 @@ func (sys *IAMSys) GetUserInfo(name string) (u madmin.UserInfo, err error) {
 	select {
 	case <-sys.configLoaded:
 	default:
-		sys.loadUserFromStore(name)
+		sys.loadUserFromStore(ctx, name)
 	}
 
 	if sys.usersSysType != MinIOUsersSysType {
@@ -1374,25 +1375,25 @@ func (sys *IAMSys) SetUserSecretKey(accessKey string, secretKey string) error {
 	return nil
 }
 
-func (sys *IAMSys) loadUserFromStore(accessKey string) {
+func (sys *IAMSys) loadUserFromStore(ctx context.Context, accessKey string) {
 	sys.store.lock()
 	// If user is already found proceed.
 	if _, found := sys.iamUsersMap[accessKey]; !found {
-		sys.store.loadUser(context.Background(), accessKey, regularUser, sys.iamUsersMap)
+		sys.store.loadUser(ctx, accessKey, regularUser, sys.iamUsersMap)
 		if _, found = sys.iamUsersMap[accessKey]; found {
 			// found user, load its mapped policies
-			sys.store.loadMappedPolicy(context.Background(), accessKey, regularUser, false, sys.iamUserPolicyMap)
+			sys.store.loadMappedPolicy(ctx, accessKey, regularUser, false, sys.iamUserPolicyMap)
 		} else {
-			sys.store.loadUser(context.Background(), accessKey, srvAccUser, sys.iamUsersMap)
+			sys.store.loadUser(ctx, accessKey, srvAccUser, sys.iamUsersMap)
 			if svc, found := sys.iamUsersMap[accessKey]; found {
 				// Found service account, load its parent user and its mapped policies.
 				if sys.usersSysType == MinIOUsersSysType {
-					sys.store.loadUser(context.Background(), svc.ParentUser, regularUser, sys.iamUsersMap)
+					sys.store.loadUser(ctx, svc.ParentUser, regularUser, sys.iamUsersMap)
 				}
-				sys.store.loadMappedPolicy(context.Background(), svc.ParentUser, regularUser, false, sys.iamUserPolicyMap)
+				sys.store.loadMappedPolicy(ctx, svc.ParentUser, regularUser, false, sys.iamUserPolicyMap)
 			} else {
 				// None found fall back to STS users.
-				sys.store.loadUser(context.Background(), accessKey, stsUser, sys.iamUsersMap)
+				sys.store.loadUser(ctx, accessKey, stsUser, sys.iamUsersMap)
 				if _, found = sys.iamUsersMap[accessKey]; found {
 					// STS user found, load its mapped policy.
 					sys.store.loadMappedPolicy(context.Background(), accessKey, stsUser, false, sys.iamUserPolicyMap)
@@ -1413,7 +1414,7 @@ func (sys *IAMSys) loadUserFromStore(accessKey string) {
 }
 
 // GetUser - get user credentials
-func (sys *IAMSys) GetUser(accessKey string) (cred auth.Credentials, ok bool) {
+func (sys *IAMSys) GetUser(ctx context.Context, accessKey string) (cred auth.Credentials, ok bool) {
 	if !sys.Initialized() {
 		return cred, false
 	}
@@ -1422,7 +1423,7 @@ func (sys *IAMSys) GetUser(accessKey string) (cred auth.Credentials, ok bool) {
 	select {
 	case <-sys.configLoaded:
 	default:
-		sys.loadUserFromStore(accessKey)
+		sys.loadUserFromStore(ctx, accessKey)
 		fallback = true
 	}
 
@@ -1436,7 +1437,7 @@ func (sys *IAMSys) GetUser(accessKey string) (cred auth.Credentials, ok bool) {
 		// the IAM store and see if credential
 		// exists now. If it doesn't proceed to
 		// fail.
-		sys.loadUserFromStore(accessKey)
+		sys.loadUserFromStore(ctx, accessKey)
 
 		sys.store.rlock()
 		cred, ok = sys.iamUsersMap[accessKey]

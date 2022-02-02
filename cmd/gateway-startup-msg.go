@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/minio/minio/pkg/color"
+	"storj.io/minio/pkg/color"
 )
 
 // Prints the formatted startup message.

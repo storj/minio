@@ -1,3 +1,4 @@
+//go:build !linux && !netbsd && !freebsd && !darwin && !openbsd
 // +build !linux,!netbsd,!freebsd,!darwin,!openbsd
 
 /*

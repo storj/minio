@@ -39,15 +39,16 @@ import (
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/klauspost/readahead"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/config/storageclass"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/bucket/lifecycle"
-	"github.com/minio/minio/pkg/color"
-	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/disk"
-	"github.com/minio/minio/pkg/env"
-	xioutil "github.com/minio/minio/pkg/ioutil"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/cmd/config/storageclass"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/bucket/lifecycle"
+	"storj.io/minio/pkg/color"
+	"storj.io/minio/pkg/console"
+	"storj.io/minio/pkg/disk"
+	"storj.io/minio/pkg/env"
+	xioutil "storj.io/minio/pkg/ioutil"
 )
 
 const (

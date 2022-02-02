@@ -1,3 +1,4 @@
+//go:build linux || netbsd || freebsd
 // +build linux netbsd freebsd
 
 /*

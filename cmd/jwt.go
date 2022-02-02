@@ -17,15 +17,17 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
 	jwtreq "github.com/dgrijalva/jwt-go/request"
-	xjwt "github.com/minio/minio/cmd/jwt"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
+
+	xjwt "storj.io/minio/cmd/jwt"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
 )
 
 const (
@@ -63,7 +65,7 @@ func authenticateJWTUsersWithCredentials(credentials auth.Credentials, expiresAt
 	serverCred := globalActiveCred
 	if serverCred.AccessKey != credentials.AccessKey {
 		var ok bool
-		serverCred, ok = globalIAMSys.GetUser(credentials.AccessKey)
+		serverCred, ok = globalIAMSys.GetUser(context.Background(), credentials.AccessKey)
 		if !ok {
 			return "", errInvalidAccessKeyID
 		}
@@ -114,7 +116,7 @@ func webTokenCallback(claims *xjwt.MapClaims) ([]byte, error) {
 	if ok {
 		return []byte(globalActiveCred.SecretKey), nil
 	}
-	cred, ok := globalIAMSys.GetUser(claims.AccessKey)
+	cred, ok := globalIAMSys.GetUser(context.Background(), claims.AccessKey)
 	if !ok {
 		return nil, errInvalidAccessKeyID
 	}

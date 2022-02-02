@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/minio/minio/pkg/event"
+	"storj.io/minio/pkg/event"
 )
 
 // TestDir

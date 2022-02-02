@@ -25,8 +25,9 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"github.com/minio/minio/cmd/config"
-	xnet "github.com/minio/minio/pkg/net"
+
+	"storj.io/minio/cmd/config"
+	xnet "storj.io/minio/pkg/net"
 )
 
 ///////////////////////////////////////////////////////////////////////////////

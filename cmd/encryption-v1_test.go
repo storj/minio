@@ -24,9 +24,10 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio/cmd/crypto"
-	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/sio"
+
+	"storj.io/minio/cmd/crypto"
+	xhttp "storj.io/minio/cmd/http"
 )
 
 var encryptRequestTests = []struct {

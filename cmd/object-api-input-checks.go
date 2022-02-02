@@ -23,7 +23,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio/cmd/logger"
+
+	"storj.io/minio/cmd/logger"
 )
 
 // Checks on GetObject arguments, bucket and object.

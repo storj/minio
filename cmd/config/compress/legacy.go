@@ -19,7 +19,7 @@ package compress
 import (
 	"strings"
 
-	"github.com/minio/minio/cmd/config"
+	"storj.io/minio/cmd/config"
 )
 
 // Legacy envs.

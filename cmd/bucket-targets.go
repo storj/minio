@@ -30,10 +30,11 @@ import (
 	minio "github.com/minio/minio-go/v7"
 	miniogo "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/minio/minio/cmd/crypto"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/bucket/versioning"
-	"github.com/minio/minio/pkg/madmin"
+
+	"storj.io/minio/cmd/crypto"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/bucket/versioning"
+	"storj.io/minio/pkg/madmin"
 )
 
 const (

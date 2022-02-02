@@ -33,17 +33,18 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/klauspost/compress/zip"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/cmd/crypto"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	bandwidth "github.com/minio/minio/pkg/bandwidth"
-	bucketBandwidth "github.com/minio/minio/pkg/bucket/bandwidth"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/event"
-	"github.com/minio/minio/pkg/madmin"
-	xnet "github.com/minio/minio/pkg/net"
-	"github.com/minio/minio/pkg/sync/errgroup"
 	"github.com/willf/bloom"
+
+	"storj.io/minio/cmd/crypto"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	bandwidth "storj.io/minio/pkg/bandwidth"
+	bucketBandwidth "storj.io/minio/pkg/bucket/bandwidth"
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/event"
+	"storj.io/minio/pkg/madmin"
+	xnet "storj.io/minio/pkg/net"
+	"storj.io/minio/pkg/sync/errgroup"
 )
 
 // NotificationSys - notification system.

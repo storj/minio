@@ -19,8 +19,8 @@ package logger
 import (
 	"strings"
 
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/env"
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/pkg/env"
 )
 
 // Console logger target

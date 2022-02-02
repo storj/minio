@@ -31,15 +31,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	xhttp "github.com/minio/minio/cmd/http"
-	xjwt "github.com/minio/minio/cmd/jwt"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	objectlock "github.com/minio/minio/pkg/bucket/object/lock"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/etag"
-	"github.com/minio/minio/pkg/hash"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	xhttp "storj.io/minio/cmd/http"
+	xjwt "storj.io/minio/cmd/jwt"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/etag"
+	"storj.io/minio/pkg/hash"
+	iampolicy "storj.io/minio/pkg/iam/policy"
 )
 
 // Verify if request has JWT.
@@ -335,6 +335,9 @@ func checkRequestAuthTypeCredential(ctx context.Context, r *http.Request, action
 	}
 	if cred.AccessKey != "" {
 		logger.GetReqInfo(ctx).AccessKey = cred.AccessKey
+	}
+	if cred.AccessGrant != "" {
+		logger.GetReqInfo(ctx).AccessGrant = cred.AccessGrant
 	}
 
 	if action != policy.ListAllMyBucketsAction && cred.AccessKey == "" {
@@ -637,6 +640,9 @@ func isPutActionAllowed(ctx context.Context, atype authType, bucketName, objectN
 
 	if cred.AccessKey != "" {
 		logger.GetReqInfo(ctx).AccessKey = cred.AccessKey
+	}
+	if cred.AccessGrant != "" {
+		logger.GetReqInfo(ctx).AccessGrant = cred.AccessGrant
 	}
 
 	// Do not check for PutObjectRetentionAction permission,

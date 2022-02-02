@@ -28,7 +28,8 @@ import (
 	"testing"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/minio/minio/pkg/hash"
+
+	"storj.io/minio/pkg/hash"
 )
 
 func md5Header(data []byte) map[string]string {

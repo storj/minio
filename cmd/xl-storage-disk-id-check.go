@@ -25,7 +25,8 @@ import (
 	"time"
 
 	ewma "github.com/VividCortex/ewma"
-	trace "github.com/minio/minio/pkg/trace"
+
+	trace "storj.io/minio/pkg/trace"
 )
 
 //go:generate stringer -type=storageMetric -trimprefix=storageMetric $GOFILE

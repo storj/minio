@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/madmin"
+	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/madmin"
 )
 
 func TestDecryptData(t *testing.T) {

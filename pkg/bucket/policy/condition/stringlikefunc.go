@@ -23,7 +23,8 @@ import (
 
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio/pkg/wildcard"
+
+	"storj.io/minio/pkg/wildcard"
 )
 
 func toStringLikeFuncString(n name, key Key, values set.StringSet) string {

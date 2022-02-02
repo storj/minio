@@ -27,8 +27,9 @@ import (
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/env"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/pkg/env"
 )
 
 const (

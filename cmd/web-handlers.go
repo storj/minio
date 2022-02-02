@@ -40,23 +40,23 @@ import (
 	miniogopolicy "github.com/minio/minio-go/v7/pkg/policy"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 
-	"github.com/minio/minio/cmd/config/dns"
-	"github.com/minio/minio/cmd/config/identity/openid"
-	"github.com/minio/minio/cmd/crypto"
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/auth"
-	"github.com/minio/minio/pkg/bucket/lifecycle"
-	objectlock "github.com/minio/minio/pkg/bucket/object/lock"
-	"github.com/minio/minio/pkg/bucket/policy"
-	"github.com/minio/minio/pkg/bucket/replication"
-	"github.com/minio/minio/pkg/etag"
-	"github.com/minio/minio/pkg/event"
-	"github.com/minio/minio/pkg/handlers"
-	"github.com/minio/minio/pkg/hash"
-	iampolicy "github.com/minio/minio/pkg/iam/policy"
-	"github.com/minio/minio/pkg/ioutil"
-	"github.com/minio/minio/pkg/rpc/json2"
+	"storj.io/minio/cmd/config/dns"
+	"storj.io/minio/cmd/config/identity/openid"
+	"storj.io/minio/cmd/crypto"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/bucket/lifecycle"
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
+	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/bucket/replication"
+	"storj.io/minio/pkg/etag"
+	"storj.io/minio/pkg/event"
+	"storj.io/minio/pkg/handlers"
+	"storj.io/minio/pkg/hash"
+	iampolicy "storj.io/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/ioutil"
+	"storj.io/minio/pkg/rpc/json2"
 )
 
 func extractBucketObject(args reflect.Value) (bucketName, objectName string) {
@@ -124,7 +124,7 @@ func (web *webAPIHandlers) ServerInfo(r *http.Request, args *WebGenericArgs, rep
 	}
 
 	if !owner {
-		creds, ok := globalIAMSys.GetUser(claims.AccessKey)
+		creds, ok := globalIAMSys.GetUser(ctx, claims.AccessKey)
 		if ok && creds.SessionToken != "" {
 			reply.MinioUserInfo["isTempUser"] = true
 		}
@@ -1036,7 +1036,7 @@ func (web *webAPIHandlers) SetAuth(r *http.Request, args *SetAuthArgs, reply *Se
 
 	// for IAM users, access key cannot be updated
 	// claims.AccessKey is used instead of accesskey from args
-	prevCred, ok := globalIAMSys.GetUser(claims.AccessKey)
+	prevCred, ok := globalIAMSys.GetUser(ctx, claims.AccessKey)
 	if !ok {
 		return errInvalidAccessKeyID
 	}
@@ -1083,7 +1083,7 @@ func (web *webAPIHandlers) CreateURLToken(r *http.Request, args *WebGenericArgs,
 	creds := globalActiveCred
 	if !owner {
 		var ok bool
-		creds, ok = globalIAMSys.GetUser(claims.AccessKey)
+		creds, ok = globalIAMSys.GetUser(ctx, claims.AccessKey)
 		if !ok {
 			return toJSONError(ctx, errInvalidAccessKeyID)
 		}
@@ -2133,7 +2133,7 @@ func (web *webAPIHandlers) PresignedGet(r *http.Request, args *PresignedGetArgs,
 	var creds auth.Credentials
 	if !owner {
 		var ok bool
-		creds, ok = globalIAMSys.GetUser(claims.AccessKey)
+		creds, ok = globalIAMSys.GetUser(ctx, claims.AccessKey)
 		if !ok {
 			return toJSONError(ctx, errInvalidAccessKeyID)
 		}

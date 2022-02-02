@@ -16,7 +16,7 @@
 
 package openid
 
-import "github.com/minio/minio/cmd/config"
+import "storj.io/minio/cmd/config"
 
 // Legacy envs
 const (

@@ -22,9 +22,10 @@ import (
 	"sort"
 
 	"github.com/minio/cli"
-	"github.com/minio/minio/pkg/console"
-	"github.com/minio/minio/pkg/trie"
-	"github.com/minio/minio/pkg/words"
+
+	"storj.io/minio/pkg/console"
+	"storj.io/minio/pkg/trie"
+	"storj.io/minio/pkg/words"
 )
 
 // GlobalFlags - global flags for minio.

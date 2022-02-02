@@ -23,9 +23,10 @@ import (
 	"net/http"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/hash"
-	"github.com/minio/minio/pkg/madmin"
+
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/hash"
+	"storj.io/minio/pkg/madmin"
 )
 
 const (

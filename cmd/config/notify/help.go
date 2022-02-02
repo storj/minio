@@ -17,8 +17,8 @@
 package notify
 
 import (
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/event/target"
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/pkg/event/target"
 )
 
 const (

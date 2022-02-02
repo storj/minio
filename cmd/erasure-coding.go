@@ -27,7 +27,8 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/klauspost/reedsolomon"
-	"github.com/minio/minio/cmd/logger"
+
+	"storj.io/minio/cmd/logger"
 )
 
 // Erasure - erasure encoding details.

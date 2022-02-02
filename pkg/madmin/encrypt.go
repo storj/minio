@@ -24,11 +24,12 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/minio/minio/pkg/argon2"
-	"github.com/minio/minio/pkg/fips"
 	"github.com/secure-io/sio-go"
 	"github.com/secure-io/sio-go/sioutil"
 	"golang.org/x/crypto/pbkdf2"
+
+	"storj.io/minio/pkg/argon2"
+	"storj.io/minio/pkg/fips"
 )
 
 // EncryptData encrypts the data with an unique key

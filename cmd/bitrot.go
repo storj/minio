@@ -26,8 +26,9 @@ import (
 	"io"
 
 	"github.com/minio/highwayhash"
-	"github.com/minio/minio/cmd/logger"
 	"golang.org/x/crypto/blake2b"
+
+	"storj.io/minio/cmd/logger"
 )
 
 // magic HH-256 key as HH-256 hash of the first 100 decimals of π as utf-8 string with a zero key.

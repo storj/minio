@@ -20,7 +20,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/minio/minio/pkg/sync/errgroup"
+	"storj.io/minio/pkg/sync/errgroup"
 )
 
 func (er erasureObjects) getLocalDisks() (localDisks []StorageAPI) {

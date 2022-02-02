@@ -19,8 +19,8 @@ package encoding
 import (
 	"fmt"
 
-	"github.com/minio/minio/pkg/s3select/internal/parquet-go/common"
-	"github.com/minio/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
+	"storj.io/minio/pkg/s3select/internal/parquet-go/common"
+	"storj.io/minio/pkg/s3select/internal/parquet-go/gen-go/parquet"
 )
 
 const (

@@ -28,12 +28,13 @@ import (
 	"sync"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/cmd/config/storageclass"
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/color"
-	xioutil "github.com/minio/minio/pkg/ioutil"
-	"github.com/minio/minio/pkg/sync/errgroup"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/cmd/config/storageclass"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/color"
+	xioutil "storj.io/minio/pkg/ioutil"
+	"storj.io/minio/pkg/sync/errgroup"
 )
 
 const (

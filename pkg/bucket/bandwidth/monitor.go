@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio/pkg/bandwidth"
+	"storj.io/minio/pkg/bandwidth"
 )
 
 // throttleBandwidth gets the throttle for bucket with the configured value

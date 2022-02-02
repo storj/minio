@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/sync/errgroup"
+	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/sync/errgroup"
 )
 
 // Returns number of errors that occurred the most (incl. nil) and the

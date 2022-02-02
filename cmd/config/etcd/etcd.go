@@ -22,12 +22,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/minio/minio/cmd/config"
-	"github.com/minio/minio/pkg/env"
-	xnet "github.com/minio/minio/pkg/net"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/clientv3/namespace"
 	"go.uber.org/zap"
+
+	xnet "storj.io/minio/pkg/net"
+
+	"storj.io/minio/cmd/config"
+	"storj.io/minio/pkg/env"
 )
 
 const (

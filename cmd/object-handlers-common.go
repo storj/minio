@@ -24,8 +24,8 @@ import (
 	"strconv"
 	"time"
 
-	xhttp "github.com/minio/minio/cmd/http"
-	"github.com/minio/minio/pkg/bucket/lifecycle"
+	xhttp "storj.io/minio/cmd/http"
+	"storj.io/minio/pkg/bucket/lifecycle"
 )
 
 var (

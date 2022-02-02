@@ -23,9 +23,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/minio/minio/pkg/kms"
 	"github.com/secure-io/sio-go"
 	"github.com/secure-io/sio-go/sioutil"
+
+	"storj.io/minio/pkg/kms"
 )
 
 // EncryptBytes encrypts the plaintext with a key managed by KMS.

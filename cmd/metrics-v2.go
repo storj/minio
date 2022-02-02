@@ -25,11 +25,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio/cmd/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/procfs"
+
+	"storj.io/minio/cmd/logger"
 )
 
 // MetricNamespace is top level grouping of metrics to create the metric name.

@@ -27,8 +27,9 @@ import (
 	"sync"
 
 	"github.com/fatih/structs"
-	"github.com/minio/minio/pkg/safe"
 	etcd "go.etcd.io/etcd/clientv3"
+
+	"storj.io/minio/pkg/safe"
 )
 
 // Config - generic config interface functions
