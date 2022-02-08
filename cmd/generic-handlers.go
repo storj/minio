@@ -426,7 +426,12 @@ func setRequestValidityHandler(h http.Handler) http.Handler {
 			return
 		}
 		// Check for bad components in URL query values.
-		for _, vv := range r.URL.Query() {
+		for q, vv := range r.URL.Query() {
+			// TODO: ideally we'd have a precise list of fields to check here
+			// however, we know that "delimiter" must be skipped for the Ceph / Splunk tests
+			if q == "delimiter" {
+				continue
+			}
 			for _, v := range vv {
 				if hasBadPathComponent(v) {
 					writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInvalidResourceName), r.URL, guessIsBrowserReq(r))
