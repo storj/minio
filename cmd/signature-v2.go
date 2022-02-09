@@ -30,7 +30,6 @@ import (
 	"strings"
 
 	xhttp "storj.io/minio/cmd/http"
-
 	"storj.io/minio/pkg/auth"
 )
 
@@ -191,13 +190,13 @@ func getReqAccessKeyV2(r *http.Request) (auth.Credentials, bool, APIErrorCode) {
 	// Authorization = "AWS" + " " + AWSAccessKeyId + ":" + Signature
 	authFields := strings.Split(r.Header.Get(xhttp.Authorization), " ")
 	if len(authFields) != 2 {
-		return auth.Credentials{}, false, ErrMissingFields
+		return auth.Credentials{}, false, ErrAuthHeaderEmpty
 	}
 
 	// Then will be splitting on ":", this will seprate `AWSAccessKeyId` and `Signature` string.
 	keySignFields := strings.Split(strings.TrimSpace(authFields[1]), ":")
 	if len(keySignFields) != 2 {
-		return auth.Credentials{}, false, ErrMissingFields
+		return auth.Credentials{}, false, ErrMissingFieldsV2
 	}
 
 	return checkKeyValid(r.Context(), keySignFields[0])

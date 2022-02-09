@@ -196,14 +196,14 @@ func TestValidateV2AuthHeader(t *testing.T) {
 		{
 
 			authString:    signV2Algorithm,
-			expectedError: ErrMissingFields,
+			expectedError: ErrAuthHeaderEmpty,
 		},
 		// Test case - 4.
 		// Test case with signature part missing.
 		{
 
 			authString:    fmt.Sprintf("%s %s", signV2Algorithm, accessID),
-			expectedError: ErrMissingFields,
+			expectedError: ErrMissingFieldsV2,
 		},
 		// Test case - 5.
 		// Test case with wrong accessID.

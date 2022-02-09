@@ -25,20 +25,18 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"google.golang.org/api/googleapi"
-
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/tags"
+	"google.golang.org/api/googleapi"
 
 	"storj.io/minio/cmd/config/dns"
 	"storj.io/minio/cmd/crypto"
 	"storj.io/minio/cmd/logger"
 	"storj.io/minio/pkg/auth"
 	"storj.io/minio/pkg/bucket/lifecycle"
-	"storj.io/minio/pkg/bucket/replication"
-
 	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/bucket/replication"
 	"storj.io/minio/pkg/bucket/versioning"
 	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/hash"
@@ -145,6 +143,7 @@ const (
 	ErrAllAccessDisabled
 	ErrMalformedPolicy
 	ErrMissingFields
+	ErrMissingFieldsV2
 	ErrMissingCredTag
 	ErrCredMalformed
 	ErrInvalidRegion
@@ -671,6 +670,11 @@ var errorCodes = errorCodeMap{
 	ErrMissingFields: {
 		Code:           "MissingFields",
 		Description:    "Missing fields in request.",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrMissingFieldsV2: {
+		Code:           "InvalidArgument",
+		Description:    "AWS authorization header is invalid.  Expected AwsAccessKeyId:signature",
 		HTTPStatusCode: http.StatusBadRequest,
 	},
 	ErrMissingCredTag: {
