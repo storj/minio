@@ -505,7 +505,12 @@ func setAuthHandler(h http.Handler) http.Handler {
 			h.ServeHTTP(w, r)
 			return
 		}
-		writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrSignatureVersionNotSupported), r.URL, guessIsBrowserReq(r))
+		// NOTE(artur): for requests having an empty Authorization header, the
+		// "real" S3 returns the AccessDenied error code. We do the same thing
+		// to be compatible with ceph/splunk-s3-tests. There are plenty of other
+		// incompatibilities in there, but they are not easily fixable with how
+		// MinIO is structured, so we do at least this.
+		writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrAccessDenied), r.URL, guessIsBrowserReq(r))
 		atomic.AddUint64(&globalHTTPStats.rejectedRequestsAuth, 1)
 	})
 }
