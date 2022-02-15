@@ -750,7 +750,7 @@ var errorCodes = errorCodeMap{
 	ErrMissingDateHeader: {
 		Code:           "AccessDenied",
 		Description:    "AWS authentication requires a valid Date or x-amz-date header",
-		HTTPStatusCode: http.StatusBadRequest,
+		HTTPStatusCode: http.StatusForbidden,
 	},
 	ErrInvalidQuerySignatureAlgo: {
 		Code:           "AuthorizationQueryParametersError",
