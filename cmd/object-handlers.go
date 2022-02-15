@@ -1451,6 +1451,12 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 
 	/// if Content-Length is unknown/missing, deny the request
 	size := r.ContentLength
+	// S3 appears to error if a Content-Length header is missing, regardless of
+	// determinable length.
+	if _, err := strconv.ParseInt(r.Header.Get(xhttp.ContentLength), 10, 64); err != nil {
+		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentLength), r.URL, guessIsBrowserReq(r))
+		return
+	}
 	rAuthType := getRequestAuthType(r)
 	if rAuthType == authTypeStreamingSigned {
 		if sizeStr, ok := r.Header[xhttp.AmzDecodedContentLength]; ok {
@@ -1764,14 +1770,6 @@ func (api objectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 
 	/// if Content-Length is unknown/missing, deny the request
 	size := r.ContentLength
-	// S3 appears to error if a Content-Length header is missing, regardless of determinable length.
-	if contentLength := r.Header[xhttp.ContentLength]; len(contentLength) == 0 {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentLength), r.URL, guessIsBrowserReq(r))
-		return
-	} else if _, err := strconv.ParseInt(contentLength[0], 10, 64); err != nil {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentLength), r.URL, guessIsBrowserReq(r))
-		return
-	}
 	rAuthType := getRequestAuthType(r)
 	if rAuthType == authTypeStreamingSigned {
 		if sizeStr, ok := r.Header[xhttp.AmzDecodedContentLength]; ok {
