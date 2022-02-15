@@ -318,7 +318,7 @@ func parseAmzDate(amzDateStr string) (amzDate time.Time, apiErr APIErrorCode) {
 			return amzDate, ErrNone
 		}
 	}
-	return time.Time{}, ErrMalformedDate
+	return time.Time{}, ErrMissingDateHeader
 }
 
 // parseAmzDateHeader - parses supported amz date headers, in

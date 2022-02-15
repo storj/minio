@@ -373,7 +373,7 @@ func doesSignatureMatch(hashedPayload string, r *http.Request, region string, st
 	// Parse date header.
 	t, e := time.Parse(iso8601Format, date)
 	if e != nil {
-		return ErrMalformedDate
+		return ErrMissingDateHeader
 	}
 
 	// Query string.

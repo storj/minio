@@ -113,7 +113,7 @@ func calculateSeedSignature(r *http.Request) (cred auth.Credentials, signature s
 	var err error
 	date, err = time.Parse(iso8601Format, dateStr)
 	if err != nil {
-		return cred, "", "", time.Time{}, ErrMalformedDate
+		return cred, "", "", time.Time{}, ErrMissingDateHeader
 	}
 
 	// Query string.
