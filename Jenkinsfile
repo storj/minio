@@ -10,7 +10,8 @@ def withDockerNetwork(Closure inner) {
 
 timeout(time: 26, unit: 'MINUTES') {
 	node {
-		def dockerImage = docker.build("storj-ci", "--pull git://github.com/storj/ci.git#main")
+		def dockerImage = docker.image("storjlabs/ci:latest")
+		dockerImage.pull()
 		dockerImage.inside('-u root:root --cap-add SYS_PTRACE -v "/tmp/gomod":/go/pkg/mod') {
 			try {
 				stage('Build') {
