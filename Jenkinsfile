@@ -18,6 +18,7 @@ timeout(time: 26, unit: 'MINUTES') {
 					checkout scm
 				}
 				stage('Verification') {
+					sh 'check-downgrades'
 					sh 'go vet ./...'
 				}
 			}
