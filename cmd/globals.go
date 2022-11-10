@@ -26,7 +26,7 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v7/pkg/set"
-	etcd "go.etcd.io/etcd/clientv3"
+	etcd "go.etcd.io/etcd/client/v3"
 
 	"storj.io/minio/cmd/config/cache"
 	"storj.io/minio/cmd/config/compress"

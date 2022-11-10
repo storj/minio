@@ -28,8 +28,8 @@ import (
 	"unicode/utf8"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
-	etcd "go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/mvcc/mvccpb"
+	"go.etcd.io/etcd/api/v3/mvccpb"
+	etcd "go.etcd.io/etcd/client/v3"
 
 	"github.com/minio/minio-go/v7/pkg/set"
 

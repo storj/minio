@@ -24,7 +24,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	etcd "go.etcd.io/etcd/clientv3"
+	etcd "go.etcd.io/etcd/client/v3"
 
 	"storj.io/minio/cmd/config"
 	"storj.io/minio/cmd/logger"

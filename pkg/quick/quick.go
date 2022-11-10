@@ -27,7 +27,7 @@ import (
 	"sync"
 
 	"github.com/fatih/structs"
-	etcd "go.etcd.io/etcd/clientv3"
+	etcd "go.etcd.io/etcd/client/v3"
 
 	"storj.io/minio/pkg/safe"
 )
