@@ -227,7 +227,7 @@ func registerAPIRouter(router *mux.Router) {
 			Queries("partNumber", "{partNumber:[0-9]+}", "uploadId", "{uploadId:.*}")
 		// PutObjectPart
 		router.Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("putobjectpart", MaxClients(httpTraceHdrs(api.PutObjectPartHandler)))).Queries("partNumber", "{partNumber:[0-9]+}", "uploadId", "{uploadId:.*}")
+			collectAPIStats("putobjectpart", MaxClients(HTTPTraceHdrs(api.PutObjectPartHandler)))).Queries("partNumber", "{partNumber:[0-9]+}", "uploadId", "{uploadId:.*}")
 		// ListObjectParts
 		router.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
 			collectAPIStats("listobjectparts", MaxClients(HTTPTraceAll(api.ListObjectPartsHandler)))).Queries("uploadId", "{uploadId:.*}")
@@ -242,22 +242,22 @@ func registerAPIRouter(router *mux.Router) {
 			collectAPIStats("abortmultipartupload", MaxClients(HTTPTraceAll(api.AbortMultipartUploadHandler)))).Queries("uploadId", "{uploadId:.*}")
 		// GetObjectACL - this is a dummy call.
 		router.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("getobjectacl", MaxClients(httpTraceHdrs(api.GetObjectACLHandler)))).Queries("acl", "")
+			collectAPIStats("getobjectacl", MaxClients(HTTPTraceHdrs(api.GetObjectACLHandler)))).Queries("acl", "")
 		// PutObjectACL - this is a dummy call.
 		router.Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("putobjectacl", MaxClients(httpTraceHdrs(api.PutObjectACLHandler)))).Queries("acl", "")
+			collectAPIStats("putobjectacl", MaxClients(HTTPTraceHdrs(api.PutObjectACLHandler)))).Queries("acl", "")
 		// GetObjectTagging
 		router.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("getobjecttagging", MaxClients(httpTraceHdrs(api.GetObjectTaggingHandler)))).Queries("tagging", "")
+			collectAPIStats("getobjecttagging", MaxClients(HTTPTraceHdrs(api.GetObjectTaggingHandler)))).Queries("tagging", "")
 		// PutObjectTagging
 		router.Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("putobjecttagging", MaxClients(httpTraceHdrs(api.PutObjectTaggingHandler)))).Queries("tagging", "")
+			collectAPIStats("putobjecttagging", MaxClients(HTTPTraceHdrs(api.PutObjectTaggingHandler)))).Queries("tagging", "")
 		// DeleteObjectTagging
 		router.Methods(http.MethodDelete).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("deleteobjecttagging", MaxClients(httpTraceHdrs(api.DeleteObjectTaggingHandler)))).Queries("tagging", "")
+			collectAPIStats("deleteobjecttagging", MaxClients(HTTPTraceHdrs(api.DeleteObjectTaggingHandler)))).Queries("tagging", "")
 		// SelectObjectContent
 		router.Methods(http.MethodPost).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("selectobjectcontent", MaxClients(httpTraceHdrs(api.SelectObjectContentHandler)))).Queries("select", "").Queries("select-type", "2")
+			collectAPIStats("selectobjectcontent", MaxClients(HTTPTraceHdrs(api.SelectObjectContentHandler)))).Queries("select", "").Queries("select-type", "2")
 		// GetObjectRetention
 		router.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
 			collectAPIStats("getobjectretention", MaxClients(HTTPTraceAll(api.GetObjectRetentionHandler)))).Queries("retention", "")
@@ -266,7 +266,7 @@ func registerAPIRouter(router *mux.Router) {
 			collectAPIStats("getobjectlegalhold", MaxClients(HTTPTraceAll(api.GetObjectLegalHoldHandler)))).Queries("legal-hold", "")
 		// GetObject
 		router.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("getobject", MaxClients(httpTraceHdrs(api.GetObjectHandler))))
+			collectAPIStats("getobject", MaxClients(HTTPTraceHdrs(api.GetObjectHandler))))
 		// CopyObject
 		router.Methods(http.MethodPut).Path("/{object:.+}").HeadersRegexp(xhttp.AmzCopySource, ".*?(\\/|%2F).*?").HandlerFunc(
 			collectAPIStats("copyobject", MaxClients(HTTPTraceAll(api.CopyObjectHandler))))
@@ -279,11 +279,11 @@ func registerAPIRouter(router *mux.Router) {
 
 		// PutObject with auto-extract support for zip
 		router.Methods(http.MethodPut).Path("/{object:.+}").HeadersRegexp(xhttp.AmzSnowballExtract, "true").HandlerFunc(
-			collectAPIStats("putobject", MaxClients(httpTraceHdrs(api.PutObjectExtractHandler))))
+			collectAPIStats("putobject", MaxClients(HTTPTraceHdrs(api.PutObjectExtractHandler))))
 
 		// PutObject
 		router.Methods(http.MethodPut).Path("/{object:.+}").HandlerFunc(
-			collectAPIStats("putobject", MaxClients(httpTraceHdrs(api.PutObjectHandler))))
+			collectAPIStats("putobject", MaxClients(HTTPTraceHdrs(api.PutObjectHandler))))
 
 		// DeleteObject
 		router.Methods(http.MethodDelete).Path("/{object:.+}").HandlerFunc(
@@ -403,7 +403,7 @@ func registerAPIRouter(router *mux.Router) {
 			collectAPIStats("headbucket", MaxClients(HTTPTraceAll(api.HeadBucketHandler))))
 		// PostPolicy
 		router.Methods(http.MethodPost).HeadersRegexp(xhttp.ContentType, "multipart/form-data*").HandlerFunc(
-			collectAPIStats("postpolicybucket", MaxClients(httpTraceHdrs(api.PostPolicyBucketHandler))))
+			collectAPIStats("postpolicybucket", MaxClients(HTTPTraceHdrs(api.PostPolicyBucketHandler))))
 		// DeleteMultipleObjects
 		router.Methods(http.MethodPost).HandlerFunc(
 			collectAPIStats("deletemultipleobjects", MaxClients(HTTPTraceAll(api.DeleteMultipleObjectsHandler)))).Queries("delete", "")

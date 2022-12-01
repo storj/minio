@@ -374,7 +374,7 @@ func HTTPTraceAll(f http.HandlerFunc) http.HandlerFunc {
 }
 
 // Log only the headers.
-func httpTraceHdrs(f http.HandlerFunc) http.HandlerFunc {
+func HTTPTraceHdrs(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if globalTrace.NumSubscribers() == 0 {
 			f.ServeHTTP(w, r)

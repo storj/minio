@@ -84,9 +84,9 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 
 		// Config KV operations.
 		if enableConfigOps {
-			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/get-config-kv").HandlerFunc(httpTraceHdrs(adminAPI.GetConfigKVHandler)).Queries("key", "{key:.*}")
-			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/set-config-kv").HandlerFunc(httpTraceHdrs(adminAPI.SetConfigKVHandler))
-			adminRouter.Methods(http.MethodDelete).Path(adminVersion + "/del-config-kv").HandlerFunc(httpTraceHdrs(adminAPI.DelConfigKVHandler))
+			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/get-config-kv").HandlerFunc(HTTPTraceHdrs(adminAPI.GetConfigKVHandler)).Queries("key", "{key:.*}")
+			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/set-config-kv").HandlerFunc(HTTPTraceHdrs(adminAPI.SetConfigKVHandler))
+			adminRouter.Methods(http.MethodDelete).Path(adminVersion + "/del-config-kv").HandlerFunc(HTTPTraceHdrs(adminAPI.DelConfigKVHandler))
 		}
 
 		// Enable config help in all modes.
@@ -95,16 +95,16 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 		// Config KV history operations.
 		if enableConfigOps {
 			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/list-config-history-kv").HandlerFunc(HTTPTraceAll(adminAPI.ListConfigHistoryKVHandler)).Queries("count", "{count:[0-9]+}")
-			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/clear-config-history-kv").HandlerFunc(httpTraceHdrs(adminAPI.ClearConfigHistoryKVHandler)).Queries("restoreId", "{restoreId:.*}")
-			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/restore-config-history-kv").HandlerFunc(httpTraceHdrs(adminAPI.RestoreConfigHistoryKVHandler)).Queries("restoreId", "{restoreId:.*}")
+			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/clear-config-history-kv").HandlerFunc(HTTPTraceHdrs(adminAPI.ClearConfigHistoryKVHandler)).Queries("restoreId", "{restoreId:.*}")
+			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/restore-config-history-kv").HandlerFunc(HTTPTraceHdrs(adminAPI.RestoreConfigHistoryKVHandler)).Queries("restoreId", "{restoreId:.*}")
 		}
 
 		/// Config import/export bulk operations
 		if enableConfigOps {
 			// Get config
-			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/config").HandlerFunc(httpTraceHdrs(adminAPI.GetConfigHandler))
+			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/config").HandlerFunc(HTTPTraceHdrs(adminAPI.GetConfigHandler))
 			// Set config
-			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/config").HandlerFunc(httpTraceHdrs(adminAPI.SetConfigHandler))
+			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/config").HandlerFunc(HTTPTraceHdrs(adminAPI.SetConfigHandler))
 		}
 
 		if enableIAMOps {
@@ -116,87 +116,87 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 			// Add user IAM
 			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/accountinfo").HandlerFunc(HTTPTraceAll(adminAPI.AccountInfoHandler))
 
-			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/add-user").HandlerFunc(httpTraceHdrs(adminAPI.AddUser)).Queries("accessKey", "{accessKey:.*}")
+			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/add-user").HandlerFunc(HTTPTraceHdrs(adminAPI.AddUser)).Queries("accessKey", "{accessKey:.*}")
 
-			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-user-status").HandlerFunc(httpTraceHdrs(adminAPI.SetUserStatus)).Queries("accessKey", "{accessKey:.*}").Queries("status", "{status:.*}")
+			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-user-status").HandlerFunc(HTTPTraceHdrs(adminAPI.SetUserStatus)).Queries("accessKey", "{accessKey:.*}").Queries("status", "{status:.*}")
 
 			// Service accounts ops
-			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/add-service-account").HandlerFunc(httpTraceHdrs(adminAPI.AddServiceAccount))
-			adminRouter.Methods(http.MethodPost).Path(adminVersion+"/update-service-account").HandlerFunc(httpTraceHdrs(adminAPI.UpdateServiceAccount)).Queries("accessKey", "{accessKey:.*}")
-			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/info-service-account").HandlerFunc(httpTraceHdrs(adminAPI.InfoServiceAccount)).Queries("accessKey", "{accessKey:.*}")
-			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-service-accounts").HandlerFunc(httpTraceHdrs(adminAPI.ListServiceAccounts))
-			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/delete-service-account").HandlerFunc(httpTraceHdrs(adminAPI.DeleteServiceAccount)).Queries("accessKey", "{accessKey:.*}")
+			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/add-service-account").HandlerFunc(HTTPTraceHdrs(adminAPI.AddServiceAccount))
+			adminRouter.Methods(http.MethodPost).Path(adminVersion+"/update-service-account").HandlerFunc(HTTPTraceHdrs(adminAPI.UpdateServiceAccount)).Queries("accessKey", "{accessKey:.*}")
+			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/info-service-account").HandlerFunc(HTTPTraceHdrs(adminAPI.InfoServiceAccount)).Queries("accessKey", "{accessKey:.*}")
+			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-service-accounts").HandlerFunc(HTTPTraceHdrs(adminAPI.ListServiceAccounts))
+			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/delete-service-account").HandlerFunc(HTTPTraceHdrs(adminAPI.DeleteServiceAccount)).Queries("accessKey", "{accessKey:.*}")
 
 			if adminVersion == adminAPIVersionV2Prefix {
 				// Info policy IAM v2
-				adminRouter.Methods(http.MethodGet).Path(adminVersion+"/info-canned-policy").HandlerFunc(httpTraceHdrs(adminAPI.InfoCannedPolicyV2)).Queries("name", "{name:.*}")
+				adminRouter.Methods(http.MethodGet).Path(adminVersion+"/info-canned-policy").HandlerFunc(HTTPTraceHdrs(adminAPI.InfoCannedPolicyV2)).Queries("name", "{name:.*}")
 
 				// List policies v2
-				adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-canned-policies").HandlerFunc(httpTraceHdrs(adminAPI.ListCannedPoliciesV2))
+				adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-canned-policies").HandlerFunc(HTTPTraceHdrs(adminAPI.ListCannedPoliciesV2))
 			} else {
 				// Info policy IAM latest
-				adminRouter.Methods(http.MethodGet).Path(adminVersion+"/info-canned-policy").HandlerFunc(httpTraceHdrs(adminAPI.InfoCannedPolicy)).Queries("name", "{name:.*}")
+				adminRouter.Methods(http.MethodGet).Path(adminVersion+"/info-canned-policy").HandlerFunc(HTTPTraceHdrs(adminAPI.InfoCannedPolicy)).Queries("name", "{name:.*}")
 
 				// List policies latest
-				adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-canned-policies").HandlerFunc(httpTraceHdrs(adminAPI.ListCannedPolicies))
+				adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-canned-policies").HandlerFunc(HTTPTraceHdrs(adminAPI.ListCannedPolicies))
 			}
 
 			// Remove policy IAM
-			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/remove-canned-policy").HandlerFunc(httpTraceHdrs(adminAPI.RemoveCannedPolicy)).Queries("name", "{name:.*}")
+			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/remove-canned-policy").HandlerFunc(HTTPTraceHdrs(adminAPI.RemoveCannedPolicy)).Queries("name", "{name:.*}")
 
 			// Set user or group policy
 			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-user-or-group-policy").
-				HandlerFunc(httpTraceHdrs(adminAPI.SetPolicyForUserOrGroup)).
+				HandlerFunc(HTTPTraceHdrs(adminAPI.SetPolicyForUserOrGroup)).
 				Queries("policyName", "{policyName:.*}", "userOrGroup", "{userOrGroup:.*}", "isGroup", "{isGroup:true|false}")
 
 			// Remove user IAM
-			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/remove-user").HandlerFunc(httpTraceHdrs(adminAPI.RemoveUser)).Queries("accessKey", "{accessKey:.*}")
+			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/remove-user").HandlerFunc(HTTPTraceHdrs(adminAPI.RemoveUser)).Queries("accessKey", "{accessKey:.*}")
 
 			// List users
-			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-users").HandlerFunc(httpTraceHdrs(adminAPI.ListUsers))
+			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/list-users").HandlerFunc(HTTPTraceHdrs(adminAPI.ListUsers))
 
 			// User info
-			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/user-info").HandlerFunc(httpTraceHdrs(adminAPI.GetUserInfo)).Queries("accessKey", "{accessKey:.*}")
+			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/user-info").HandlerFunc(HTTPTraceHdrs(adminAPI.GetUserInfo)).Queries("accessKey", "{accessKey:.*}")
 
 			// Add/Remove members from group
-			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/update-group-members").HandlerFunc(httpTraceHdrs(adminAPI.UpdateGroupMembers))
+			adminRouter.Methods(http.MethodPut).Path(adminVersion + "/update-group-members").HandlerFunc(HTTPTraceHdrs(adminAPI.UpdateGroupMembers))
 
 			// Get Group
-			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/group").HandlerFunc(httpTraceHdrs(adminAPI.GetGroup)).Queries("group", "{group:.*}")
+			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/group").HandlerFunc(HTTPTraceHdrs(adminAPI.GetGroup)).Queries("group", "{group:.*}")
 
 			// List Groups
-			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/groups").HandlerFunc(httpTraceHdrs(adminAPI.ListGroups))
+			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/groups").HandlerFunc(HTTPTraceHdrs(adminAPI.ListGroups))
 
 			// Set Group Status
-			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-group-status").HandlerFunc(httpTraceHdrs(adminAPI.SetGroupStatus)).Queries("group", "{group:.*}").Queries("status", "{status:.*}")
+			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-group-status").HandlerFunc(HTTPTraceHdrs(adminAPI.SetGroupStatus)).Queries("group", "{group:.*}").Queries("status", "{status:.*}")
 		}
 
 		if globalIsDistErasure || globalIsErasure {
 			// GetBucketQuotaConfig
 			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/get-bucket-quota").HandlerFunc(
-				httpTraceHdrs(adminAPI.GetBucketQuotaConfigHandler)).Queries("bucket", "{bucket:.*}")
+				HTTPTraceHdrs(adminAPI.GetBucketQuotaConfigHandler)).Queries("bucket", "{bucket:.*}")
 			// PutBucketQuotaConfig
 			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-bucket-quota").HandlerFunc(
-				httpTraceHdrs(adminAPI.PutBucketQuotaConfigHandler)).Queries("bucket", "{bucket:.*}")
+				HTTPTraceHdrs(adminAPI.PutBucketQuotaConfigHandler)).Queries("bucket", "{bucket:.*}")
 
 			// Bucket replication operations
 			// GetBucketTargetHandler
 			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/list-remote-targets").HandlerFunc(
-				httpTraceHdrs(adminAPI.ListRemoteTargetsHandler)).Queries("bucket", "{bucket:.*}", "type", "{type:.*}")
+				HTTPTraceHdrs(adminAPI.ListRemoteTargetsHandler)).Queries("bucket", "{bucket:.*}", "type", "{type:.*}")
 			// SetRemoteTargetHandler
 			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/set-remote-target").HandlerFunc(
-				httpTraceHdrs(adminAPI.SetRemoteTargetHandler)).Queries("bucket", "{bucket:.*}")
+				HTTPTraceHdrs(adminAPI.SetRemoteTargetHandler)).Queries("bucket", "{bucket:.*}")
 			// RemoveRemoteTargetHandler
 			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/remove-remote-target").HandlerFunc(
-				httpTraceHdrs(adminAPI.RemoveRemoteTargetHandler)).Queries("bucket", "{bucket:.*}", "arn", "{arn:.*}")
+				HTTPTraceHdrs(adminAPI.RemoveRemoteTargetHandler)).Queries("bucket", "{bucket:.*}", "arn", "{arn:.*}")
 		}
 
 		if globalIsDistErasure {
 			// Top locks
-			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/top/locks").HandlerFunc(httpTraceHdrs(adminAPI.TopLocksHandler))
+			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/top/locks").HandlerFunc(HTTPTraceHdrs(adminAPI.TopLocksHandler))
 			// Force unlocks paths
 			adminRouter.Methods(http.MethodPost).Path(adminVersion+"/force-unlock").
-				Queries("paths", "{paths:.*}").HandlerFunc(httpTraceHdrs(adminAPI.ForceUnlockHandler))
+				Queries("paths", "{paths:.*}").HandlerFunc(HTTPTraceHdrs(adminAPI.ForceUnlockHandler))
 		}
 
 		// HTTP Trace
@@ -213,12 +213,12 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 		if !globalIsGateway {
 			// Keep obdinfo for backward compatibility with mc
 			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/obdinfo").
-				HandlerFunc(httpTraceHdrs(adminAPI.HealthInfoHandler))
+				HandlerFunc(HTTPTraceHdrs(adminAPI.HealthInfoHandler))
 			// -- Health API --
 			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/healthinfo").
-				HandlerFunc(httpTraceHdrs(adminAPI.HealthInfoHandler))
+				HandlerFunc(HTTPTraceHdrs(adminAPI.HealthInfoHandler))
 			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/bandwidth").
-				HandlerFunc(httpTraceHdrs(adminAPI.BandwidthMonitorHandler))
+				HandlerFunc(HTTPTraceHdrs(adminAPI.BandwidthMonitorHandler))
 		}
 	}
 
