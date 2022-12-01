@@ -38,7 +38,7 @@ const (
 // as per http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html.
 // It returns empty configuration if its not set.
 func (api ObjectAPIHandlers) GetBucketNotificationHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketNotification")
+	ctx := NewContext(r, w, "GetBucketNotification")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -110,7 +110,7 @@ func (api ObjectAPIHandlers) GetBucketNotificationHandler(w http.ResponseWriter,
 // PutBucketNotificationHandler - This HTTP handler stores given notification configuration as per
 // http://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html.
 func (api ObjectAPIHandlers) PutBucketNotificationHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PutBucketNotification")
+	ctx := NewContext(r, w, "PutBucketNotification")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 

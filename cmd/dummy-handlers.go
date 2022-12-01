@@ -31,7 +31,7 @@ import (
 
 // GetBucketWebsite  - GET bucket website, a dummy api
 func (api ObjectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketWebsite")
+	ctx := NewContext(r, w, "GetBucketWebsite")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -63,7 +63,7 @@ func (api ObjectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *h
 
 // GetBucketAccelerate  - GET bucket accelerate, a dummy api
 func (api ObjectAPIHandlers) GetBucketAccelerateHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketAccelerate")
+	ctx := NewContext(r, w, "GetBucketAccelerate")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -96,7 +96,7 @@ func (api ObjectAPIHandlers) GetBucketAccelerateHandler(w http.ResponseWriter, r
 
 // GetBucketRequestPaymentHandler - GET bucket requestPayment, a dummy api
 func (api ObjectAPIHandlers) GetBucketRequestPaymentHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketRequestPayment")
+	ctx := NewContext(r, w, "GetBucketRequestPayment")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -130,7 +130,7 @@ func (api ObjectAPIHandlers) GetBucketRequestPaymentHandler(w http.ResponseWrite
 
 // GetBucketLoggingHandler - GET bucket logging, a dummy api
 func (api ObjectAPIHandlers) GetBucketLoggingHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketLogging")
+	ctx := NewContext(r, w, "GetBucketLogging")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -169,7 +169,7 @@ func (api ObjectAPIHandlers) DeleteBucketWebsiteHandler(w http.ResponseWriter, r
 
 // GetBucketCorsHandler - GET bucket cors, a dummy api
 func (api ObjectAPIHandlers) GetBucketCorsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketCors")
+	ctx := NewContext(r, w, "GetBucketCors")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 

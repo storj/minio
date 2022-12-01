@@ -80,7 +80,7 @@ func updateServer(u *url.URL, sha256Sum []byte, lrTime time.Time, releaseInfo st
 // ----------
 // updates all minio servers and restarts them gracefully.
 func (a adminAPIHandlers) ServerUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ServerUpdate")
+	ctx := NewContext(r, w, "ServerUpdate")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -188,7 +188,7 @@ func (a adminAPIHandlers) ServerUpdateHandler(w http.ResponseWriter, r *http.Req
 // ----------
 // restarts/stops minio server gracefully. In a distributed setup,
 func (a adminAPIHandlers) ServiceHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "Service")
+	ctx := NewContext(r, w, "Service")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -276,7 +276,7 @@ type ServerHTTPStats struct {
 // ----------
 // Get server information
 func (a adminAPIHandlers) StorageInfoHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "StorageInfo")
+	ctx := NewContext(r, w, "StorageInfo")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -319,7 +319,7 @@ func (a adminAPIHandlers) StorageInfoHandler(w http.ResponseWriter, r *http.Requ
 // ----------
 // Get server/cluster data usage info
 func (a adminAPIHandlers) DataUsageInfoHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DataUsageInfo")
+	ctx := NewContext(r, w, "DataUsageInfo")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -399,7 +399,7 @@ type PeerLocks struct {
 
 // ForceUnlockHandler force unlocks requested resource
 func (a adminAPIHandlers) ForceUnlockHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ForceUnlock")
+	ctx := NewContext(r, w, "ForceUnlock")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -438,7 +438,7 @@ func (a adminAPIHandlers) ForceUnlockHandler(w http.ResponseWriter, r *http.Requ
 
 // TopLocksHandler Get list of locks in use
 func (a adminAPIHandlers) TopLocksHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "TopLocks")
+	ctx := NewContext(r, w, "TopLocks")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -490,7 +490,7 @@ type StartProfilingResult struct {
 // ----------
 // Enable server profiling
 func (a adminAPIHandlers) StartProfilingHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "StartProfiling")
+	ctx := NewContext(r, w, "StartProfiling")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -595,7 +595,7 @@ func (f dummyFileInfo) Sys() interface{}   { return f.sys }
 // ----------
 // Download profiling information of all nodes in a zip format
 func (a adminAPIHandlers) DownloadProfilingHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DownloadProfiling")
+	ctx := NewContext(r, w, "DownloadProfiling")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -696,7 +696,7 @@ func extractHealInitParams(vars map[string]string, qParms url.Values, r io.Reade
 // sequence. However, if the force-start flag is provided, the server
 // aborts the running heal sequence and starts a new one.
 func (a adminAPIHandlers) HealHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "Heal")
+	ctx := NewContext(r, w, "Heal")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -882,7 +882,7 @@ func getAggregatedBackgroundHealState(ctx context.Context, o ObjectLayer) (madmi
 }
 
 func (a adminAPIHandlers) BackgroundHealStatusHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "HealBackgroundStatus")
+	ctx := NewContext(r, w, "HealBackgroundStatus")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1097,7 +1097,7 @@ func extractTraceOptions(r *http.Request) (opts madmin.ServiceTraceOpts, err err
 // ----------
 // The handler sends http trace to the connected HTTP client.
 func (a adminAPIHandlers) TraceHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "HTTPTrace")
+	ctx := NewContext(r, w, "HTTPTrace")
 
 	// Validate request signature.
 	_, adminAPIErr := checkAdminRequestAuth(ctx, r, iampolicy.TraceAdminAction, "")
@@ -1155,7 +1155,7 @@ func (a adminAPIHandlers) TraceHandler(w http.ResponseWriter, r *http.Request) {
 
 // The handler sends console logs to the connected HTTP client.
 func (a adminAPIHandlers) ConsoleLogHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ConsoleLog")
+	ctx := NewContext(r, w, "ConsoleLog")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1227,7 +1227,7 @@ func (a adminAPIHandlers) ConsoleLogHandler(w http.ResponseWriter, r *http.Reque
 
 // KMSCreateKeyHandler - POST /minio/admin/v3/kms/key/create?key-id=<master-key-id>
 func (a adminAPIHandlers) KMSCreateKeyHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "KMSCreateKey")
+	ctx := NewContext(r, w, "KMSCreateKey")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
 	objectAPI, _ := validateAdminReq(ctx, w, r, iampolicy.KMSCreateKeyAdminAction)
@@ -1249,7 +1249,7 @@ func (a adminAPIHandlers) KMSCreateKeyHandler(w http.ResponseWriter, r *http.Req
 
 // KMSKeyStatusHandler - GET /minio/admin/v3/kms/key/status?key-id=<master-key-id>
 func (a adminAPIHandlers) KMSKeyStatusHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "KMSKeyStatus")
+	ctx := NewContext(r, w, "KMSKeyStatus")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1327,7 +1327,7 @@ func (a adminAPIHandlers) KMSKeyStatusHandler(w http.ResponseWriter, r *http.Req
 // ----------
 // Get server health info
 func (a adminAPIHandlers) HealthInfoHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "HealthInfo")
+	ctx := NewContext(r, w, "HealthInfo")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1507,7 +1507,7 @@ func (a adminAPIHandlers) HealthInfoHandler(w http.ResponseWriter, r *http.Reque
 // ----------
 // Get bandwidth consumption information
 func (a adminAPIHandlers) BandwidthMonitorHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "BandwidthMonitor")
+	ctx := NewContext(r, w, "BandwidthMonitor")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1563,7 +1563,7 @@ func (a adminAPIHandlers) BandwidthMonitorHandler(w http.ResponseWriter, r *http
 // ----------
 // Get server information
 func (a adminAPIHandlers) ServerInfoHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ServerInfo")
+	ctx := NewContext(r, w, "ServerInfo")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 

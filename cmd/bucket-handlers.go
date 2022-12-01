@@ -178,7 +178,7 @@ func initFederatorBackend(buckets []BucketInfo, objLayer ObjectLayer) {
 // -------------------------
 // This operation returns bucket location.
 func (api ObjectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketLocation")
+	ctx := NewContext(r, w, "GetBucketLocation")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -226,7 +226,7 @@ func (api ObjectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *
 // uploads in the response.
 //
 func (api ObjectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListMultipartUploads")
+	ctx := NewContext(r, w, "ListMultipartUploads")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -281,7 +281,7 @@ func (api ObjectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, 
 // This implementation of the GET operation returns a list of all buckets
 // owned by the authenticated sender of the request.
 func (api ObjectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListBuckets")
+	ctx := NewContext(r, w, "ListBuckets")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -376,7 +376,7 @@ func (api ObjectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.R
 
 // DeleteMultipleObjectsHandler - deletes multiple objects.
 func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DeleteMultipleObjects")
+	ctx := NewContext(r, w, "DeleteMultipleObjects")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -648,7 +648,7 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 // ----------
 // This implementation of the PUT operation creates a new bucket for authenticated request
 func (api ObjectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PutBucket")
+	ctx := NewContext(r, w, "PutBucket")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -781,7 +781,7 @@ func (api ObjectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 // This implementation of the POST operation handles object creation with a specified
 // signature policy in multipart/form-data
 func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PostPolicyBucket")
+	ctx := NewContext(r, w, "PostPolicyBucket")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1086,7 +1086,7 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 // GetBucketPolicyStatusHandler -  Retrieves the policy status
 // for an MinIO bucket, indicating whether the bucket is public.
 func (api ObjectAPIHandlers) GetBucketPolicyStatusHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketPolicyStatus")
+	ctx := NewContext(r, w, "GetBucketPolicyStatus")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1148,7 +1148,7 @@ func (api ObjectAPIHandlers) GetBucketPolicyStatusHandler(w http.ResponseWriter,
 // have permission to access it. Otherwise, the operation might
 // return responses such as 404 Not Found and 403 Forbidden.
 func (api ObjectAPIHandlers) HeadBucketHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "HeadBucket")
+	ctx := NewContext(r, w, "HeadBucket")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1178,7 +1178,7 @@ func (api ObjectAPIHandlers) HeadBucketHandler(w http.ResponseWriter, r *http.Re
 
 // DeleteBucketHandler - Delete bucket
 func (api ObjectAPIHandlers) DeleteBucketHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DeleteBucket")
+	ctx := NewContext(r, w, "DeleteBucket")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1266,7 +1266,7 @@ func (api ObjectAPIHandlers) DeleteBucketHandler(w http.ResponseWriter, r *http.
 // specified in the Object Lock configuration will be applied by default
 // to every new object placed in the specified bucket.
 func (api ObjectAPIHandlers) PutBucketObjectLockConfigHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PutBucketObjectLockConfig")
+	ctx := NewContext(r, w, "PutBucketObjectLockConfig")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1322,7 +1322,7 @@ func (api ObjectAPIHandlers) PutBucketObjectLockConfigHandler(w http.ResponseWri
 // the Object Lock configuration will be applied by default to every new
 // object placed in the specified bucket.
 func (api ObjectAPIHandlers) GetBucketObjectLockConfigHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketObjectLockConfig")
+	ctx := NewContext(r, w, "GetBucketObjectLockConfig")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1360,7 +1360,7 @@ func (api ObjectAPIHandlers) GetBucketObjectLockConfigHandler(w http.ResponseWri
 // PutBucketTaggingHandler - PUT Bucket tagging.
 // ----------
 func (api ObjectAPIHandlers) PutBucketTaggingHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PutBucketTagging")
+	ctx := NewContext(r, w, "PutBucketTagging")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1404,7 +1404,7 @@ func (api ObjectAPIHandlers) PutBucketTaggingHandler(w http.ResponseWriter, r *h
 // GetBucketTaggingHandler - GET Bucket tagging.
 // ----------
 func (api ObjectAPIHandlers) GetBucketTaggingHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketTagging")
+	ctx := NewContext(r, w, "GetBucketTagging")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1442,7 +1442,7 @@ func (api ObjectAPIHandlers) GetBucketTaggingHandler(w http.ResponseWriter, r *h
 // DeleteBucketTaggingHandler - DELETE Bucket tagging.
 // ----------
 func (api ObjectAPIHandlers) DeleteBucketTaggingHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DeleteBucketTagging")
+	ctx := NewContext(r, w, "DeleteBucketTagging")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1473,7 +1473,7 @@ func (api ObjectAPIHandlers) DeleteBucketTaggingHandler(w http.ResponseWriter, r
 // ----------
 // Add a replication configuration on the specified bucket as specified in https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketReplication.html
 func (api ObjectAPIHandlers) PutBucketReplicationConfigHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PutBucketReplicationConfig")
+	ctx := NewContext(r, w, "PutBucketReplicationConfig")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
 	vars := mux.Vars(r)
@@ -1536,7 +1536,7 @@ func (api ObjectAPIHandlers) PutBucketReplicationConfigHandler(w http.ResponseWr
 // ----------
 // Gets the replication configuration for a bucket.
 func (api ObjectAPIHandlers) GetBucketReplicationConfigHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketReplicationConfig")
+	ctx := NewContext(r, w, "GetBucketReplicationConfig")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1578,7 +1578,7 @@ func (api ObjectAPIHandlers) GetBucketReplicationConfigHandler(w http.ResponseWr
 // DeleteBucketReplicationConfigHandler - DELETE Bucket replication config.
 // ----------
 func (api ObjectAPIHandlers) DeleteBucketReplicationConfigHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DeleteBucketReplicationConfig")
+	ctx := NewContext(r, w, "DeleteBucketReplicationConfig")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
@@ -1611,7 +1611,7 @@ func (api ObjectAPIHandlers) DeleteBucketReplicationConfigHandler(w http.Respons
 // ----------
 // Gets the replication metrics for a bucket.
 func (api ObjectAPIHandlers) GetBucketReplicationMetricsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketReplicationMetrics")
+	ctx := NewContext(r, w, "GetBucketReplicationMetrics")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 

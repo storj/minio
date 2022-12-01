@@ -48,7 +48,7 @@ func (s *peerRESTServer) GetLocksHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ctx := newContext(r, w, "GetLocks")
+	ctx := NewContext(r, w, "GetLocks")
 	logger.LogIf(ctx, gob.NewEncoder(w).Encode(globalLockServer.DupLockMap()))
 
 	w.(http.Flusher).Flush()
@@ -335,7 +335,7 @@ func (s *peerRESTServer) DownloadProfilingDataHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	ctx := newContext(r, w, "DownloadProfiling")
+	ctx := NewContext(r, w, "DownloadProfiling")
 	profileData, err := getProfileData()
 	if err != nil {
 		s.WriteErrorResponse(w, err)
@@ -353,7 +353,7 @@ func (s *peerRESTServer) ServerInfoHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ctx := newContext(r, w, "ServerInfo")
+	ctx := NewContext(r, w, "ServerInfo")
 	info := getLocalServerProperty(globalEndpoints, r)
 
 	defer w.(http.Flusher).Flush()
@@ -361,7 +361,7 @@ func (s *peerRESTServer) ServerInfoHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *peerRESTServer) NetInfoHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "NetInfo")
+	ctx := NewContext(r, w, "NetInfo")
 	if !s.IsValid(w, r) {
 		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
@@ -402,7 +402,7 @@ func (s *peerRESTServer) DispatchNetInfoHandler(w http.ResponseWriter, r *http.R
 
 	done := keepHTTPResponseAlive(w)
 
-	ctx := newContext(r, w, "DispatchNetInfo")
+	ctx := NewContext(r, w, "DispatchNetInfo")
 	info := globalNotificationSys.NetInfo(ctx)
 
 	done(nil)
@@ -417,7 +417,7 @@ func (s *peerRESTServer) DriveInfoHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ctx, cancel := context.WithCancel(newContext(r, w, "DriveInfo"))
+	ctx, cancel := context.WithCancel(NewContext(r, w, "DriveInfo"))
 	defer cancel()
 	infoSerial := getLocalDrives(ctx, false, globalEndpoints, r)
 	infoParallel := getLocalDrives(ctx, true, globalEndpoints, r)
@@ -606,7 +606,7 @@ func (s *peerRESTServer) CycleServerBloomFilterHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	ctx := newContext(r, w, "CycleServerBloomFilter")
+	ctx := NewContext(r, w, "CycleServerBloomFilter")
 
 	var req bloomFilterRequest
 	err := gob.NewDecoder(r.Body).Decode(&req)
@@ -628,7 +628,7 @@ func (s *peerRESTServer) GetMetacacheListingHandler(w http.ResponseWriter, r *ht
 		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
-	ctx := newContext(r, w, "GetMetacacheListing")
+	ctx := NewContext(r, w, "GetMetacacheListing")
 
 	var opts listPathOptions
 	err := gob.NewDecoder(r.Body).Decode(&opts)
@@ -645,7 +645,7 @@ func (s *peerRESTServer) UpdateMetacacheListingHandler(w http.ResponseWriter, r 
 		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
-	ctx := newContext(r, w, "UpdateMetacacheListing")
+	ctx := NewContext(r, w, "UpdateMetacacheListing")
 
 	var req metacache
 	err := msgp.Decode(r.Body, &req)
@@ -732,7 +732,7 @@ func (s *peerRESTServer) GetLocalDiskIDs(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ctx := newContext(r, w, "GetLocalDiskIDs")
+	ctx := NewContext(r, w, "GetLocalDiskIDs")
 
 	objLayer := newObjectLayerFn()
 
@@ -994,7 +994,7 @@ func (s *peerRESTServer) BackgroundHealStatusHandler(w http.ResponseWriter, r *h
 		s.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
-	ctx := newContext(r, w, "BackgroundHealStatus")
+	ctx := NewContext(r, w, "BackgroundHealStatus")
 
 	state, ok := getBackgroundHealStatus(ctx, newObjectLayerFn())
 	if !ok {

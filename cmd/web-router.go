@@ -80,7 +80,7 @@ func registerWebRouter(router *mux.Router) error {
 			if globalTrace.NumSubscribers() > 0 {
 				globalTrace.Publish(WebTrace(ri))
 			}
-			ctx := newContext(ri.Request, ri.ResponseWriter, ri.Method)
+			ctx := NewContext(ri.Request, ri.ResponseWriter, ri.Method)
 			logger.AuditLog(ctx, ri.ResponseWriter, ri.Request, claims.Map())
 		}
 	})

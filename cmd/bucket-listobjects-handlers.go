@@ -73,7 +73,7 @@ func validateListObjectsArgs(marker, delimiter, encodingType string, maxKeys int
 // You can use the versions subresource to list metadata about all
 // of the versions of objects in a bucket.
 func (api ObjectAPIHandlers) ListObjectVersionsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListObjectVersions")
+	ctx := NewContext(r, w, "ListObjectVersions")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -134,7 +134,7 @@ func (api ObjectAPIHandlers) ListObjectVersionsHandler(w http.ResponseWriter, r 
 // NOTE: It is recommended that this API to be used for application development.
 // MinIO continues to support ListObjectsV1 and V2 for supporting legacy tools.
 func (api ObjectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListObjectsV2M")
+	ctx := NewContext(r, w, "ListObjectsV2M")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -201,7 +201,7 @@ func (api ObjectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *htt
 // NOTE: It is recommended that this API to be used for application development.
 // MinIO continues to support ListObjectsV1 for supporting legacy tools.
 func (api ObjectAPIHandlers) ListObjectsV2Handler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListObjectsV2")
+	ctx := NewContext(r, w, "ListObjectsV2")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -301,7 +301,7 @@ func proxyRequestByNodeIndex(ctx context.Context, w http.ResponseWriter, r *http
 // criteria to return a subset of the objects in a bucket.
 //
 func (api ObjectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListObjectsV1")
+	ctx := NewContext(r, w, "ListObjectsV1")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 

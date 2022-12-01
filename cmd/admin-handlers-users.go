@@ -57,7 +57,7 @@ func validateAdminUsersReq(ctx context.Context, w http.ResponseWriter, r *http.R
 
 // RemoveUser - DELETE /minio/admin/v3/remove-user?accessKey=<access_key>
 func (a adminAPIHandlers) RemoveUser(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "RemoveUser")
+	ctx := NewContext(r, w, "RemoveUser")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -95,7 +95,7 @@ func (a adminAPIHandlers) RemoveUser(w http.ResponseWriter, r *http.Request) {
 
 // ListUsers - GET /minio/admin/v3/list-users
 func (a adminAPIHandlers) ListUsers(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListUsers")
+	ctx := NewContext(r, w, "ListUsers")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -129,7 +129,7 @@ func (a adminAPIHandlers) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 // GetUserInfo - GET /minio/admin/v3/user-info
 func (a adminAPIHandlers) GetUserInfo(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetUserInfo")
+	ctx := NewContext(r, w, "GetUserInfo")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -186,7 +186,7 @@ func (a adminAPIHandlers) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 
 // UpdateGroupMembers - PUT /minio/admin/v3/update-group-members
 func (a adminAPIHandlers) UpdateGroupMembers(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "UpdateGroupMembers")
+	ctx := NewContext(r, w, "UpdateGroupMembers")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -231,7 +231,7 @@ func (a adminAPIHandlers) UpdateGroupMembers(w http.ResponseWriter, r *http.Requ
 
 // GetGroup - /minio/admin/v3/group?group=mygroup1
 func (a adminAPIHandlers) GetGroup(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetGroup")
+	ctx := NewContext(r, w, "GetGroup")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -260,7 +260,7 @@ func (a adminAPIHandlers) GetGroup(w http.ResponseWriter, r *http.Request) {
 
 // ListGroups - GET /minio/admin/v3/groups
 func (a adminAPIHandlers) ListGroups(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListGroups")
+	ctx := NewContext(r, w, "ListGroups")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -286,7 +286,7 @@ func (a adminAPIHandlers) ListGroups(w http.ResponseWriter, r *http.Request) {
 
 // SetGroupStatus - PUT /minio/admin/v3/set-group-status?group=mygroup1&status=enabled
 func (a adminAPIHandlers) SetGroupStatus(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "SetGroupStatus")
+	ctx := NewContext(r, w, "SetGroupStatus")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -323,7 +323,7 @@ func (a adminAPIHandlers) SetGroupStatus(w http.ResponseWriter, r *http.Request)
 
 // SetUserStatus - PUT /minio/admin/v3/set-user-status?accessKey=<access_key>&status=[enabled|disabled]
 func (a adminAPIHandlers) SetUserStatus(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "SetUserStatus")
+	ctx := NewContext(r, w, "SetUserStatus")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -358,7 +358,7 @@ func (a adminAPIHandlers) SetUserStatus(w http.ResponseWriter, r *http.Request) 
 
 // AddUser - PUT /minio/admin/v3/add-user?accessKey=<access_key>
 func (a adminAPIHandlers) AddUser(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "AddUser")
+	ctx := NewContext(r, w, "AddUser")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -460,7 +460,7 @@ func (a adminAPIHandlers) AddUser(w http.ResponseWriter, r *http.Request) {
 
 // AddServiceAccount - PUT /minio/admin/v3/add-service-account
 func (a adminAPIHandlers) AddServiceAccount(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "AddServiceAccount")
+	ctx := NewContext(r, w, "AddServiceAccount")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -576,7 +576,7 @@ func (a adminAPIHandlers) AddServiceAccount(w http.ResponseWriter, r *http.Reque
 
 // UpdateServiceAccount - POST /minio/admin/v3/update-service-account
 func (a adminAPIHandlers) UpdateServiceAccount(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "UpdateServiceAccount")
+	ctx := NewContext(r, w, "UpdateServiceAccount")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -662,7 +662,7 @@ func (a adminAPIHandlers) UpdateServiceAccount(w http.ResponseWriter, r *http.Re
 
 // InfoServiceAccount - GET /minio/admin/v3/info-service-account
 func (a adminAPIHandlers) InfoServiceAccount(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "InfoServiceAccount")
+	ctx := NewContext(r, w, "InfoServiceAccount")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -761,7 +761,7 @@ func (a adminAPIHandlers) InfoServiceAccount(w http.ResponseWriter, r *http.Requ
 
 // ListServiceAccounts - GET /minio/admin/v3/list-service-accounts
 func (a adminAPIHandlers) ListServiceAccounts(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListServiceAccounts")
+	ctx := NewContext(r, w, "ListServiceAccounts")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -839,7 +839,7 @@ func (a adminAPIHandlers) ListServiceAccounts(w http.ResponseWriter, r *http.Req
 
 // DeleteServiceAccount - DELETE /minio/admin/v3/delete-service-account
 func (a adminAPIHandlers) DeleteServiceAccount(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DeleteServiceAccount")
+	ctx := NewContext(r, w, "DeleteServiceAccount")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -907,7 +907,7 @@ func (a adminAPIHandlers) DeleteServiceAccount(w http.ResponseWriter, r *http.Re
 
 // AccountInfoHandler returns usage
 func (a adminAPIHandlers) AccountInfoHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "AccountInfo")
+	ctx := NewContext(r, w, "AccountInfo")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1052,7 +1052,7 @@ func (a adminAPIHandlers) AccountInfoHandler(w http.ResponseWriter, r *http.Requ
 
 // InfoCannedPolicyV2 - GET /minio/admin/v2/info-canned-policy?name={policyName}
 func (a adminAPIHandlers) InfoCannedPolicyV2(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "InfoCannedPolicyV2")
+	ctx := NewContext(r, w, "InfoCannedPolicyV2")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1079,7 +1079,7 @@ func (a adminAPIHandlers) InfoCannedPolicyV2(w http.ResponseWriter, r *http.Requ
 
 // InfoCannedPolicy - GET /minio/admin/v3/info-canned-policy?name={policyName}
 func (a adminAPIHandlers) InfoCannedPolicy(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "InfoCannedPolicy")
+	ctx := NewContext(r, w, "InfoCannedPolicy")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1103,7 +1103,7 @@ func (a adminAPIHandlers) InfoCannedPolicy(w http.ResponseWriter, r *http.Reques
 
 // ListCannedPoliciesV2 - GET /minio/admin/v2/list-canned-policies
 func (a adminAPIHandlers) ListCannedPoliciesV2(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListCannedPoliciesV2")
+	ctx := NewContext(r, w, "ListCannedPoliciesV2")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1137,7 +1137,7 @@ func (a adminAPIHandlers) ListCannedPoliciesV2(w http.ResponseWriter, r *http.Re
 
 // ListCannedPolicies - GET /minio/admin/v3/list-canned-policies
 func (a adminAPIHandlers) ListCannedPolicies(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListCannedPolicies")
+	ctx := NewContext(r, w, "ListCannedPolicies")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1171,7 +1171,7 @@ func (a adminAPIHandlers) ListCannedPolicies(w http.ResponseWriter, r *http.Requ
 
 // RemoveCannedPolicy - DELETE /minio/admin/v3/remove-canned-policy?name=<policy_name>
 func (a adminAPIHandlers) RemoveCannedPolicy(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "RemoveCannedPolicy")
+	ctx := NewContext(r, w, "RemoveCannedPolicy")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1199,7 +1199,7 @@ func (a adminAPIHandlers) RemoveCannedPolicy(w http.ResponseWriter, r *http.Requ
 
 // AddCannedPolicy - PUT /minio/admin/v3/add-canned-policy?name=<policy_name>
 func (a adminAPIHandlers) AddCannedPolicy(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "AddCannedPolicy")
+	ctx := NewContext(r, w, "AddCannedPolicy")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1251,7 +1251,7 @@ func (a adminAPIHandlers) AddCannedPolicy(w http.ResponseWriter, r *http.Request
 
 // SetPolicyForUserOrGroup - PUT /minio/admin/v3/set-policy?policy=xxx&user-or-group=?[&is-group]
 func (a adminAPIHandlers) SetPolicyForUserOrGroup(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "SetPolicyForUserOrGroup")
+	ctx := NewContext(r, w, "SetPolicyForUserOrGroup")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 

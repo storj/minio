@@ -148,7 +148,7 @@ func checkAssumeRoleAuth(ctx context.Context, r *http.Request) (user auth.Creden
 // credentials for regular users on Minio.
 // https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
 func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "AssumeRole")
+	ctx := NewContext(r, w, "AssumeRole")
 
 	user, isErrCodeSTS, stsErr := checkAssumeRoleAuth(ctx, r)
 	if stsErr != ErrSTSNone {
@@ -173,7 +173,7 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx = newContext(r, w, action)
+	ctx = NewContext(r, w, action)
 	defer logger.AuditLog(ctx, w, r, nil)
 
 	sessionPolicyStr := r.Form.Get(stsPolicy)
@@ -260,7 +260,7 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "AssumeRoleSSOCommon")
+	ctx := NewContext(r, w, "AssumeRoleSSOCommon")
 
 	// Parse the incoming form data.
 	if err := r.ParseForm(); err != nil {
@@ -284,7 +284,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ctx = newContext(r, w, action)
+	ctx = NewContext(r, w, action)
 	defer logger.AuditLog(ctx, w, r, nil)
 
 	if globalOpenIDValidators == nil {
@@ -436,7 +436,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithClientGrants(w http.ResponseWriter, r *
 
 // AssumeRoleWithLDAPIdentity - implements user auth against LDAP server
 func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "AssumeRoleWithLDAPIdentity")
+	ctx := NewContext(r, w, "AssumeRoleWithLDAPIdentity")
 
 	defer logger.AuditLog(ctx, w, r, nil, stsLDAPPassword)
 

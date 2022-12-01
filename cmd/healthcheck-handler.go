@@ -28,7 +28,7 @@ const unavailable = "offline"
 
 // ClusterCheckHandler returns if the server is ready for requests.
 func ClusterCheckHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ClusterCheckHandler")
+	ctx := NewContext(r, w, "ClusterCheckHandler")
 
 	if shouldProxy() {
 		w.Header().Set(xhttp.MinIOServerStatus, unavailable)
@@ -66,7 +66,7 @@ func ClusterCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 // ClusterReadCheckHandler returns if the server is ready for requests.
 func ClusterReadCheckHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ClusterReadCheckHandler")
+	ctx := NewContext(r, w, "ClusterReadCheckHandler")
 
 	if shouldProxy() {
 		w.Header().Set(xhttp.MinIOServerStatus, unavailable)

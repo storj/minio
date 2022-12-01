@@ -40,7 +40,7 @@ const (
 // specified in the quota configuration will be applied by default
 // to enforce total quota for the specified bucket.
 func (a adminAPIHandlers) PutBucketQuotaConfigHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PutBucketQuotaConfig")
+	ctx := NewContext(r, w, "PutBucketQuotaConfig")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -80,7 +80,7 @@ func (a adminAPIHandlers) PutBucketQuotaConfigHandler(w http.ResponseWriter, r *
 
 // GetBucketQuotaConfigHandler - gets bucket quota configuration
 func (a adminAPIHandlers) GetBucketQuotaConfigHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketQuotaConfig")
+	ctx := NewContext(r, w, "GetBucketQuotaConfig")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -116,7 +116,7 @@ func (a adminAPIHandlers) GetBucketQuotaConfigHandler(w http.ResponseWriter, r *
 
 // SetRemoteTargetHandler - sets a remote target for bucket
 func (a adminAPIHandlers) SetRemoteTargetHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "SetBucketTarget")
+	ctx := NewContext(r, w, "SetBucketTarget")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 	vars := mux.Vars(r)
@@ -209,7 +209,7 @@ func (a adminAPIHandlers) SetRemoteTargetHandler(w http.ResponseWriter, r *http.
 // ListRemoteTargetsHandler - lists remote target(s) for a bucket or gets a target
 // for a particular ARN type
 func (a adminAPIHandlers) ListRemoteTargetsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListBucketTargets")
+	ctx := NewContext(r, w, "ListBucketTargets")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 	vars := mux.Vars(r)
@@ -248,7 +248,7 @@ func (a adminAPIHandlers) ListRemoteTargetsHandler(w http.ResponseWriter, r *htt
 
 // RemoveRemoteTargetHandler - removes a remote target for bucket with specified ARN
 func (a adminAPIHandlers) RemoveRemoteTargetHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "RemoveBucketTarget")
+	ctx := NewContext(r, w, "RemoveBucketTarget")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 	vars := mux.Vars(r)

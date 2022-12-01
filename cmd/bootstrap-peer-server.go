@@ -98,7 +98,7 @@ func getServerSystemCfg() ServerSystemConfig {
 func (b *bootstrapRESTServer) HealthHandler(w http.ResponseWriter, r *http.Request) {}
 
 func (b *bootstrapRESTServer) VerifyHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "VerifyHandler")
+	ctx := NewContext(r, w, "VerifyHandler")
 	cfg := getServerSystemCfg()
 	logger.LogIf(ctx, json.NewEncoder(w).Encode(&cfg))
 	w.(http.Flusher).Flush()

@@ -29,7 +29,7 @@ import (
 )
 
 func (api ObjectAPIHandlers) ListenNotificationHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "ListenNotification")
+	ctx := NewContext(r, w, "ListenNotification")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 

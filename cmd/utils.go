@@ -771,7 +771,7 @@ func likelyUnescapeGeneric(p string, escapeFn func(string) (string, error)) stri
 }
 
 // Returns context with ReqInfo details set in the context.
-func newContext(r *http.Request, w http.ResponseWriter, api string) context.Context {
+func NewContext(r *http.Request, w http.ResponseWriter, api string) context.Context {
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 	object := likelyUnescapeGeneric(vars["object"], url.PathUnescape)

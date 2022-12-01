@@ -37,7 +37,7 @@ const (
 // PutBucketLifecycleHandler - This HTTP handler stores given bucket lifecycle configuration as per
 // https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lifecycle-mgmt.html
 func (api ObjectAPIHandlers) PutBucketLifecycleHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PutBucketLifecycle")
+	ctx := NewContext(r, w, "PutBucketLifecycle")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -102,7 +102,7 @@ func (api ObjectAPIHandlers) PutBucketLifecycleHandler(w http.ResponseWriter, r 
 
 // GetBucketLifecycleHandler - This HTTP handler returns bucket policy configuration.
 func (api ObjectAPIHandlers) GetBucketLifecycleHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketLifecycle")
+	ctx := NewContext(r, w, "GetBucketLifecycle")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -144,7 +144,7 @@ func (api ObjectAPIHandlers) GetBucketLifecycleHandler(w http.ResponseWriter, r 
 
 // DeleteBucketLifecycleHandler - This HTTP handler removes bucket lifecycle configuration.
 func (api ObjectAPIHandlers) DeleteBucketLifecycleHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DeleteBucketLifecycle")
+	ctx := NewContext(r, w, "DeleteBucketLifecycle")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 

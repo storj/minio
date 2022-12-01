@@ -1106,7 +1106,7 @@ func (web *webAPIHandlers) CreateURLToken(r *http.Request, args *WebGenericArgs,
 
 // Upload - file upload handler.
 func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "WebUpload")
+	ctx := NewContext(r, w, "WebUpload")
 
 	// obtain the claims here if possible, for audit logging.
 	claims, owner, authErr := webRequestAuthenticate(r)
@@ -1356,7 +1356,7 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 
 // Download - file download handler.
 func (web *webAPIHandlers) Download(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "WebDownload")
+	ctx := NewContext(r, w, "WebDownload")
 
 	claims, owner, authErr := webTokenAuthenticate(r.URL.Query().Get("token"))
 	defer logger.AuditLog(ctx, w, r, claims.Map())
@@ -1558,7 +1558,7 @@ func (web *webAPIHandlers) DownloadZip(w http.ResponseWriter, r *http.Request) {
 
 	claims, owner, authErr := webTokenAuthenticate(r.URL.Query().Get("token"))
 
-	ctx := newContext(r, w, "WebDownloadZip")
+	ctx := NewContext(r, w, "WebDownloadZip")
 	defer logger.AuditLog(ctx, w, r, claims.Map())
 
 	objectAPI := web.ObjectAPI()

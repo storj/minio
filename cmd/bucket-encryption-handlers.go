@@ -36,7 +36,7 @@ const (
 // PutBucketEncryptionHandler - Stores given bucket encryption configuration
 // https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketEncryption.html
 func (api ObjectAPIHandlers) PutBucketEncryptionHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "PutBucketEncryption")
+	ctx := NewContext(r, w, "PutBucketEncryption")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -101,7 +101,7 @@ func (api ObjectAPIHandlers) PutBucketEncryptionHandler(w http.ResponseWriter, r
 // GetBucketEncryptionHandler - Returns bucket policy configuration
 // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketEncryption.html
 func (api ObjectAPIHandlers) GetBucketEncryptionHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "GetBucketEncryption")
+	ctx := NewContext(r, w, "GetBucketEncryption")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -144,7 +144,7 @@ func (api ObjectAPIHandlers) GetBucketEncryptionHandler(w http.ResponseWriter, r
 
 // DeleteBucketEncryptionHandler - Removes bucket encryption configuration
 func (api ObjectAPIHandlers) DeleteBucketEncryptionHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := newContext(r, w, "DeleteBucketEncryption")
+	ctx := NewContext(r, w, "DeleteBucketEncryption")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
