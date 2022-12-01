@@ -2037,10 +2037,10 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 
 var noError = APIError{}
 
-// toAPIError - Converts embedded errors. Convenience
+// ToAPIError - Converts embedded errors. Convenience
 // function written to handle all cases where we have known types of
 // errors returned by underlying layers.
-func toAPIError(ctx context.Context, err error) APIError {
+func ToAPIError(ctx context.Context, err error) APIError {
 	if err == nil {
 		return noError
 	}

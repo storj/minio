@@ -82,7 +82,7 @@ func (api ObjectAPIHandlers) PutBucketACLHandler(w http.ResponseWriter, r *http.
 	// Before proceeding validate if bucket exists.
 	_, err := objAPI.GetBucketInfo(ctx, bucket)
 	if err != nil {
-		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -95,23 +95,23 @@ func (api ObjectAPIHandlers) PutBucketACLHandler(w http.ResponseWriter, r *http.
 					r.URL, guessIsBrowserReq(r))
 				return
 			}
-			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
 
 		if len(acl.AccessControlList.Grants) == 0 {
-			writeErrorResponse(ctx, w, toAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
 			return
 		}
 
 		if acl.AccessControlList.Grants[0].Permission != "FULL_CONTROL" {
-			writeErrorResponse(ctx, w, toAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
 			return
 		}
 	}
 
 	if aclHeader != "" && aclHeader != "private" {
-		writeErrorResponse(ctx, w, toAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -146,7 +146,7 @@ func (api ObjectAPIHandlers) GetBucketACLHandler(w http.ResponseWriter, r *http.
 	// Before proceeding validate if bucket exists.
 	_, err := objAPI.GetBucketInfo(ctx, bucket)
 	if err != nil {
-		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -161,7 +161,7 @@ func (api ObjectAPIHandlers) GetBucketACLHandler(w http.ResponseWriter, r *http.
 	})
 
 	if err := xml.NewEncoder(w).Encode(acl); err != nil {
-		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -182,7 +182,7 @@ func (api ObjectAPIHandlers) PutObjectACLHandler(w http.ResponseWriter, r *http.
 	bucket := vars["bucket"]
 	object, err := unescapePath(vars["object"])
 	if err != nil {
-		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -202,7 +202,7 @@ func (api ObjectAPIHandlers) PutObjectACLHandler(w http.ResponseWriter, r *http.
 	// Before proceeding validate if object exists.
 	_, err = objAPI.GetObjectInfo(ctx, bucket, object, ObjectOptions{})
 	if err != nil {
-		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -210,23 +210,23 @@ func (api ObjectAPIHandlers) PutObjectACLHandler(w http.ResponseWriter, r *http.
 	if aclHeader == "" {
 		acl := &accessControlPolicy{}
 		if err = xmlDecoder(r.Body, acl, r.ContentLength); err != nil {
-			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
 
 		if len(acl.AccessControlList.Grants) == 0 {
-			writeErrorResponse(ctx, w, toAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
 			return
 		}
 
 		if acl.AccessControlList.Grants[0].Permission != "FULL_CONTROL" {
-			writeErrorResponse(ctx, w, toAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
 			return
 		}
 	}
 
 	if aclHeader != "" && aclHeader != "private" {
-		writeErrorResponse(ctx, w, toAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, NotImplemented{}), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -246,7 +246,7 @@ func (api ObjectAPIHandlers) GetObjectACLHandler(w http.ResponseWriter, r *http.
 	bucket := vars["bucket"]
 	object, err := unescapePath(vars["object"])
 	if err != nil {
-		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -266,7 +266,7 @@ func (api ObjectAPIHandlers) GetObjectACLHandler(w http.ResponseWriter, r *http.
 	// Before proceeding validate if object exists.
 	_, err = objAPI.GetObjectInfo(ctx, bucket, object, ObjectOptions{})
 	if err != nil {
-		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -280,7 +280,7 @@ func (api ObjectAPIHandlers) GetObjectACLHandler(w http.ResponseWriter, r *http.
 		Permission: "FULL_CONTROL",
 	})
 	if err := xml.NewEncoder(w).Encode(acl); err != nil {
-		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 

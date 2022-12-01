@@ -487,7 +487,7 @@ func setBucketForwardingHandler(h http.Handler) http.Handler {
 					writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrNoSuchBucket),
 						r.URL, guessIsBrowserReq(r))
 				} else {
-					writeErrorResponse(r.Context(), w, toAPIError(r.Context(), err),
+					writeErrorResponse(r.Context(), w, ToAPIError(r.Context(), err),
 						r.URL, guessIsBrowserReq(r))
 				}
 				return
@@ -543,7 +543,7 @@ func setBucketForwardingHandler(h http.Handler) http.Handler {
 			if err == dns.ErrNoEntriesFound {
 				writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrNoSuchBucket), r.URL, guessIsBrowserReq(r))
 			} else {
-				writeErrorResponse(r.Context(), w, toAPIError(r.Context(), err), r.URL, guessIsBrowserReq(r))
+				writeErrorResponse(r.Context(), w, ToAPIError(r.Context(), err), r.URL, guessIsBrowserReq(r))
 			}
 			return
 		}

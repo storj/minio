@@ -75,7 +75,7 @@ func (api ObjectAPIHandlers) ListenNotificationHandler(w http.ResponseWriter, r 
 
 	if len(values[peerRESTListenPrefix]) == 1 {
 		if err := event.ValidateFilterRuleValue(values[peerRESTListenPrefix][0]); err != nil {
-			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
 
@@ -90,7 +90,7 @@ func (api ObjectAPIHandlers) ListenNotificationHandler(w http.ResponseWriter, r 
 
 	if len(values[peerRESTListenSuffix]) == 1 {
 		if err := event.ValidateFilterRuleValue(values[peerRESTListenSuffix][0]); err != nil {
-			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
 
@@ -103,7 +103,7 @@ func (api ObjectAPIHandlers) ListenNotificationHandler(w http.ResponseWriter, r 
 	for _, s := range values[peerRESTListenEvents] {
 		eventName, err := event.ParseName(s)
 		if err != nil {
-			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
 
@@ -112,7 +112,7 @@ func (api ObjectAPIHandlers) ListenNotificationHandler(w http.ResponseWriter, r 
 
 	if bucketName != "" {
 		if _, err := objAPI.GetBucketInfo(ctx, bucketName); err != nil {
-			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
 	}

@@ -1544,7 +1544,7 @@ func (a adminAPIHandlers) BandwidthMonitorHandler(w http.ResponseWriter, r *http
 				return
 			}
 			if err := json.NewEncoder(w).Encode(report); err != nil {
-				writeErrorResponseJSON(ctx, w, toAPIError(ctx, err), r.URL)
+				writeErrorResponseJSON(ctx, w, ToAPIError(ctx, err), r.URL)
 				return
 			}
 			w.(http.Flusher).Flush()
