@@ -223,6 +223,6 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 	}
 
 	// If none of the routes match add default error handler routes
-	adminRouter.NotFoundHandler = HTTPTraceAll(errorResponseHandler)
+	adminRouter.NotFoundHandler = HTTPTraceAll(ErrorResponseHandler)
 	adminRouter.MethodNotAllowedHandler = HTTPTraceAll(methodNotAllowedHandler("Admin"))
 }

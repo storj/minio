@@ -491,7 +491,7 @@ func methodNotAllowedHandler(api string) func(w http.ResponseWriter, r *http.Req
 }
 
 // If none of the http routes match respond with appropriate errors
-func errorResponseHandler(w http.ResponseWriter, r *http.Request) {
+func ErrorResponseHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		return
 	}
