@@ -1695,7 +1695,7 @@ func ExecObjectLayerAPIAnonTest(t *testing.T, obj ObjectLayer, testName, bucketN
 	apiRouter.ServeHTTP(rec, anonReq)
 
 	// expected error response when the unsigned HTTP request is not permitted.
-	accessDenied := getAPIError(ErrAccessDenied).HTTPStatusCode
+	accessDenied := GetAPIError(ErrAccessDenied).HTTPStatusCode
 	if rec.Code != accessDenied {
 		t.Fatal(failTestStr(anonTestStr, fmt.Sprintf("Object API Nil Test expected to fail with %d, but failed with %d", accessDenied, rec.Code)))
 	}
@@ -1754,7 +1754,7 @@ func ExecObjectLayerAPIAnonTest(t *testing.T, obj ObjectLayer, testName, bucketN
 	}
 
 	// expected error response when the unsigned HTTP request is not permitted.
-	unsupportedSignature := getAPIError(ErrSignatureVersionNotSupported).HTTPStatusCode
+	unsupportedSignature := GetAPIError(ErrSignatureVersionNotSupported).HTTPStatusCode
 	if rec.Code != unsupportedSignature {
 		t.Fatal(failTestStr(unknownSignTestStr, fmt.Sprintf("Object API Unknow auth test for \"%s\", expected to fail with %d, but failed with %d", testName, unsupportedSignature, rec.Code)))
 	}
@@ -1782,7 +1782,7 @@ func ExecObjectLayerAPINilTest(t TestErrHandler, bucketName, objectName, instanc
 
 	// expected error response when the API handler is called before the object layer is initialized,
 	// or when objectLayer is `nil`.
-	serverNotInitializedErr := getAPIError(ErrServerNotInitialized).HTTPStatusCode
+	serverNotInitializedErr := GetAPIError(ErrServerNotInitialized).HTTPStatusCode
 	if rec.Code != serverNotInitializedErr {
 		t.Errorf("Object API Nil Test expected to fail with %d, but failed with %d", serverNotInitializedErr, rec.Code)
 	}

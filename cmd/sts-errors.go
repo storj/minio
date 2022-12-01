@@ -32,7 +32,7 @@ func writeSTSErrorResponse(ctx context.Context, w http.ResponseWriter, isErrCode
 		err = stsErrCodes.ToSTSErr(errCode)
 	}
 	if err.Code == "InternalError" || !isErrCodeSTS {
-		aerr := getAPIError(APIErrorCode(errCode))
+		aerr := GetAPIError(APIErrorCode(errCode))
 		if aerr.Code != "InternalError" {
 			err.Code = aerr.Code
 			err.Description = aerr.Description

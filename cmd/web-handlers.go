@@ -2384,43 +2384,43 @@ func toWebAPIError(ctx context.Context, err error) APIError {
 			Description:    err.Error(),
 		}
 	case errEncryptedObject:
-		return getAPIError(ErrSSEEncryptedObject)
+		return GetAPIError(ErrSSEEncryptedObject)
 	case errInvalidEncryptionParameters:
-		return getAPIError(ErrInvalidEncryptionParameters)
+		return GetAPIError(ErrInvalidEncryptionParameters)
 	case errObjectTampered:
-		return getAPIError(ErrObjectTampered)
+		return GetAPIError(ErrObjectTampered)
 	case errMethodNotAllowed:
-		return getAPIError(ErrMethodNotAllowed)
+		return GetAPIError(ErrMethodNotAllowed)
 	}
 
 	// Convert error type to api error code.
 	switch err.(type) {
 	case StorageFull:
-		return getAPIError(ErrStorageFull)
+		return GetAPIError(ErrStorageFull)
 	case BucketQuotaExceeded:
-		return getAPIError(ErrAdminBucketQuotaExceeded)
+		return GetAPIError(ErrAdminBucketQuotaExceeded)
 	case BucketNotFound:
-		return getAPIError(ErrNoSuchBucket)
+		return GetAPIError(ErrNoSuchBucket)
 	case BucketNotEmpty:
-		return getAPIError(ErrBucketNotEmpty)
+		return GetAPIError(ErrBucketNotEmpty)
 	case BucketExists:
-		return getAPIError(ErrBucketAlreadyOwnedByYou)
+		return GetAPIError(ErrBucketAlreadyOwnedByYou)
 	case BucketNameInvalid:
-		return getAPIError(ErrInvalidBucketName)
+		return GetAPIError(ErrInvalidBucketName)
 	case hash.BadDigest:
-		return getAPIError(ErrBadDigest)
+		return GetAPIError(ErrBadDigest)
 	case IncompleteBody:
-		return getAPIError(ErrIncompleteBody)
+		return GetAPIError(ErrIncompleteBody)
 	case ObjectExistsAsDirectory:
-		return getAPIError(ErrObjectExistsAsDirectory)
+		return GetAPIError(ErrObjectExistsAsDirectory)
 	case ObjectNotFound:
-		return getAPIError(ErrNoSuchKey)
+		return GetAPIError(ErrNoSuchKey)
 	case ObjectNameInvalid:
-		return getAPIError(ErrNoSuchKey)
+		return GetAPIError(ErrNoSuchKey)
 	case InsufficientWriteQuorum:
-		return getAPIError(ErrWriteQuorum)
+		return GetAPIError(ErrWriteQuorum)
 	case InsufficientReadQuorum:
-		return getAPIError(ErrReadQuorum)
+		return GetAPIError(ErrReadQuorum)
 	case NotImplemented:
 		return APIError{
 			Code:           "NotImplemented",

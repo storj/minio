@@ -141,7 +141,7 @@ func validateAdminSignature(ctx context.Context, r *http.Request, region string)
 	if s3Err != ErrNone {
 		reqInfo := (&logger.ReqInfo{}).AppendTags("requestHeaders", dumpRequest(r))
 		ctx := logger.SetReqInfo(ctx, reqInfo)
-		logger.LogIf(ctx, errors.New(getAPIError(s3Err).Description), logger.Application)
+		logger.LogIf(ctx, errors.New(GetAPIError(s3Err).Description), logger.Application)
 		return cred, nil, owner, s3Err
 	}
 

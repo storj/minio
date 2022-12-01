@@ -400,7 +400,7 @@ func testAPIGetObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			secretKey:  credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrNoSuchKey),
+				GetAPIError(ErrNoSuchKey),
 				getGetObjectURL("", bucketName, "abcd"), "", "")),
 			expectedRespStatus: http.StatusNotFound,
 		},
@@ -426,7 +426,7 @@ func testAPIGetObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			secretKey:  credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrInvalidRange),
+				GetAPIError(ErrInvalidRange),
 				getGetObjectURL("", bucketName, objectName), "", "")),
 			expectedRespStatus: http.StatusRequestedRangeNotSatisfiable,
 		},
@@ -454,7 +454,7 @@ func testAPIGetObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			secretKey:  credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrInvalidAccessKeyID),
+				GetAPIError(ErrInvalidAccessKeyID),
 				getGetObjectURL("", bucketName, objectName), "", "")),
 			expectedRespStatus: http.StatusForbidden,
 		},
@@ -468,7 +468,7 @@ func testAPIGetObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			secretKey:  credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrInvalidObjectName),
+				GetAPIError(ErrInvalidObjectName),
 				getGetObjectURL("", bucketName, "../../etc"), "", "")),
 			expectedRespStatus: http.StatusBadRequest,
 		},
@@ -482,7 +482,7 @@ func testAPIGetObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			secretKey:  credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrNoSuchKey),
+				GetAPIError(ErrNoSuchKey),
 				SlashSeparator+bucketName+SlashSeparator+". ./. ./etc", "", "")),
 			expectedRespStatus: http.StatusNotFound,
 		},
@@ -496,7 +496,7 @@ func testAPIGetObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			secretKey:  credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrInvalidObjectName),
+				GetAPIError(ErrInvalidObjectName),
 				SlashSeparator+bucketName+SlashSeparator+". ./../etc", "", "")),
 			expectedRespStatus: http.StatusBadRequest,
 		},
@@ -510,7 +510,7 @@ func testAPIGetObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			secretKey:  credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrNoSuchKey),
+				GetAPIError(ErrNoSuchKey),
 				getGetObjectURL("", bucketName, "etc/path/proper/.../etc"),
 				"", "")),
 			expectedRespStatus: http.StatusNotFound,
@@ -2833,7 +2833,7 @@ func testAPICompleteMultipartHandler(obj ObjectLayer, instanceType, bucketName s
 			secretKey: credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrMalformedXML),
+				GetAPIError(ErrMalformedXML),
 				getGetObjectURL("", bucketName, objectName), "", "")),
 			expectedRespStatus: http.StatusBadRequest,
 		},
@@ -2895,7 +2895,7 @@ func testAPICompleteMultipartHandler(obj ObjectLayer, instanceType, bucketName s
 			secretKey: credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrInvalidPartOrder),
+				GetAPIError(ErrInvalidPartOrder),
 				getGetObjectURL("", bucketName, objectName), "", "")),
 			expectedRespStatus: http.StatusBadRequest,
 		},
@@ -2911,7 +2911,7 @@ func testAPICompleteMultipartHandler(obj ObjectLayer, instanceType, bucketName s
 			secretKey: credentials.SecretKey,
 
 			expectedContent: encodeResponse(getAPIErrorResponse(ctx,
-				getAPIError(ErrInvalidAccessKeyID),
+				GetAPIError(ErrInvalidAccessKeyID),
 				getGetObjectURL("", bucketName, objectName), "", "")),
 			expectedRespStatus: http.StatusForbidden,
 		},
@@ -3387,8 +3387,8 @@ func testAPIPutObjectPartHandlerStreaming(obj ObjectLayer, instanceType, bucketN
 	}
 
 	noAPIErr := APIError{}
-	missingDateHeaderErr := getAPIError(ErrMissingDateHeader)
-	internalErr := getAPIError(ErrInternalError)
+	missingDateHeaderErr := GetAPIError(ErrMissingDateHeader)
+	internalErr := GetAPIError(ErrInternalError)
 	testCases := []struct {
 		fault       Fault
 		expectedErr APIError
@@ -3470,21 +3470,21 @@ func testAPIPutObjectPartHandler(obj ObjectLayer, instanceType, bucketName strin
 	// expected error types for invalid inputs to PutObjectPartHandler.
 	noAPIErr := APIError{}
 	// expected error when content length is missing in the HTTP request.
-	missingContent := getAPIError(ErrMissingContentLength)
+	missingContent := GetAPIError(ErrMissingContentLength)
 	// expected error when content length is too large.
-	entityTooLarge := getAPIError(ErrEntityTooLarge)
+	entityTooLarge := GetAPIError(ErrEntityTooLarge)
 	// expected error when the signature check fails.
-	badSigning := getAPIError(ErrSignatureDoesNotMatch)
+	badSigning := GetAPIError(ErrSignatureDoesNotMatch)
 	// expected error MD5 sum mismatch occurs.
-	badChecksum := getAPIError(ErrInvalidDigest)
+	badChecksum := GetAPIError(ErrInvalidDigest)
 	// expected error when the part number in the request is invalid.
-	invalidPart := getAPIError(ErrInvalidPart)
+	invalidPart := GetAPIError(ErrInvalidPart)
 	// expected error when maxPart is beyond the limit.
-	invalidMaxParts := getAPIError(ErrInvalidMaxParts)
+	invalidMaxParts := GetAPIError(ErrInvalidMaxParts)
 	// expected error the when the uploadID is invalid.
-	noSuchUploadID := getAPIError(ErrNoSuchUpload)
+	noSuchUploadID := GetAPIError(ErrNoSuchUpload)
 	// expected error when InvalidAccessID is set.
-	invalidAccessID := getAPIError(ErrInvalidAccessKeyID)
+	invalidAccessID := GetAPIError(ErrInvalidAccessKeyID)
 
 	// SignatureMismatch for various signing types
 	testCases := []struct {
@@ -3879,13 +3879,13 @@ func testAPIListObjectPartsHandler(obj ObjectLayer, instanceType, bucketName str
 	// expected error types for invalid inputs to ListObjectParts handler.
 	noAPIErr := APIError{}
 	// expected error when the signature check fails.
-	signatureMismatchErr := getAPIError(ErrSignatureDoesNotMatch)
+	signatureMismatchErr := GetAPIError(ErrSignatureDoesNotMatch)
 	// expected error the when the uploadID is invalid.
-	noSuchUploadErr := getAPIError(ErrNoSuchUpload)
+	noSuchUploadErr := GetAPIError(ErrNoSuchUpload)
 	// expected error the part number marker use in the ListObjectParts request is invalid.
-	invalidPartMarkerErr := getAPIError(ErrInvalidPartNumberMarker)
+	invalidPartMarkerErr := GetAPIError(ErrInvalidPartNumberMarker)
 	// expected error when the maximum number of parts requested to listed in invalid.
-	invalidMaxPartsErr := getAPIError(ErrInvalidMaxParts)
+	invalidMaxPartsErr := GetAPIError(ErrInvalidMaxParts)
 
 	testCases := []struct {
 		fault            Fault

@@ -2174,8 +2174,8 @@ func toAPIError(ctx context.Context, err error) APIError {
 	return apiErr
 }
 
-// getAPIError provides API Error for input API error code.
-func getAPIError(code APIErrorCode) APIError {
+// GetAPIError provides API Error for input API error code.
+func GetAPIError(code APIErrorCode) APIError {
 	if apiErr, ok := errorCodes[code]; ok {
 		return apiErr
 	}

@@ -112,7 +112,7 @@ func TestWriteWebErrorResponse(t *testing.T) {
 	// Validate all the test cases.
 	for i, testCase := range testCases {
 		writeWebErrorResponse(newFlushWriter(&buffer), testCase.webErr)
-		desc := getAPIError(testCase.apiErrCode).Description
+		desc := GetAPIError(testCase.apiErrCode).Description
 		if testCase.apiErrCode == ErrNotImplemented {
 			desc = "Functionality not implemented"
 		}
