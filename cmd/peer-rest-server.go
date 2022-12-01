@@ -44,7 +44,7 @@ type peerRESTServer struct{}
 // GetLocksHandler - returns list of older lock from the server.
 func (s *peerRESTServer) GetLocksHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -58,25 +58,25 @@ func (s *peerRESTServer) GetLocksHandler(w http.ResponseWriter, r *http.Request)
 // DeletePolicyHandler - deletes a policy on the server.
 func (s *peerRESTServer) DeletePolicyHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	vars := mux.Vars(r)
 	policyName := vars[peerRESTPolicy]
 	if policyName == "" {
-		s.writeErrorResponse(w, errors.New("policyName is missing"))
+		s.WriteErrorResponse(w, errors.New("policyName is missing"))
 		return
 	}
 
 	if err := globalIAMSys.DeletePolicy(policyName); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -86,25 +86,25 @@ func (s *peerRESTServer) DeletePolicyHandler(w http.ResponseWriter, r *http.Requ
 // LoadPolicyHandler - reloads a policy on the server.
 func (s *peerRESTServer) LoadPolicyHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	vars := mux.Vars(r)
 	policyName := vars[peerRESTPolicy]
 	if policyName == "" {
-		s.writeErrorResponse(w, errors.New("policyName is missing"))
+		s.WriteErrorResponse(w, errors.New("policyName is missing"))
 		return
 	}
 
 	if err := globalIAMSys.LoadPolicy(objAPI, policyName); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -114,26 +114,26 @@ func (s *peerRESTServer) LoadPolicyHandler(w http.ResponseWriter, r *http.Reques
 // LoadPolicyMappingHandler - reloads a policy mapping on the server.
 func (s *peerRESTServer) LoadPolicyMappingHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	vars := mux.Vars(r)
 	userOrGroup := vars[peerRESTUserOrGroup]
 	if userOrGroup == "" {
-		s.writeErrorResponse(w, errors.New("user-or-group is missing"))
+		s.WriteErrorResponse(w, errors.New("user-or-group is missing"))
 		return
 	}
 	_, isGroup := vars[peerRESTIsGroup]
 
 	if err := globalIAMSys.LoadPolicyMapping(objAPI, userOrGroup, isGroup); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -143,25 +143,25 @@ func (s *peerRESTServer) LoadPolicyMappingHandler(w http.ResponseWriter, r *http
 // DeleteServiceAccountHandler - deletes a service account on the server.
 func (s *peerRESTServer) DeleteServiceAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	vars := mux.Vars(r)
 	accessKey := vars[peerRESTUser]
 	if accessKey == "" {
-		s.writeErrorResponse(w, errors.New("service account name is missing"))
+		s.WriteErrorResponse(w, errors.New("service account name is missing"))
 		return
 	}
 
 	if err := globalIAMSys.DeleteServiceAccount(r.Context(), accessKey); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -171,25 +171,25 @@ func (s *peerRESTServer) DeleteServiceAccountHandler(w http.ResponseWriter, r *h
 // LoadServiceAccountHandler - reloads a service account on the server.
 func (s *peerRESTServer) LoadServiceAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	vars := mux.Vars(r)
 	accessKey := vars[peerRESTUser]
 	if accessKey == "" {
-		s.writeErrorResponse(w, errors.New("service account parameter is missing"))
+		s.WriteErrorResponse(w, errors.New("service account parameter is missing"))
 		return
 	}
 
 	if err := globalIAMSys.LoadServiceAccount(accessKey); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -199,25 +199,25 @@ func (s *peerRESTServer) LoadServiceAccountHandler(w http.ResponseWriter, r *htt
 // DeleteUserHandler - deletes a user on the server.
 func (s *peerRESTServer) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	vars := mux.Vars(r)
 	accessKey := vars[peerRESTUser]
 	if accessKey == "" {
-		s.writeErrorResponse(w, errors.New("username is missing"))
+		s.WriteErrorResponse(w, errors.New("username is missing"))
 		return
 	}
 
 	if err := globalIAMSys.DeleteUser(accessKey); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -227,26 +227,26 @@ func (s *peerRESTServer) DeleteUserHandler(w http.ResponseWriter, r *http.Reques
 // LoadUserHandler - reloads a user on the server.
 func (s *peerRESTServer) LoadUserHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	vars := mux.Vars(r)
 	accessKey := vars[peerRESTUser]
 	if accessKey == "" {
-		s.writeErrorResponse(w, errors.New("username is missing"))
+		s.WriteErrorResponse(w, errors.New("username is missing"))
 		return
 	}
 
 	temp, err := strconv.ParseBool(vars[peerRESTUserTemp])
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -256,7 +256,7 @@ func (s *peerRESTServer) LoadUserHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err = globalIAMSys.LoadUser(objAPI, accessKey, userType); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -266,13 +266,13 @@ func (s *peerRESTServer) LoadUserHandler(w http.ResponseWriter, r *http.Request)
 // LoadGroupHandler - reloads group along with members list.
 func (s *peerRESTServer) LoadGroupHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
@@ -280,7 +280,7 @@ func (s *peerRESTServer) LoadGroupHandler(w http.ResponseWriter, r *http.Request
 	group := vars[peerRESTGroup]
 	err := globalIAMSys.LoadGroup(objAPI, group)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -290,14 +290,14 @@ func (s *peerRESTServer) LoadGroupHandler(w http.ResponseWriter, r *http.Request
 // StartProfilingHandler - Issues the start profiling command.
 func (s *peerRESTServer) StartProfilingHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	vars := mux.Vars(r)
 	profiles := strings.Split(vars[peerRESTProfiler], ",")
 	if len(profiles) == 0 {
-		s.writeErrorResponse(w, errors.New("profiler name is missing"))
+		s.WriteErrorResponse(w, errors.New("profiler name is missing"))
 		return
 	}
 	globalProfilerMu.Lock()
@@ -319,7 +319,7 @@ func (s *peerRESTServer) StartProfilingHandler(w http.ResponseWriter, r *http.Re
 	for _, profiler := range profiles {
 		prof, err := startProfiler(profiler)
 		if err != nil {
-			s.writeErrorResponse(w, err)
+			s.WriteErrorResponse(w, err)
 			return
 		}
 		globalProfiler[profiler] = prof
@@ -331,14 +331,14 @@ func (s *peerRESTServer) StartProfilingHandler(w http.ResponseWriter, r *http.Re
 // DownloadProfilingDataHandler - returns profiled data.
 func (s *peerRESTServer) DownloadProfilingDataHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	ctx := newContext(r, w, "DownloadProfiling")
 	profileData, err := getProfileData()
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -349,7 +349,7 @@ func (s *peerRESTServer) DownloadProfilingDataHandler(w http.ResponseWriter, r *
 // ServerInfoHandler - returns Server Info
 func (s *peerRESTServer) ServerInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -363,7 +363,7 @@ func (s *peerRESTServer) ServerInfoHandler(w http.ResponseWriter, r *http.Reques
 func (s *peerRESTServer) NetInfoHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "NetInfo")
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -396,7 +396,7 @@ func (s *peerRESTServer) NetInfoHandler(w http.ResponseWriter, r *http.Request) 
 
 func (s *peerRESTServer) DispatchNetInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -413,7 +413,7 @@ func (s *peerRESTServer) DispatchNetInfoHandler(w http.ResponseWriter, r *http.R
 // DriveInfoHandler - returns Drive info.
 func (s *peerRESTServer) DriveInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -442,7 +442,7 @@ func (s *peerRESTServer) DriveInfoHandler(w http.ResponseWriter, r *http.Request
 // CPUInfoHandler - returns CPU info.
 func (s *peerRESTServer) CPUInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -458,7 +458,7 @@ func (s *peerRESTServer) CPUInfoHandler(w http.ResponseWriter, r *http.Request) 
 // DiskHwInfoHandler - returns Disk HW info.
 func (s *peerRESTServer) DiskHwInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -474,7 +474,7 @@ func (s *peerRESTServer) DiskHwInfoHandler(w http.ResponseWriter, r *http.Reques
 // OsInfoHandler - returns Os info.
 func (s *peerRESTServer) OsInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -490,7 +490,7 @@ func (s *peerRESTServer) OsInfoHandler(w http.ResponseWriter, r *http.Request) {
 // ProcInfoHandler - returns Proc info.
 func (s *peerRESTServer) ProcInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -506,7 +506,7 @@ func (s *peerRESTServer) ProcInfoHandler(w http.ResponseWriter, r *http.Request)
 // MemInfoHandler - returns Memory info.
 func (s *peerRESTServer) MemInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -522,14 +522,14 @@ func (s *peerRESTServer) MemInfoHandler(w http.ResponseWriter, r *http.Request) 
 // DeleteBucketMetadataHandler - Delete in memory bucket metadata
 func (s *peerRESTServer) DeleteBucketMetadataHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	vars := mux.Vars(r)
 	bucketName := vars[peerRESTBucket]
 	if bucketName == "" {
-		s.writeErrorResponse(w, errors.New("Bucket name is missing"))
+		s.WriteErrorResponse(w, errors.New("Bucket name is missing"))
 		return
 	}
 
@@ -544,14 +544,14 @@ func (s *peerRESTServer) DeleteBucketMetadataHandler(w http.ResponseWriter, r *h
 // returns BucketReplicationStatus
 func (s *peerRESTServer) GetBucketStatsHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	vars := mux.Vars(r)
 	bucketName := vars[peerRESTBucket]
 	if bucketName == "" {
-		s.writeErrorResponse(w, errors.New("Bucket name is missing"))
+		s.WriteErrorResponse(w, errors.New("Bucket name is missing"))
 		return
 	}
 
@@ -565,26 +565,26 @@ func (s *peerRESTServer) GetBucketStatsHandler(w http.ResponseWriter, r *http.Re
 // LoadBucketMetadataHandler - reloads in memory bucket metadata
 func (s *peerRESTServer) LoadBucketMetadataHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	vars := mux.Vars(r)
 	bucketName := vars[peerRESTBucket]
 	if bucketName == "" {
-		s.writeErrorResponse(w, errors.New("Bucket name is missing"))
+		s.WriteErrorResponse(w, errors.New("Bucket name is missing"))
 		return
 	}
 
 	objAPI := newObjectLayerFn()
 	if objAPI == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	meta, err := loadBucketMetadata(r.Context(), objAPI, bucketName)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -602,7 +602,7 @@ func (s *peerRESTServer) LoadBucketMetadataHandler(w http.ResponseWriter, r *htt
 // CycleServerBloomFilterHandler cycles bloom filter on server.
 func (s *peerRESTServer) CycleServerBloomFilterHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -611,12 +611,12 @@ func (s *peerRESTServer) CycleServerBloomFilterHandler(w http.ResponseWriter, r 
 	var req bloomFilterRequest
 	err := gob.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 	bf, err := intDataUpdateTracker.cycleFilter(ctx, req)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -625,7 +625,7 @@ func (s *peerRESTServer) CycleServerBloomFilterHandler(w http.ResponseWriter, r 
 
 func (s *peerRESTServer) GetMetacacheListingHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 	ctx := newContext(r, w, "GetMetacacheListing")
@@ -633,7 +633,7 @@ func (s *peerRESTServer) GetMetacacheListingHandler(w http.ResponseWriter, r *ht
 	var opts listPathOptions
 	err := gob.NewDecoder(r.Body).Decode(&opts)
 	if err != nil && err != io.EOF {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 	resp := localMetacacheMgr.getBucket(ctx, opts.Bucket).findCache(opts)
@@ -642,7 +642,7 @@ func (s *peerRESTServer) GetMetacacheListingHandler(w http.ResponseWriter, r *ht
 
 func (s *peerRESTServer) UpdateMetacacheListingHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 	ctx := newContext(r, w, "UpdateMetacacheListing")
@@ -650,12 +650,12 @@ func (s *peerRESTServer) UpdateMetacacheListingHandler(w http.ResponseWriter, r 
 	var req metacache
 	err := msgp.Decode(r.Body, &req)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 	cache, err := localMetacacheMgr.updateCacheEntry(req)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 	// Return updated metadata.
@@ -665,26 +665,26 @@ func (s *peerRESTServer) UpdateMetacacheListingHandler(w http.ResponseWriter, r 
 // PutBucketNotificationHandler - Set bucket policy.
 func (s *peerRESTServer) PutBucketNotificationHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	vars := mux.Vars(r)
 	bucketName := vars[peerRESTBucket]
 	if bucketName == "" {
-		s.writeErrorResponse(w, errors.New("Bucket name is missing"))
+		s.WriteErrorResponse(w, errors.New("Bucket name is missing"))
 		return
 	}
 
 	var rulesMap event.RulesMap
 	if r.ContentLength < 0 {
-		s.writeErrorResponse(w, errInvalidArgument)
+		s.WriteErrorResponse(w, errInvalidArgument)
 		return
 	}
 
 	err := gob.NewDecoder(r.Body).Decode(&rulesMap)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -728,7 +728,7 @@ func (s *peerRESTServer) HealthHandler(w http.ResponseWriter, r *http.Request) {
 // GetLocalDiskIDs - Return disk IDs of all the local disks.
 func (s *peerRESTServer) GetLocalDiskIDs(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -738,13 +738,13 @@ func (s *peerRESTServer) GetLocalDiskIDs(w http.ResponseWriter, r *http.Request)
 
 	// Service not initialized yet
 	if objLayer == nil {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
 	z, ok := objLayer.(*erasureServerPools)
 	if !ok {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
@@ -756,24 +756,24 @@ func (s *peerRESTServer) GetLocalDiskIDs(w http.ResponseWriter, r *http.Request)
 // ServerUpdateHandler - updates the current server.
 func (s *peerRESTServer) ServerUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	if r.ContentLength < 0 {
-		s.writeErrorResponse(w, errInvalidArgument)
+		s.WriteErrorResponse(w, errInvalidArgument)
 		return
 	}
 
 	var info serverUpdateInfo
 	err := gob.NewDecoder(r.Body).Decode(&info)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
 	if _, err = updateServer(info.URL, info.Sha256Sum, info.Time, info.ReleaseInfo, getMinioMode()); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 }
@@ -783,19 +783,19 @@ var errUnsupportedSignal = fmt.Errorf("unsupported signal: only restart and stop
 // SignalServiceHandler - signal service handler.
 func (s *peerRESTServer) SignalServiceHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	vars := mux.Vars(r)
 	signalString := vars[peerRESTSignal]
 	if signalString == "" {
-		s.writeErrorResponse(w, errors.New("signal name is missing"))
+		s.WriteErrorResponse(w, errors.New("signal name is missing"))
 		return
 	}
 	si, err := strconv.Atoi(signalString)
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 	signal := serviceSignal(si)
@@ -808,20 +808,20 @@ func (s *peerRESTServer) SignalServiceHandler(w http.ResponseWriter, r *http.Req
 	case serviceReloadDynamic:
 		objAPI := newObjectLayerFn()
 		if objAPI == nil {
-			s.writeErrorResponse(w, errServerNotInitialized)
+			s.WriteErrorResponse(w, errServerNotInitialized)
 			return
 		}
 		srvCfg, err := getValidConfig(objAPI)
 		if err != nil {
-			s.writeErrorResponse(w, err)
+			s.WriteErrorResponse(w, err)
 			return
 		}
 		if err = applyDynamicConfig(r.Context(), objAPI, srvCfg); err != nil {
-			s.writeErrorResponse(w, err)
+			s.WriteErrorResponse(w, err)
 		}
 		return
 	default:
-		s.writeErrorResponse(w, errUnsupportedSignal)
+		s.WriteErrorResponse(w, errUnsupportedSignal)
 		return
 	}
 }
@@ -829,7 +829,7 @@ func (s *peerRESTServer) SignalServiceHandler(w http.ResponseWriter, r *http.Req
 // ListenHandler sends http trace messages back to peer rest client
 func (s *peerRESTServer) ListenHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("invalid request"))
+		s.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
@@ -837,13 +837,13 @@ func (s *peerRESTServer) ListenHandler(w http.ResponseWriter, r *http.Request) {
 
 	var prefix string
 	if len(values[peerRESTListenPrefix]) > 1 {
-		s.writeErrorResponse(w, errors.New("invalid request"))
+		s.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
 	if len(values[peerRESTListenPrefix]) == 1 {
 		if err := event.ValidateFilterRuleValue(values[peerRESTListenPrefix][0]); err != nil {
-			s.writeErrorResponse(w, err)
+			s.WriteErrorResponse(w, err)
 			return
 		}
 
@@ -852,13 +852,13 @@ func (s *peerRESTServer) ListenHandler(w http.ResponseWriter, r *http.Request) {
 
 	var suffix string
 	if len(values[peerRESTListenSuffix]) > 1 {
-		s.writeErrorResponse(w, errors.New("invalid request"))
+		s.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
 	if len(values[peerRESTListenSuffix]) == 1 {
 		if err := event.ValidateFilterRuleValue(values[peerRESTListenSuffix][0]); err != nil {
-			s.writeErrorResponse(w, err)
+			s.WriteErrorResponse(w, err)
 			return
 		}
 
@@ -871,7 +871,7 @@ func (s *peerRESTServer) ListenHandler(w http.ResponseWriter, r *http.Request) {
 	for _, ev := range values[peerRESTListenEvents] {
 		eventName, err := event.ParseName(ev)
 		if err != nil {
-			s.writeErrorResponse(w, err)
+			s.WriteErrorResponse(w, err)
 			return
 		}
 
@@ -945,13 +945,13 @@ func extractTraceOptsFromPeerRequest(r *http.Request) (opts madmin.ServiceTraceO
 // TraceHandler sends http trace messages back to peer rest client
 func (s *peerRESTServer) TraceHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
 	traceOpts, err := extractTraceOptsFromPeerRequest(r)
 	if err != nil {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -991,14 +991,14 @@ func (s *peerRESTServer) TraceHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *peerRESTServer) BackgroundHealStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("invalid request"))
+		s.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 	ctx := newContext(r, w, "BackgroundHealStatus")
 
 	state, ok := getBackgroundHealStatus(ctx, newObjectLayerFn())
 	if !ok {
-		s.writeErrorResponse(w, errServerNotInitialized)
+		s.WriteErrorResponse(w, errServerNotInitialized)
 		return
 	}
 
@@ -1009,7 +1009,7 @@ func (s *peerRESTServer) BackgroundHealStatusHandler(w http.ResponseWriter, r *h
 // ConsoleLogHandler sends console logs of this node back to peer rest client
 func (s *peerRESTServer) ConsoleLogHandler(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("Invalid request"))
+		s.WriteErrorResponse(w, errors.New("Invalid request"))
 		return
 	}
 
@@ -1037,7 +1037,7 @@ func (s *peerRESTServer) ConsoleLogHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s *peerRESTServer) writeErrorResponse(w http.ResponseWriter, err error) {
+func (s *peerRESTServer) WriteErrorResponse(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusForbidden)
 	w.Write([]byte(err.Error()))
 }
@@ -1045,7 +1045,7 @@ func (s *peerRESTServer) writeErrorResponse(w http.ResponseWriter, err error) {
 // IsValid - To authenticate and verify the time difference.
 func (s *peerRESTServer) IsValid(w http.ResponseWriter, r *http.Request) bool {
 	if err := storageServerRequestValidate(r); err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return false
 	}
 	return true
@@ -1054,7 +1054,7 @@ func (s *peerRESTServer) IsValid(w http.ResponseWriter, r *http.Request) bool {
 // GetBandwidth gets the bandwidth for the buckets requested.
 func (s *peerRESTServer) GetBandwidth(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("invalid request"))
+		s.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 	bucketsString := r.URL.Query().Get("buckets")
@@ -1069,7 +1069,7 @@ func (s *peerRESTServer) GetBandwidth(w http.ResponseWriter, r *http.Request) {
 
 	enc := gob.NewEncoder(w)
 	if err := enc.Encode(report); err != nil {
-		s.writeErrorResponse(w, errors.New("Encoding report failed: "+err.Error()))
+		s.WriteErrorResponse(w, errors.New("Encoding report failed: "+err.Error()))
 		return
 	}
 	w.(http.Flusher).Flush()
@@ -1078,7 +1078,7 @@ func (s *peerRESTServer) GetBandwidth(w http.ResponseWriter, r *http.Request) {
 // GetPeerMetrics gets the metrics to be federated across peers.
 func (s *peerRESTServer) GetPeerMetrics(w http.ResponseWriter, r *http.Request) {
 	if !s.IsValid(w, r) {
-		s.writeErrorResponse(w, errors.New("invalid request"))
+		s.WriteErrorResponse(w, errors.New("invalid request"))
 	}
 	w.WriteHeader(http.StatusOK)
 	w.(http.Flusher).Flush()
@@ -1091,7 +1091,7 @@ func (s *peerRESTServer) GetPeerMetrics(w http.ResponseWriter, r *http.Request) 
 	ch := ReportMetrics(r.Context(), GetGeneratorsForPeer)
 	for m := range ch {
 		if err := enc.Encode(m); err != nil {
-			s.writeErrorResponse(w, errors.New("Encoding metric failed: "+err.Error()))
+			s.WriteErrorResponse(w, errors.New("Encoding metric failed: "+err.Error()))
 			return
 		}
 	}

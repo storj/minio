@@ -774,7 +774,7 @@ func writeSuccessResponseHeadersOnly(w http.ResponseWriter) {
 }
 
 // writeErrorRespone writes error headers
-func writeErrorResponse(ctx context.Context, w http.ResponseWriter, err APIError, reqURL *url.URL, browser bool) {
+func WriteErrorResponse(ctx context.Context, w http.ResponseWriter, err APIError, reqURL *url.URL, browser bool) {
 	switch err.Code {
 	case "SlowDown", "XMinioServerNotInitialized", "XMinioReadQuorum", "XMinioWriteQuorum":
 		// Set retry-after header to indicate user-agents to retry request after 120secs.

@@ -1225,7 +1225,7 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 	// Extract incoming metadata if any.
 	metadata, err := extractMetadata(ctx, r)
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -1282,19 +1282,19 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 			)
 			encReader, objectEncryptionKey, err = EncryptRequest(hashReader, r, bucket, object, metadata)
 			if err != nil {
-				writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return
 			}
 			info := ObjectInfo{Size: size}
 			// do not try to verify encrypted content
 			hashReader, err = hash.NewReader(etag.Wrap(encReader, hashReader), info.EncryptedSize(), "", "", size)
 			if err != nil {
-				writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return
 			}
 			pReader, err = pReader.WithEncryption(hashReader, &objectEncryptionKey)
 			if err != nil {
-				writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return
 			}
 		}
@@ -1313,7 +1313,7 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 	// enforce object retention rules
 	retentionMode, retentionDate, _, s3Err := checkPutObjectLockAllowed(ctx, r, bucket, object, getObjectInfo, retPerms, holdPerms)
 	if s3Err != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 	if retentionMode != "" {

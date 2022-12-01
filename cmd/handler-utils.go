@@ -480,7 +480,7 @@ func methodNotAllowedHandler(api string) func(w http.ResponseWriter, r *http.Req
 				HTTPStatusCode: http.StatusUpgradeRequired,
 			}, r.URL)
 		default:
-			writeErrorResponse(r.Context(), w, APIError{
+			WriteErrorResponse(r.Context(), w, APIError{
 				Code: "BadRequest",
 				Description: fmt.Sprintf("An error occurred when parsing the HTTP request %s at '%s'",
 					r.Method, r.URL.Path),
@@ -533,7 +533,7 @@ func errorResponseHandler(w http.ResponseWriter, r *http.Request) {
 			HTTPStatusCode: http.StatusUpgradeRequired,
 		}, r.URL)
 	default:
-		writeErrorResponse(r.Context(), w, APIError{
+		WriteErrorResponse(r.Context(), w, APIError{
 			Code: "BadRequest",
 			Description: fmt.Sprintf("An error occurred when parsing the HTTP request %s at '%s'",
 				r.Method, r.URL.Path),

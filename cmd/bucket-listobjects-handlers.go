@@ -82,12 +82,12 @@ func (api ObjectAPIHandlers) ListObjectVersionsHandler(w http.ResponseWriter, r 
 
 	objectAPI := api.ObjectAPI()
 	if objectAPI == nil {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	if s3Error := checkRequestAuthType(ctx, r, policy.ListBucketVersionsAction, bucket, ""); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -96,13 +96,13 @@ func (api ObjectAPIHandlers) ListObjectVersionsHandler(w http.ResponseWriter, r 
 	// Extract all the listBucketVersions query params to their native values.
 	prefix, marker, delimiter, maxkeys, encodingType, versionIDMarker, errCode := getListBucketObjectVersionsArgs(urlValues)
 	if errCode != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	// Validate the query params before beginning to serve the request.
 	if s3Error := validateListObjectsArgs(marker, delimiter, encodingType, maxkeys); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -113,7 +113,7 @@ func (api ObjectAPIHandlers) ListObjectVersionsHandler(w http.ResponseWriter, r 
 	// marshaled into S3 compatible XML header.
 	listObjectVersionsInfo, err := listObjectVersions(ctx, bucket, prefix, marker, versionIDMarker, delimiter, maxkeys)
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -143,12 +143,12 @@ func (api ObjectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *htt
 
 	objectAPI := api.ObjectAPI()
 	if objectAPI == nil {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	if s3Error := checkRequestAuthType(ctx, r, policy.ListBucketAction, bucket, ""); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -157,14 +157,14 @@ func (api ObjectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *htt
 	// Extract all the listObjectsV2 query params to their native values.
 	prefix, token, startAfter, delimiter, fetchOwner, maxKeys, encodingType, errCode := getListObjectsV2Args(urlValues)
 	if errCode != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	// Validate the query params before beginning to serve the request.
 	// fetch-owner is not validated since it is a boolean
 	if s3Error := validateListObjectsArgs(token, delimiter, encodingType, maxKeys); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -175,7 +175,7 @@ func (api ObjectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *htt
 	// marshaled into S3 compatible XML header.
 	listObjectsV2Info, err := listObjectsV2(ctx, bucket, prefix, token, delimiter, maxKeys, fetchOwner, startAfter)
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -210,12 +210,12 @@ func (api ObjectAPIHandlers) ListObjectsV2Handler(w http.ResponseWriter, r *http
 
 	objectAPI := api.ObjectAPI()
 	if objectAPI == nil {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	if s3Error := checkRequestAuthType(ctx, r, policy.ListBucketAction, bucket, ""); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -224,14 +224,14 @@ func (api ObjectAPIHandlers) ListObjectsV2Handler(w http.ResponseWriter, r *http
 	// Extract all the listObjectsV2 query params to their native values.
 	prefix, token, startAfter, delimiter, fetchOwner, maxKeys, encodingType, errCode := getListObjectsV2Args(urlValues)
 	if errCode != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	// Validate the query params before beginning to serve the request.
 	// fetch-owner is not validated since it is a boolean
 	if s3Error := validateListObjectsArgs(token, delimiter, encodingType, maxKeys); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -242,7 +242,7 @@ func (api ObjectAPIHandlers) ListObjectsV2Handler(w http.ResponseWriter, r *http
 	// marshaled into S3 compatible XML header.
 	listObjectsV2Info, err := listObjectsV2(ctx, bucket, prefix, token, delimiter, maxKeys, fetchOwner, startAfter)
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -310,25 +310,25 @@ func (api ObjectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 
 	objectAPI := api.ObjectAPI()
 	if objectAPI == nil {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	if s3Error := checkRequestAuthType(ctx, r, policy.ListBucketAction, bucket, ""); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	// Extract all the litsObjectsV1 query params to their native values.
 	prefix, marker, delimiter, maxKeys, encodingType, s3Error := getListObjectsV1Args(r.URL.Query())
 	if s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	// Validate all the query params before beginning to serve the request.
 	if s3Error := validateListObjectsArgs(marker, delimiter, encodingType, maxKeys); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -339,7 +339,7 @@ func (api ObjectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 	// marshaled into S3 compatible XML header.
 	listObjectsInfo, err := listObjects(ctx, bucket, prefix, marker, delimiter, maxKeys)
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 

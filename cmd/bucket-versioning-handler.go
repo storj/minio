@@ -48,23 +48,23 @@ func (api ObjectAPIHandlers) PutBucketVersioningHandler(w http.ResponseWriter, r
 
 	objectAPI := api.ObjectAPI()
 	if objectAPI == nil {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketVersioningAction, bucket, ""); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	v, err := versioning.ParseConfig(io.LimitReader(r.Body, maxBucketVersioningConfigSize))
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	if rcfg, _ := globalBucketObjectLockSys.Get(bucket); rcfg.LockEnabled && v.Suspended() {
-		writeErrorResponse(ctx, w, APIError{
+		WriteErrorResponse(ctx, w, APIError{
 			Code:           "InvalidBucketState",
 			Description:    "An Object Lock configuration is present on this bucket, so the versioning state cannot be changed.",
 			HTTPStatusCode: http.StatusConflict,
@@ -72,7 +72,7 @@ func (api ObjectAPIHandlers) PutBucketVersioningHandler(w http.ResponseWriter, r
 		return
 	}
 	if _, err := getReplicationConfig(ctx, bucket); err == nil && v.Suspended() {
-		writeErrorResponse(ctx, w, APIError{
+		WriteErrorResponse(ctx, w, APIError{
 			Code:           "InvalidBucketState",
 			Description:    "A replication configuration is present on this bucket, so the versioning state cannot be changed.",
 			HTTPStatusCode: http.StatusConflict,
@@ -82,12 +82,12 @@ func (api ObjectAPIHandlers) PutBucketVersioningHandler(w http.ResponseWriter, r
 
 	configData, err := xml.Marshal(v)
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	if err = globalBucketMetadataSys.Update(bucket, bucketVersioningConfig, configData); err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -106,30 +106,30 @@ func (api ObjectAPIHandlers) GetBucketVersioningHandler(w http.ResponseWriter, r
 
 	objectAPI := api.ObjectAPI()
 	if objectAPI == nil {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketVersioningAction, bucket, ""); s3Error != ErrNone {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	// Check if bucket exists.
 	if _, err := objectAPI.GetBucketInfo(ctx, bucket); err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	config, err := globalBucketVersioningSys.Get(bucket)
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	configData, err := xml.Marshal(config)
 	if err != nil {
-		writeErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 

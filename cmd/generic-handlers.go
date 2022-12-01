@@ -63,7 +63,7 @@ const (
 func setRequestHeaderSizeLimitHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isHTTPHeaderSizeTooLarge(r.Header) {
-			writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrMetadataTooLarge), r.URL, guessIsBrowserReq(r))
+			WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrMetadataTooLarge), r.URL, guessIsBrowserReq(r))
 			atomic.AddUint64(&globalHTTPStats.rejectedRequestsHeader, 1)
 			return
 		}
@@ -104,7 +104,7 @@ const (
 func filterReservedMetadata(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if containsReservedMetadata(r.Header) {
-			writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrUnsupportedMetadata), r.URL, guessIsBrowserReq(r))
+			WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrUnsupportedMetadata), r.URL, guessIsBrowserReq(r))
 			return
 		}
 		h.ServeHTTP(w, r)
@@ -288,7 +288,7 @@ func setReservedBucketHandler(h http.Handler) http.Handler {
 		bucketName, _ := request2BucketObjectName(r)
 		if isMinioReservedBucket(bucketName) || isMinioMetaBucket(bucketName) {
 			if !guessIsRPCReq(r) && !guessIsBrowserReq(r) && !guessIsHealthCheckReq(r) && !guessIsMetricsReq(r) && !isAdminReq(r) {
-				writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrAllAccessDisabled), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrAllAccessDisabled), r.URL, guessIsBrowserReq(r))
 				return
 			}
 		}
@@ -345,7 +345,7 @@ func setTimeValidityHandler(h http.Handler) http.Handler {
 				// All our internal APIs are sensitive towards Date
 				// header, for all requests where Date header is not
 				// present we will reject such clients.
-				writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(errCode), r.URL, guessIsBrowserReq(r))
 				atomic.AddUint64(&globalHTTPStats.rejectedRequestsTime, 1)
 				return
 			}
@@ -353,7 +353,7 @@ func setTimeValidityHandler(h http.Handler) http.Handler {
 			// or in the future, reject request otherwise.
 			curTime := UTCNow()
 			if curTime.Sub(amzDate) > globalMaxSkewTime || amzDate.Sub(curTime) > globalMaxSkewTime {
-				writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrRequestTimeTooSkewed), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrRequestTimeTooSkewed), r.URL, guessIsBrowserReq(r))
 				atomic.AddUint64(&globalHTTPStats.rejectedRequestsTime, 1)
 				return
 			}
@@ -421,7 +421,7 @@ func setRequestValidityHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check for bad components in URL path.
 		if hasBadPathComponent(r.URL.Path) {
-			writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInvalidResourceName), r.URL, guessIsBrowserReq(r))
+			WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInvalidResourceName), r.URL, guessIsBrowserReq(r))
 			atomic.AddUint64(&globalHTTPStats.rejectedRequestsInvalid, 1)
 			return
 		}
@@ -434,14 +434,14 @@ func setRequestValidityHandler(h http.Handler) http.Handler {
 			}
 			for _, v := range vv {
 				if hasBadPathComponent(v) {
-					writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInvalidResourceName), r.URL, guessIsBrowserReq(r))
+					WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInvalidResourceName), r.URL, guessIsBrowserReq(r))
 					atomic.AddUint64(&globalHTTPStats.rejectedRequestsInvalid, 1)
 					return
 				}
 			}
 		}
 		if hasMultipleAuth(r) {
-			writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInvalidRequest), r.URL, guessIsBrowserReq(r))
+			WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInvalidRequest), r.URL, guessIsBrowserReq(r))
 			atomic.AddUint64(&globalHTTPStats.rejectedRequestsInvalid, 1)
 			return
 		}
@@ -484,10 +484,10 @@ func setBucketForwardingHandler(h http.Handler) http.Handler {
 			sr, err := globalDNSConfig.Get(bucket)
 			if err != nil {
 				if err == dns.ErrNoEntriesFound {
-					writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrNoSuchBucket),
+					WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrNoSuchBucket),
 						r.URL, guessIsBrowserReq(r))
 				} else {
-					writeErrorResponse(r.Context(), w, ToAPIError(r.Context(), err),
+					WriteErrorResponse(r.Context(), w, ToAPIError(r.Context(), err),
 						r.URL, guessIsBrowserReq(r))
 				}
 				return
@@ -541,9 +541,9 @@ func setBucketForwardingHandler(h http.Handler) http.Handler {
 		sr, err := globalDNSConfig.Get(bucket)
 		if err != nil {
 			if err == dns.ErrNoEntriesFound {
-				writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrNoSuchBucket), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrNoSuchBucket), r.URL, guessIsBrowserReq(r))
 			} else {
-				writeErrorResponse(r.Context(), w, ToAPIError(r.Context(), err), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(r.Context(), w, ToAPIError(r.Context(), err), r.URL, guessIsBrowserReq(r))
 			}
 			return
 		}
@@ -596,7 +596,7 @@ type criticalErrorHandler struct{ handler http.Handler }
 func (h criticalErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err == logger.ErrCritical { // handle
-			writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInternalError), r.URL, guessIsBrowserReq(r))
+			WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInternalError), r.URL, guessIsBrowserReq(r))
 			return
 		} else if err != nil {
 			panic(err) // forward other panic calls
@@ -613,7 +613,7 @@ func setSSETLSHandler(h http.Handler) http.Handler {
 			if r.Method == http.MethodHead {
 				writeErrorResponseHeadersOnly(w, errorCodes.ToAPIErr(ErrInsecureSSECustomerRequest))
 			} else {
-				writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInsecureSSECustomerRequest), r.URL, guessIsBrowserReq(r))
+				WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInsecureSSECustomerRequest), r.URL, guessIsBrowserReq(r))
 			}
 			return
 		}

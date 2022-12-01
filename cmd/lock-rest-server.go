@@ -43,7 +43,7 @@ type lockRESTServer struct {
 	ll *localLocker
 }
 
-func (l *lockRESTServer) writeErrorResponse(w http.ResponseWriter, err error) {
+func (l *lockRESTServer) WriteErrorResponse(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusForbidden)
 	w.Write([]byte(err.Error()))
 }
@@ -51,12 +51,12 @@ func (l *lockRESTServer) writeErrorResponse(w http.ResponseWriter, err error) {
 // IsValid - To authenticate and verify the time difference.
 func (l *lockRESTServer) IsValid(w http.ResponseWriter, r *http.Request) bool {
 	if l.ll == nil {
-		l.writeErrorResponse(w, errLockNotInitialized)
+		l.WriteErrorResponse(w, errLockNotInitialized)
 		return false
 	}
 
 	if err := storageServerRequestValidate(r); err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return false
 	}
 	return true
@@ -98,24 +98,24 @@ func (l *lockRESTServer) HealthHandler(w http.ResponseWriter, r *http.Request) {
 // RefreshHandler - refresh the current lock
 func (l *lockRESTServer) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	if !l.IsValid(w, r) {
-		l.writeErrorResponse(w, errors.New("invalid request"))
+		l.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
 	args, err := getLockArgs(r)
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 
 	refreshed, err := l.ll.Refresh(r.Context(), args)
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 
 	if !refreshed {
-		l.writeErrorResponse(w, errLockNotFound)
+		l.WriteErrorResponse(w, errLockNotFound)
 		return
 	}
 }
@@ -123,13 +123,13 @@ func (l *lockRESTServer) RefreshHandler(w http.ResponseWriter, r *http.Request) 
 // LockHandler - Acquires a lock.
 func (l *lockRESTServer) LockHandler(w http.ResponseWriter, r *http.Request) {
 	if !l.IsValid(w, r) {
-		l.writeErrorResponse(w, errors.New("invalid request"))
+		l.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
 	args, err := getLockArgs(r)
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -138,7 +138,7 @@ func (l *lockRESTServer) LockHandler(w http.ResponseWriter, r *http.Request) {
 		err = errLockConflict
 	}
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 }
@@ -146,13 +146,13 @@ func (l *lockRESTServer) LockHandler(w http.ResponseWriter, r *http.Request) {
 // UnlockHandler - releases the acquired lock.
 func (l *lockRESTServer) UnlockHandler(w http.ResponseWriter, r *http.Request) {
 	if !l.IsValid(w, r) {
-		l.writeErrorResponse(w, errors.New("invalid request"))
+		l.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
 	args, err := getLockArgs(r)
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -160,7 +160,7 @@ func (l *lockRESTServer) UnlockHandler(w http.ResponseWriter, r *http.Request) {
 	// Ignore the Unlock() "reply" return value because if err == nil, "reply" is always true
 	// Consequently, if err != nil, reply is always false
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 }
@@ -168,13 +168,13 @@ func (l *lockRESTServer) UnlockHandler(w http.ResponseWriter, r *http.Request) {
 // LockHandler - Acquires an RLock.
 func (l *lockRESTServer) RLockHandler(w http.ResponseWriter, r *http.Request) {
 	if !l.IsValid(w, r) {
-		l.writeErrorResponse(w, errors.New("invalid request"))
+		l.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
 	args, err := getLockArgs(r)
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -183,7 +183,7 @@ func (l *lockRESTServer) RLockHandler(w http.ResponseWriter, r *http.Request) {
 		err = errLockConflict
 	}
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 }
@@ -191,20 +191,20 @@ func (l *lockRESTServer) RLockHandler(w http.ResponseWriter, r *http.Request) {
 // RUnlockHandler - releases the acquired read lock.
 func (l *lockRESTServer) RUnlockHandler(w http.ResponseWriter, r *http.Request) {
 	if !l.IsValid(w, r) {
-		l.writeErrorResponse(w, errors.New("invalid request"))
+		l.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
 	args, err := getLockArgs(r)
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 
 	// Ignore the RUnlock() "reply" return value because if err == nil, "reply" is always true.
 	// Consequently, if err != nil, reply is always false
 	if _, err = l.ll.RUnlock(args); err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 }
@@ -212,18 +212,18 @@ func (l *lockRESTServer) RUnlockHandler(w http.ResponseWriter, r *http.Request) 
 // ForceUnlockHandler - query expired lock status.
 func (l *lockRESTServer) ForceUnlockHandler(w http.ResponseWriter, r *http.Request) {
 	if !l.IsValid(w, r) {
-		l.writeErrorResponse(w, errors.New("invalid request"))
+		l.WriteErrorResponse(w, errors.New("invalid request"))
 		return
 	}
 
 	args, err := getLockArgs(r)
 	if err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 
 	if _, err = l.ll.ForceUnlock(r.Context(), args); err != nil {
-		l.writeErrorResponse(w, err)
+		l.WriteErrorResponse(w, err)
 		return
 	}
 }

@@ -510,7 +510,7 @@ func setAuthHandler(h http.Handler) http.Handler {
 		// to be compatible with ceph/splunk-s3-tests. There are plenty of other
 		// incompatibilities in there, but they are not easily fixable with how
 		// MinIO is structured, so we do at least this.
-		writeErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrAccessDenied), r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrAccessDenied), r.URL, guessIsBrowserReq(r))
 		atomic.AddUint64(&globalHTTPStats.rejectedRequestsAuth, 1)
 	})
 }

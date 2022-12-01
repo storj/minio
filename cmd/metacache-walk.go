@@ -307,7 +307,7 @@ func (s *storageRESTServer) WalkDirHandler(w http.ResponseWriter, r *http.Reques
 	dirPath := vars[storageRESTDirPath]
 	recursive, err := strconv.ParseBool(vars[storageRESTRecursive])
 	if err != nil {
-		s.writeErrorResponse(w, err)
+		s.WriteErrorResponse(w, err)
 		return
 	}
 
@@ -315,7 +315,7 @@ func (s *storageRESTServer) WalkDirHandler(w http.ResponseWriter, r *http.Reques
 	if v := vars[storageRESTReportNotFound]; v != "" {
 		reportNotFound, err = strconv.ParseBool(v)
 		if err != nil {
-			s.writeErrorResponse(w, err)
+			s.WriteErrorResponse(w, err)
 			return
 		}
 	}
