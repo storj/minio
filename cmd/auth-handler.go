@@ -271,7 +271,7 @@ func checkClaimsFromToken(r *http.Request, cred auth.Credentials) (map[string]in
 //   for authenticated requests validates IAM policies.
 // returns APIErrorCode if any to be replied to the client.
 func checkRequestAuthType(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (s3Err APIErrorCode) {
-	_, _, s3Err = checkRequestAuthTypeCredential(ctx, r, action, bucketName, objectName)
+	_, _, s3Err = CheckRequestAuthTypeCredential(ctx, r, action, bucketName, objectName)
 	return s3Err
 }
 
@@ -281,7 +281,7 @@ func checkRequestAuthType(ctx context.Context, r *http.Request, action policy.Ac
 //   for authenticated requests validates IAM policies.
 // returns APIErrorCode if any to be replied to the client.
 // Additionally returns the accessKey used in the request, and if this request is by an admin.
-func checkRequestAuthTypeCredential(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (cred auth.Credentials, owner bool, s3Err APIErrorCode) {
+func CheckRequestAuthTypeCredential(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (cred auth.Credentials, owner bool, s3Err APIErrorCode) {
 	switch getRequestAuthType(r) {
 	case authTypeUnknown, authTypeStreamingSigned:
 		return cred, owner, ErrSignatureVersionNotSupported
