@@ -189,7 +189,7 @@ func healingMetricsPrometheus(ch chan<- prometheus.Metric) {
 // collects gateway specific metrics for MinIO instance in Prometheus specific format
 // and sends to given channel
 func gatewayMetricsPrometheus(ch chan<- prometheus.Metric) {
-	if !globalIsGateway || (globalGatewayName != S3BackendGateway && globalGatewayName != AzureBackendGateway && globalGatewayName != GCSBackendGateway) {
+	if !GlobalIsGateway || (globalGatewayName != S3BackendGateway && globalGatewayName != AzureBackendGateway && globalGatewayName != GCSBackendGateway) {
 		return
 	}
 
@@ -435,7 +435,7 @@ func networkMetricsPrometheus(ch chan<- prometheus.Metric) {
 
 // get the most current of in-memory replication stats  and data usage info from crawler.
 func getLatestReplicationStats(bucket string, u madmin.BucketUsageInfo) (s BucketReplicationStats) {
-	bucketStats := globalNotificationSys.GetClusterBucketStats(GlobalContext, bucket)
+	bucketStats := GlobalNotificationSys.GetClusterBucketStats(GlobalContext, bucket)
 
 	replStats := BucketReplicationStats{}
 	for _, bucketStat := range bucketStats {
@@ -503,7 +503,7 @@ func bucketUsageMetricsPrometheus(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	if globalIsGateway {
+	if GlobalIsGateway {
 		return
 	}
 
@@ -615,7 +615,7 @@ func storageMetricsPrometheus(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	if globalIsGateway {
+	if GlobalIsGateway {
 		return
 	}
 
@@ -759,7 +759,7 @@ func AuthMiddleware(h http.Handler) http.Handler {
 			return
 		}
 		// For authenticated users apply IAM policy.
-		if !globalIAMSys.IsAllowed(iampolicy.Args{
+		if !GlobalIAMSys.IsAllowed(iampolicy.Args{
 			AccountName:     claims.AccessKey,
 			Action:          iampolicy.PrometheusAdminAction,
 			ConditionValues: getConditionValues(r, "", claims.AccessKey, claims.Map()),

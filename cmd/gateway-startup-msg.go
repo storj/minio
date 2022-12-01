@@ -43,8 +43,8 @@ func printGatewayStartupMessage(apiEndPoints []string, backendType string) {
 
 	// SSL is configured reads certification chain, prints
 	// authority and expiry.
-	if color.IsTerminal() && !globalCLIContext.Anonymous {
-		if globalIsTLS {
+	if color.IsTerminal() && !GlobalCLIContext.Anonymous {
+		if GlobalIsTLS {
 			printCertificateMsg(globalPublicCerts)
 		}
 	}
@@ -59,7 +59,7 @@ func printGatewayCommonMsg(apiEndpoints []string) {
 
 	// Colorize the message and print.
 	logStartupMessage(color.Blue("Endpoint: ") + color.Bold(fmt.Sprintf("%s ", apiEndpointStr)))
-	if color.IsTerminal() && !globalCLIContext.Anonymous {
+	if color.IsTerminal() && !GlobalCLIContext.Anonymous {
 		logStartupMessage(color.Blue("RootUser: ") + color.Bold(fmt.Sprintf("%s ", cred.AccessKey)))
 		logStartupMessage(color.Blue("RootPass: ") + color.Bold(fmt.Sprintf("%s ", cred.SecretKey)))
 	}

@@ -34,7 +34,7 @@ type BucketQuotaSys struct {
 
 // Get - Get quota configuration.
 func (sys *BucketQuotaSys) Get(bucketName string) (*madmin.BucketQuota, error) {
-	if globalIsGateway {
+	if GlobalIsGateway {
 		objAPI := newObjectLayerFn()
 		if objAPI == nil {
 			return nil, errServerNotInitialized
@@ -110,14 +110,14 @@ func enforceBucketQuota(ctx context.Context, bucket string, size int64) error {
 		return nil
 	}
 
-	return globalBucketQuotaSys.check(ctx, bucket, size)
+	return GlobalBucketQuotaSys.check(ctx, bucket, size)
 }
 
 // enforceFIFOQuota deletes objects in FIFO order until sufficient objects
 // have been deleted so as to bring bucket usage within quota.
 func enforceFIFOQuotaBucket(ctx context.Context, objectAPI ObjectLayer, bucket string, bui madmin.BucketUsageInfo) {
 	// Check if the current bucket has quota restrictions, if not skip it
-	cfg, err := globalBucketQuotaSys.Get(bucket)
+	cfg, err := GlobalBucketQuotaSys.Get(bucket)
 	if err != nil {
 		return
 	}

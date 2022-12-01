@@ -168,7 +168,7 @@ func shouldProxy() bool {
 	if newObjectLayerFn() == nil {
 		return true
 	}
-	return !globalIAMSys.Initialized()
+	return !GlobalIAMSys.Initialized()
 }
 
 // Fetch redirect location if urlPath satisfies certain
@@ -494,7 +494,7 @@ func setBucketForwardingHandler(h http.Handler) http.Handler {
 			}
 			if globalDomainIPs.Intersection(set.CreateStringSet(getHostsSlice(sr)...)).IsEmpty() {
 				r.URL.Scheme = "http"
-				if globalIsTLS {
+				if GlobalIsTLS {
 					r.URL.Scheme = "https"
 				}
 				r.URL.Host = getHostFromSrv(sr)
@@ -549,7 +549,7 @@ func setBucketForwardingHandler(h http.Handler) http.Handler {
 		}
 		if globalDomainIPs.Intersection(set.CreateStringSet(getHostsSlice(sr)...)).IsEmpty() {
 			r.URL.Scheme = "http"
-			if globalIsTLS {
+			if GlobalIsTLS {
 				r.URL.Scheme = "https"
 			}
 			r.URL.Host = getHostFromSrv(sr)
@@ -609,7 +609,7 @@ func (h criticalErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 func setSSETLSHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Deny SSE-C requests if not made over TLS
-		if !globalIsTLS && (crypto.SSEC.IsRequested(r.Header) || crypto.SSECopy.IsRequested(r.Header)) {
+		if !GlobalIsTLS && (crypto.SSEC.IsRequested(r.Header) || crypto.SSECopy.IsRequested(r.Header)) {
 			if r.Method == http.MethodHead {
 				writeErrorResponseHeadersOnly(w, errorCodes.ToAPIErr(ErrInsecureSSECustomerRequest))
 			} else {

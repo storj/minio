@@ -132,7 +132,7 @@ func TestServerSuite(t *testing.T) {
 		// Init and run test on ErasureSet backend.
 		{serverType: "ErasureSet", signer: signerV4},
 	}
-	globalCLIContext.StrictS3Compat = true
+	GlobalCLIContext.StrictS3Compat = true
 	for i, testCase := range testCases {
 		t.Run(fmt.Sprintf("Test: %d, ServerType: %s", i+1, testCase.serverType), func(t *testing.T) {
 			runAllTests(testCase, &check{t, testCase.serverType})
@@ -1583,14 +1583,14 @@ func (s *TestSuiteCommon) TestListObjectsHandler(c *check) {
 			[]string{
 				"<Key>foo bar 1</Key>",
 				"<Key>foo bar 2</Key>",
-				fmt.Sprintf("<Owner><ID>%s</ID><DisplayName>minio</DisplayName></Owner>", globalMinioDefaultOwnerID),
+				fmt.Sprintf("<Owner><ID>%s</ID><DisplayName>minio</DisplayName></Owner>", GlobalMinioDefaultOwnerID),
 			},
 		},
 		{getListObjectsV2URL(s.endPoint, bucketName, "", "1000", "true", ""),
 			[]string{
 				"<Key>foo bar 1</Key>",
 				"<Key>foo bar 2</Key>",
-				fmt.Sprintf("<Owner><ID>%s</ID><DisplayName>minio</DisplayName></Owner>", globalMinioDefaultOwnerID),
+				fmt.Sprintf("<Owner><ID>%s</ID><DisplayName>minio</DisplayName></Owner>", GlobalMinioDefaultOwnerID),
 			},
 		},
 		{getListObjectsV2URL(s.endPoint, bucketName, "", "1000", "", "url"), []string{"<Key>foo+bar+1</Key>", "<Key>foo+bar+2</Key>"}},

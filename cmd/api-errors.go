@@ -2136,7 +2136,7 @@ func ToAPIError(ctx context.Context, err error) APIError {
 				Description:    e.Message,
 				HTTPStatusCode: e.StatusCode,
 			}
-			if globalIsGateway && strings.Contains(e.Message, "KMS is not configured") {
+			if GlobalIsGateway && strings.Contains(e.Message, "KMS is not configured") {
 				apiErr = APIError{
 					Code:           "NotImplemented",
 					Description:    e.Message,

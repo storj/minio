@@ -321,7 +321,7 @@ func validateConfig(s config.Config, setDriveCounts []int) error {
 		return err
 	}
 
-	return notify.TestNotificationTargets(GlobalContext, s, NewGatewayHTTPTransport(), globalNotificationSys.ConfiguredTargetIDs())
+	return notify.TestNotificationTargets(GlobalContext, s, NewGatewayHTTPTransport(), GlobalNotificationSys.ConfiguredTargetIDs())
 }
 
 func lookupConfigs(s config.Config, setDriveCounts []int) {
@@ -341,7 +341,7 @@ func lookupConfigs(s config.Config, setDriveCounts []int) {
 			dns.Authentication(dnsUser, dnsPass),
 			dns.RootCAs(globalRootCAs))
 		if err != nil {
-			if globalIsGateway {
+			if GlobalIsGateway {
 				logger.FatalIf(err, "Unable to initialize remote webhook DNS config")
 			} else {
 				logger.LogIf(ctx, fmt.Errorf("Unable to initialize remote webhook DNS config %w", err))
@@ -351,7 +351,7 @@ func lookupConfigs(s config.Config, setDriveCounts []int) {
 
 	etcdCfg, err := etcd.LookupConfig(s[config.EtcdSubSys][config.Default], globalRootCAs)
 	if err != nil {
-		if globalIsGateway {
+		if GlobalIsGateway {
 			logger.FatalIf(err, "Unable to initialize etcd config")
 		} else {
 			logger.LogIf(ctx, fmt.Errorf("Unable to initialize etcd config: %w", err))
@@ -362,7 +362,7 @@ func lookupConfigs(s config.Config, setDriveCounts []int) {
 		if globalEtcdClient == nil {
 			globalEtcdClient, err = etcd.New(etcdCfg)
 			if err != nil {
-				if globalIsGateway {
+				if GlobalIsGateway {
 					logger.FatalIf(err, "Unable to initialize etcd config")
 				} else {
 					logger.LogIf(ctx, fmt.Errorf("Unable to initialize etcd config: %w", err))
@@ -383,7 +383,7 @@ func lookupConfigs(s config.Config, setDriveCounts []int) {
 					dns.CoreDNSPath(etcdCfg.CoreDNSPath),
 				)
 				if err != nil {
-					if globalIsGateway {
+					if GlobalIsGateway {
 						logger.FatalIf(err, "Unable to initialize DNS config")
 					} else {
 						logger.LogIf(ctx, fmt.Errorf("Unable to initialize DNS config for %s: %w",
@@ -435,7 +435,7 @@ func lookupConfigs(s config.Config, setDriveCounts []int) {
 
 	globalCacheConfig, err = cache.LookupConfig(s[config.CacheSubSys][config.Default])
 	if err != nil {
-		if globalIsGateway {
+		if GlobalIsGateway {
 			logger.FatalIf(err, "Unable to setup cache")
 		} else {
 			logger.LogIf(ctx, fmt.Errorf("Unable to setup cache: %w", err))
@@ -469,7 +469,7 @@ func lookupConfigs(s config.Config, setDriveCounts []int) {
 	}
 
 	globalOpenIDValidators = getOpenIDValidators(globalOpenIDConfig)
-	globalPolicyOPA = opa.New(opaCfg)
+	GlobalPolicyOPA = opa.New(opaCfg)
 
 	globalLDAPConfig, err = xldap.Lookup(s[config.IdentityLDAPSubSys][config.Default],
 		globalRootCAs)

@@ -815,7 +815,7 @@ var getRemoteInstanceClient = func(r *http.Request, host string) (*miniogo.Core,
 	// and hence expected to have same credentials.
 	core, err := miniogo.NewCore(host, &miniogo.Options{
 		Creds:     credentials.NewStaticV4(cred.AccessKey, cred.SecretKey, ""),
-		Secure:    globalIsTLS,
+		Secure:    GlobalIsTLS,
 		Transport: getRemoteInstanceTransport,
 	})
 	if err != nil {
@@ -875,7 +875,7 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	if _, ok := crypto.IsRequested(r.Header); ok {
-		if globalIsGateway {
+		if GlobalIsGateway {
 			if crypto.SSEC.IsRequested(r.Header) && !objectAPI.IsEncryptionSupported() {
 				WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 				return
@@ -1234,7 +1234,7 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
-		if globalIsGateway {
+		if GlobalIsGateway {
 			srcInfo.UserDefined[xhttp.AmzTagDirective] = replaceDirective
 		}
 	}
@@ -1408,7 +1408,7 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	if _, ok := crypto.IsRequested(r.Header); ok {
-		if globalIsGateway {
+		if GlobalIsGateway {
 			if crypto.SSEC.IsRequested(r.Header) && !objectAPI.IsEncryptionSupported() {
 				WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 				return
@@ -1726,7 +1726,7 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 	}
 
 	if _, ok := crypto.IsRequested(r.Header); ok {
-		if globalIsGateway {
+		if GlobalIsGateway {
 			if crypto.SSEC.IsRequested(r.Header) && !objectAPI.IsEncryptionSupported() {
 				WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 				return
@@ -2015,7 +2015,7 @@ func (api ObjectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r 
 	}
 
 	if _, ok := crypto.IsRequested(r.Header); ok {
-		if globalIsGateway {
+		if GlobalIsGateway {
 			if crypto.SSEC.IsRequested(r.Header) && !objectAPI.IsEncryptionSupported() {
 				WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 				return
@@ -2475,7 +2475,7 @@ func (api ObjectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 	}
 
 	if _, ok := crypto.IsRequested(r.Header); ok {
-		if globalIsGateway {
+		if GlobalIsGateway {
 			if crypto.SSEC.IsRequested(r.Header) && !objectAPI.IsEncryptionSupported() {
 				WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 				return

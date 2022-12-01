@@ -197,33 +197,33 @@ func handleCommonCmdArgs(ctx *cli.Context) {
 
 	// Get "json" flag from command line argument and
 	// enable json and quite modes if json flag is turned on.
-	globalCLIContext.JSON = ctx.IsSet("json") || ctx.GlobalIsSet("json")
-	if globalCLIContext.JSON {
+	GlobalCLIContext.JSON = ctx.IsSet("json") || ctx.GlobalIsSet("json")
+	if GlobalCLIContext.JSON {
 		logger.EnableJSON()
 	}
 
 	// Get quiet flag from command line argument.
-	globalCLIContext.Quiet = ctx.IsSet("quiet") || ctx.GlobalIsSet("quiet")
-	if globalCLIContext.Quiet {
+	GlobalCLIContext.Quiet = ctx.IsSet("quiet") || ctx.GlobalIsSet("quiet")
+	if GlobalCLIContext.Quiet {
 		logger.EnableQuiet()
 	}
 
 	// Get anonymous flag from command line argument.
-	globalCLIContext.Anonymous = ctx.IsSet("anonymous") || ctx.GlobalIsSet("anonymous")
-	if globalCLIContext.Anonymous {
+	GlobalCLIContext.Anonymous = ctx.IsSet("anonymous") || ctx.GlobalIsSet("anonymous")
+	if GlobalCLIContext.Anonymous {
 		logger.EnableAnonymous()
 	}
 
 	// Fetch address option
-	globalCLIContext.Addr = ctx.GlobalString("address")
-	if globalCLIContext.Addr == "" || globalCLIContext.Addr == ":"+GlobalMinioDefaultPort {
-		globalCLIContext.Addr = ctx.String("address")
+	GlobalCLIContext.Addr = ctx.GlobalString("address")
+	if GlobalCLIContext.Addr == "" || GlobalCLIContext.Addr == ":"+GlobalMinioDefaultPort {
+		GlobalCLIContext.Addr = ctx.String("address")
 	}
 
 	// Check "no-compat" flag from command line argument.
-	globalCLIContext.StrictS3Compat = true
+	GlobalCLIContext.StrictS3Compat = true
 	if ctx.IsSet("no-compat") || ctx.GlobalIsSet("no-compat") {
-		globalCLIContext.StrictS3Compat = false
+		GlobalCLIContext.StrictS3Compat = false
 	}
 
 	// Set all config, certs and CAs directories.

@@ -740,7 +740,7 @@ func (sys *NotificationSys) load(buckets []BucketInfo) {
 			continue
 		}
 		config.SetRegion(globalServerRegion)
-		if err = config.Validate(globalServerRegion, globalNotificationSys.targetList); err != nil {
+		if err = config.Validate(globalServerRegion, GlobalNotificationSys.targetList); err != nil {
 			if _, ok := err.(*event.ErrARNNotFound); !ok {
 				logger.LogIf(ctx, err)
 			}
@@ -757,7 +757,7 @@ func (sys *NotificationSys) Init(ctx context.Context, buckets []BucketInfo, objA
 	}
 
 	// In gateway mode, notifications are not supported - except NAS gateway.
-	if globalIsGateway && !objAPI.IsNotificationSupported() {
+	if GlobalIsGateway && !objAPI.IsNotificationSupported() {
 		return nil
 	}
 
@@ -1357,7 +1357,7 @@ func NewNotificationSys(endpoints EndpointServerPools) *NotificationSys {
 func GetPeerOnlineCount() (nodesOnline, nodesOffline int) {
 	nodesOnline = 1 // Self is always online.
 	nodesOffline = 0
-	servers := globalNotificationSys.ServerInfo()
+	servers := GlobalNotificationSys.ServerInfo()
 	for _, s := range servers {
 		if s.State == string(madmin.ItemOnline) {
 			nodesOnline++
@@ -1448,8 +1448,8 @@ func sendEvent(args eventArgs) {
 	crypto.RemoveSensitiveEntries(args.Object.UserDefined)
 	crypto.RemoveInternalEntries(args.Object.UserDefined)
 
-	// globalNotificationSys is not initialized in gateway mode.
-	if globalNotificationSys == nil {
+	// GlobalNotificationSys is not initialized in gateway mode.
+	if GlobalNotificationSys == nil {
 		return
 	}
 
@@ -1457,7 +1457,7 @@ func sendEvent(args eventArgs) {
 		globalHTTPListen.Publish(args.ToEvent(false))
 	}
 
-	globalNotificationSys.Send(args)
+	GlobalNotificationSys.Send(args)
 }
 
 // GetBandwidthReports - gets the bandwidth report from all nodes including self.

@@ -161,7 +161,7 @@ func checkAdminRequestAuth(ctx context.Context, r *http.Request, action iampolic
 	if s3Err != ErrNone {
 		return cred, s3Err
 	}
-	if globalIAMSys.IsAllowed(iampolicy.Args{
+	if GlobalIAMSys.IsAllowed(iampolicy.Args{
 		AccountName:     cred.AccessKey,
 		Groups:          cred.Groups,
 		Action:          iampolicy.Action(action),
@@ -212,7 +212,7 @@ func getClaimsFromToken(token string) (map[string]interface{}, error) {
 		return nil, errAuthentication
 	}
 
-	if globalPolicyOPA == nil {
+	if GlobalPolicyOPA == nil {
 		// If OPA is not set and if ldap claim key is set, allow the claim.
 		if _, ok := claims.MapClaims[ldapUser]; ok {
 			return claims.Map(), nil
@@ -373,7 +373,7 @@ func CheckRequestAuthTypeCredential(ctx context.Context, r *http.Request, action
 		return cred, owner, ErrAccessDenied
 	}
 
-	if globalIAMSys.IsAllowed(iampolicy.Args{
+	if GlobalIAMSys.IsAllowed(iampolicy.Args{
 		AccountName:     cred.AccessKey,
 		Groups:          cred.Groups,
 		Action:          iampolicy.Action(action),
@@ -390,7 +390,7 @@ func CheckRequestAuthTypeCredential(ctx context.Context, r *http.Request, action
 	if action == policy.ListBucketVersionsAction {
 		// In AWS S3 s3:ListBucket permission is same as s3:ListBucketVersions permission
 		// verify as a fallback.
-		if globalIAMSys.IsAllowed(iampolicy.Args{
+		if GlobalIAMSys.IsAllowed(iampolicy.Args{
 			AccountName:     cred.AccessKey,
 			Groups:          cred.Groups,
 			Action:          iampolicy.ListBucketAction,
@@ -590,7 +590,7 @@ func isPutRetentionAllowed(bucketName, objectName string, retDays int, retDate t
 		conditions["object-lock-remaining-retention-days"] = []string{strconv.Itoa(retDays)}
 	}
 	if retMode == objectlock.RetGovernance && byPassSet {
-		byPassSet = globalIAMSys.IsAllowed(iampolicy.Args{
+		byPassSet = GlobalIAMSys.IsAllowed(iampolicy.Args{
 			AccountName:     cred.AccessKey,
 			Groups:          cred.Groups,
 			Action:          iampolicy.BypassGovernanceRetentionAction,
@@ -601,7 +601,7 @@ func isPutRetentionAllowed(bucketName, objectName string, retDays int, retDate t
 			Claims:          claims,
 		})
 	}
-	if globalIAMSys.IsAllowed(iampolicy.Args{
+	if GlobalIAMSys.IsAllowed(iampolicy.Args{
 		AccountName:     cred.AccessKey,
 		Groups:          cred.Groups,
 		Action:          iampolicy.PutObjectRetentionAction,
@@ -674,7 +674,7 @@ func isPutActionAllowed(ctx context.Context, atype authType, bucketName, objectN
 		return ErrAccessDenied
 	}
 
-	if globalIAMSys.IsAllowed(iampolicy.Args{
+	if GlobalIAMSys.IsAllowed(iampolicy.Args{
 		AccountName:     cred.AccessKey,
 		Groups:          cred.Groups,
 		Action:          action,

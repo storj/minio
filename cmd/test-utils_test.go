@@ -446,9 +446,9 @@ func resetGlobalHealState() {
 	}
 }
 
-// sets globalIAMSys to `nil`.
+// sets GlobalIAMSys to `nil`.
 func resetGlobalIAMSys() {
-	globalIAMSys = nil
+	GlobalIAMSys = nil
 }
 
 // Resets all the globals used modified in tests.
@@ -466,7 +466,7 @@ func resetTestGlobals() {
 	resetGlobalIsErasure()
 	// Reset global heal state
 	resetGlobalHealState()
-	// Reset globalIAMSys to `nil`
+	// Reset GlobalIAMSys to `nil`
 	resetGlobalIAMSys()
 }
 

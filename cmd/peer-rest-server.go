@@ -75,7 +75,7 @@ func (s *peerRESTServer) DeletePolicyHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := globalIAMSys.DeletePolicy(policyName); err != nil {
+	if err := GlobalIAMSys.DeletePolicy(policyName); err != nil {
 		s.WriteErrorResponse(w, err)
 		return
 	}
@@ -103,7 +103,7 @@ func (s *peerRESTServer) LoadPolicyHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := globalIAMSys.LoadPolicy(objAPI, policyName); err != nil {
+	if err := GlobalIAMSys.LoadPolicy(objAPI, policyName); err != nil {
 		s.WriteErrorResponse(w, err)
 		return
 	}
@@ -132,7 +132,7 @@ func (s *peerRESTServer) LoadPolicyMappingHandler(w http.ResponseWriter, r *http
 	}
 	_, isGroup := vars[peerRESTIsGroup]
 
-	if err := globalIAMSys.LoadPolicyMapping(objAPI, userOrGroup, isGroup); err != nil {
+	if err := GlobalIAMSys.LoadPolicyMapping(objAPI, userOrGroup, isGroup); err != nil {
 		s.WriteErrorResponse(w, err)
 		return
 	}
@@ -160,7 +160,7 @@ func (s *peerRESTServer) DeleteServiceAccountHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	if err := globalIAMSys.DeleteServiceAccount(r.Context(), accessKey); err != nil {
+	if err := GlobalIAMSys.DeleteServiceAccount(r.Context(), accessKey); err != nil {
 		s.WriteErrorResponse(w, err)
 		return
 	}
@@ -188,7 +188,7 @@ func (s *peerRESTServer) LoadServiceAccountHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if err := globalIAMSys.LoadServiceAccount(accessKey); err != nil {
+	if err := GlobalIAMSys.LoadServiceAccount(accessKey); err != nil {
 		s.WriteErrorResponse(w, err)
 		return
 	}
@@ -216,7 +216,7 @@ func (s *peerRESTServer) DeleteUserHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := globalIAMSys.DeleteUser(accessKey); err != nil {
+	if err := GlobalIAMSys.DeleteUser(accessKey); err != nil {
 		s.WriteErrorResponse(w, err)
 		return
 	}
@@ -255,7 +255,7 @@ func (s *peerRESTServer) LoadUserHandler(w http.ResponseWriter, r *http.Request)
 		userType = stsUser
 	}
 
-	if err = globalIAMSys.LoadUser(objAPI, accessKey, userType); err != nil {
+	if err = GlobalIAMSys.LoadUser(objAPI, accessKey, userType); err != nil {
 		s.WriteErrorResponse(w, err)
 		return
 	}
@@ -278,7 +278,7 @@ func (s *peerRESTServer) LoadGroupHandler(w http.ResponseWriter, r *http.Request
 
 	vars := mux.Vars(r)
 	group := vars[peerRESTGroup]
-	err := globalIAMSys.LoadGroup(objAPI, group)
+	err := GlobalIAMSys.LoadGroup(objAPI, group)
 	if err != nil {
 		s.WriteErrorResponse(w, err)
 		return
@@ -403,7 +403,7 @@ func (s *peerRESTServer) DispatchNetInfoHandler(w http.ResponseWriter, r *http.R
 	done := keepHTTPResponseAlive(w)
 
 	ctx := NewContext(r, w, "DispatchNetInfo")
-	info := globalNotificationSys.NetInfo(ctx)
+	info := GlobalNotificationSys.NetInfo(ctx)
 
 	done(nil)
 	logger.LogIf(ctx, gob.NewEncoder(w).Encode(info))
@@ -591,7 +591,7 @@ func (s *peerRESTServer) LoadBucketMetadataHandler(w http.ResponseWriter, r *htt
 	globalBucketMetadataSys.Set(bucketName, meta)
 
 	if meta.notificationConfig != nil {
-		globalNotificationSys.AddRulesMap(bucketName, meta.notificationConfig.ToRulesMap())
+		GlobalNotificationSys.AddRulesMap(bucketName, meta.notificationConfig.ToRulesMap())
 	}
 
 	if meta.bucketTargetConfig != nil {
@@ -688,7 +688,7 @@ func (s *peerRESTServer) PutBucketNotificationHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	globalNotificationSys.AddRulesMap(bucketName, rulesMap)
+	GlobalNotificationSys.AddRulesMap(bucketName, rulesMap)
 	w.(http.Flusher).Flush()
 }
 

@@ -38,7 +38,7 @@ func registerDistErasureRouters(router *mux.Router, endpointServerPools Endpoint
 }
 
 // List of some generic handlers which are applied for all incoming requests.
-var globalHandlers = []mux.MiddlewareFunc{
+var GlobalHandlers = []mux.MiddlewareFunc{
 	// filters HTTP headers which are treated as metadata and are reserved
 	// for internal use only.
 	filterReservedMetadata,
@@ -112,7 +112,7 @@ func configureServerHandler(endpointServerPools EndpointServerPools) (http.Handl
 	// Add API router
 	registerAPIRouter(router)
 
-	router.Use(globalHandlers...)
+	router.Use(GlobalHandlers...)
 
 	return router, nil
 }

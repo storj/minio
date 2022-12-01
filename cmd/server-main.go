@@ -117,13 +117,13 @@ func serverHandleCmdArgs(ctx *cli.Context) {
 	// Handle common command args.
 	handleCommonCmdArgs(ctx)
 
-	logger.FatalIf(CheckLocalServerAddr(globalCLIContext.Addr), "Unable to validate passed arguments")
+	logger.FatalIf(CheckLocalServerAddr(GlobalCLIContext.Addr), "Unable to validate passed arguments")
 
 	var err error
 	var setupType SetupType
 
 	// Check and load TLS certificates.
-	globalPublicCerts, globalTLSCerts, globalIsTLS, err = getTLSConfig()
+	globalPublicCerts, globalTLSCerts, GlobalIsTLS, err = getTLSConfig()
 	logger.FatalIf(err, "Unable to load the TLS configuration")
 
 	// Check and load Root CAs.
@@ -138,10 +138,10 @@ func serverHandleCmdArgs(ctx *cli.Context) {
 	// Register root CAs for remote ENVs
 	env.RegisterGlobalCAs(globalRootCAs)
 
-	globalMinioAddr = globalCLIContext.Addr
+	globalMinioAddr = GlobalCLIContext.Addr
 
 	globalMinioHost, globalMinioPort = mustSplitHostPort(globalMinioAddr)
-	globalEndpoints, setupType, err = createServerEndpoints(globalCLIContext.Addr, serverCmdArgs(ctx)...)
+	globalEndpoints, setupType, err = createServerEndpoints(GlobalCLIContext.Addr, serverCmdArgs(ctx)...)
 	logger.FatalIf(err, "Invalid command line arguments")
 
 	globalLocalNodeName = GetLocalPeer(globalEndpoints, globalMinioHost, globalMinioPort)
@@ -200,7 +200,7 @@ func newAllSubsystems() {
 	}
 
 	// Create new notification system and initialize notification targets
-	globalNotificationSys = NewNotificationSys(globalEndpoints)
+	GlobalNotificationSys = NewNotificationSys(globalEndpoints)
 
 	// Create new bucket metadata system.
 	if globalBucketMetadataSys == nil {
@@ -217,7 +217,7 @@ func newAllSubsystems() {
 	globalConfigSys = NewConfigSys()
 
 	// Create new IAM system.
-	globalIAMSys = NewIAMSys()
+	GlobalIAMSys = NewIAMSys()
 
 	// Create new policy system.
 	globalPolicySys = NewPolicySys()
@@ -232,7 +232,7 @@ func newAllSubsystems() {
 	globalBucketObjectLockSys = NewBucketObjectLockSys()
 
 	// Create new bucket quota subsystem
-	globalBucketQuotaSys = NewBucketQuotaSys()
+	GlobalBucketQuotaSys = NewBucketQuotaSys()
 
 	// Create new bucket versioning subsystem
 	if globalBucketVersioningSys == nil {
@@ -396,7 +396,7 @@ func initAllSubsystems(ctx context.Context, newObject ObjectLayer) (err error) {
 	globalBucketMetadataSys.Init(ctx, buckets, newObject)
 
 	// Initialize notification system.
-	globalNotificationSys.Init(ctx, buckets, newObject)
+	GlobalNotificationSys.Init(ctx, buckets, newObject)
 
 	// Initialize bucket targets sub-system.
 	globalBucketTargetSys.Init(ctx, buckets, newObject)
@@ -443,20 +443,20 @@ func serverMain(ctx *cli.Context) {
 		if host == "" {
 			host = sortIPs(localIP4.ToSlice())[0]
 		}
-		return fmt.Sprintf("%s://%s", getURLScheme(globalIsTLS), net.JoinHostPort(host, globalMinioPort))
+		return fmt.Sprintf("%s://%s", getURLScheme(GlobalIsTLS), net.JoinHostPort(host, globalMinioPort))
 	}()
 
 	// Is distributed setup, error out if no certificates are found for HTTPS endpoints.
 	if globalIsDistErasure {
-		if globalEndpoints.HTTPS() && !globalIsTLS {
+		if globalEndpoints.HTTPS() && !GlobalIsTLS {
 			logger.Fatal(config.ErrNoCertsAndHTTPSEndpoints(nil), "Unable to start the server")
 		}
-		if !globalEndpoints.HTTPS() && globalIsTLS {
+		if !globalEndpoints.HTTPS() && GlobalIsTLS {
 			logger.Fatal(config.ErrCertsAndHTTPEndpoints(nil), "Unable to start the server")
 		}
 	}
 
-	if !globalCLIContext.Quiet && !globalInplaceUpdateDisabled {
+	if !GlobalCLIContext.Quiet && !globalInplaceUpdateDisabled {
 		// Check for new updates from dl.min.io.
 		checkUpdate(getMinioMode())
 	}
@@ -549,7 +549,7 @@ func serverMain(ctx *cli.Context) {
 	}
 
 	// Initialize users credentials and policies in background right after config has initialized.
-	go globalIAMSys.Init(GlobalContext, newObject)
+	go GlobalIAMSys.Init(GlobalContext, newObject)
 
 	// Prints the formatted startup message, if err is not nil then it prints additional information as well.
 	printStartupMessage(getAPIEndpoints(), err)

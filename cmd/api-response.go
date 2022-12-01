@@ -394,7 +394,7 @@ func getObjectLocation(r *http.Request, domains []string, bucket, object string)
 	}
 	proto := handlers.GetSourceScheme(r)
 	if proto == "" {
-		proto = getURLScheme(globalIsTLS)
+		proto = getURLScheme(GlobalIsTLS)
 	}
 	u := &url.URL{
 		Host:   r.Host,
@@ -417,7 +417,7 @@ func generateListBucketsResponse(buckets []BucketInfo) ListBucketsResponse {
 	listbuckets := make([]Bucket, 0, len(buckets))
 	var data = ListBucketsResponse{}
 	var owner = Owner{
-		ID:          globalMinioDefaultOwnerID,
+		ID:          GlobalMinioDefaultOwnerID,
 		DisplayName: "minio",
 	}
 
@@ -438,7 +438,7 @@ func generateListBucketsResponse(buckets []BucketInfo) ListBucketsResponse {
 func generateListVersionsResponse(bucket, prefix, marker, versionIDMarker, delimiter, encodingType string, maxKeys int, resp ListObjectVersionsInfo) ListVersionsResponse {
 	versions := make([]ObjectVersion, 0, len(resp.Objects))
 	var owner = Owner{
-		ID:          globalMinioDefaultOwnerID,
+		ID:          GlobalMinioDefaultOwnerID,
 		DisplayName: "minio",
 	}
 	var data = ListVersionsResponse{}
@@ -496,7 +496,7 @@ func generateListVersionsResponse(bucket, prefix, marker, versionIDMarker, delim
 func generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingType string, maxKeys int, resp ListObjectsInfo) ListObjectsResponse {
 	contents := make([]Object, 0, len(resp.Objects))
 	var owner = Owner{
-		ID:          globalMinioDefaultOwnerID,
+		ID:          GlobalMinioDefaultOwnerID,
 		DisplayName: "minio",
 	}
 	var data = ListObjectsResponse{}
@@ -545,7 +545,7 @@ func generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingTy
 func generateListObjectsV2Response(bucket, prefix, token, nextToken, startAfter, delimiter, encodingType string, fetchOwner, isTruncated bool, maxKeys int, objects []ObjectInfo, prefixes []string, metadata bool) ListObjectsV2Response {
 	contents := make([]Object, 0, len(objects))
 	var owner = Owner{
-		ID:          globalMinioDefaultOwnerID,
+		ID:          GlobalMinioDefaultOwnerID,
 		DisplayName: "minio",
 	}
 	var data = ListObjectsV2Response{}
@@ -653,12 +653,12 @@ func generateListPartsResponse(partsInfo ListPartsInfo, encodingType string) Lis
 
 	// Dumb values not meaningful
 	listPartsResponse.Initiator = Initiator{
-		ID:          globalMinioDefaultOwnerID,
-		DisplayName: globalMinioDefaultOwnerID,
+		ID:          GlobalMinioDefaultOwnerID,
+		DisplayName: GlobalMinioDefaultOwnerID,
 	}
 	listPartsResponse.Owner = Owner{
-		ID:          globalMinioDefaultOwnerID,
-		DisplayName: globalMinioDefaultOwnerID,
+		ID:          GlobalMinioDefaultOwnerID,
+		DisplayName: GlobalMinioDefaultOwnerID,
 	}
 
 	listPartsResponse.MaxParts = partsInfo.MaxParts

@@ -50,7 +50,7 @@ type LifecycleSys struct{}
 
 // Get - gets lifecycle config associated to a given bucket name.
 func (sys *LifecycleSys) Get(bucketName string) (lc *lifecycle.Lifecycle, err error) {
-	if globalIsGateway {
+	if GlobalIsGateway {
 		objAPI := newObjectLayerFn()
 		if objAPI == nil {
 			return nil, errServerNotInitialized

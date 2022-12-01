@@ -180,7 +180,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 
 	// Check and load TLS certificates.
 	var err error
-	globalPublicCerts, globalTLSCerts, globalIsTLS, err = getTLSConfig()
+	globalPublicCerts, globalTLSCerts, GlobalIsTLS, err = getTLSConfig()
 	logger.FatalIf(err, "Invalid TLS certificate file")
 
 	// Check and load Root CAs.
@@ -199,7 +199,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 	initHelp()
 
 	// Get port to listen on from gateway address
-	globalMinioHost, globalMinioPort = mustSplitHostPort(globalCLIContext.Addr)
+	globalMinioHost, globalMinioPort = mustSplitHostPort(GlobalCLIContext.Addr)
 
 	// On macOS, if a process already listens on LOCALIPADDR:PORT, net.Listen() falls back
 	// to IPv6 address ie minio will start listening on IPv6 address whereas another
@@ -212,7 +212,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 		if host == "" {
 			host = sortIPs(localIP4.ToSlice())[0]
 		}
-		return fmt.Sprintf("%s://%s", getURLScheme(globalIsTLS), net.JoinHostPort(host, globalMinioPort))
+		return fmt.Sprintf("%s://%s", getURLScheme(GlobalIsTLS), net.JoinHostPort(host, globalMinioPort))
 	}()
 
 	// Handle gateway specific env
@@ -222,7 +222,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 	setMaxResources()
 
 	// Set when gateway is enabled
-	globalIsGateway = true
+	GlobalIsGateway = true
 
 	enableConfigOps := false
 
@@ -272,14 +272,14 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 	registerAPIRouter(router)
 
 	// Use all the middlewares
-	router.Use(globalHandlers...)
+	router.Use(GlobalHandlers...)
 
 	var getCert certs.GetCertificateFunc
 	if globalTLSCerts != nil {
 		getCert = globalTLSCerts.GetCertificate
 	}
 
-	httpServer := xhttp.NewServer([]string{globalCLIContext.Addr},
+	httpServer := xhttp.NewServer([]string{GlobalCLIContext.Addr},
 		criticalErrorHandler{corsHandler(router)}, getCert)
 	httpServer.BaseContext = func(listener net.Listener) context.Context {
 		return GlobalContext
@@ -314,7 +314,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 		if err != nil {
 			logger.Fatal(err, "Unable to list buckets")
 		}
-		logger.FatalIf(globalNotificationSys.Init(GlobalContext, buckets, newObject), "Unable to initialize notification system")
+		logger.FatalIf(GlobalNotificationSys.Init(GlobalContext, buckets, newObject), "Unable to initialize notification system")
 	}
 
 	if globalEtcdClient != nil {
@@ -327,9 +327,9 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 
 	if enableIAMOps {
 		// Initialize users credentials and policies in background.
-		globalIAMSys.InitStore(newObject)
+		GlobalIAMSys.InitStore(newObject)
 
-		go globalIAMSys.Init(GlobalContext, newObject)
+		go GlobalIAMSys.Init(GlobalContext, newObject)
 	}
 
 	if globalCacheConfig.Enabled {
@@ -358,7 +358,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 	verifyObjectLayerFeatures("gateway "+gatewayName, newObject)
 
 	// Prints the formatted startup message once object layer is initialized.
-	if !globalCLIContext.Quiet {
+	if !GlobalCLIContext.Quiet {
 		mode := globalMinioModeGatewayPrefix + gatewayName
 		// Check update mode.
 		checkUpdate(mode)

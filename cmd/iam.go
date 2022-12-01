@@ -848,7 +848,7 @@ func (sys *IAMSys) SetTempUser(accessKey string, cred auth.Credentials, policyNa
 	// If OPA is not set we honor any policy claims for this
 	// temporary user which match with pre-configured canned
 	// policies for this server.
-	if globalPolicyOPA == nil && policyName != "" {
+	if GlobalPolicyOPA == nil && policyName != "" {
 		mp := newMappedPolicy(policyName)
 		combinedPolicy := sys.GetCombinedPolicy(mp.toSlice()...)
 
@@ -2144,8 +2144,8 @@ func (sys *IAMSys) GetCombinedPolicy(policies ...string) iampolicy.Policy {
 // IsAllowed - checks given policy args is allowed to continue the Rest API.
 func (sys *IAMSys) IsAllowed(args iampolicy.Args) bool {
 	// If opa is configured, use OPA always.
-	if globalPolicyOPA != nil {
-		ok, err := globalPolicyOPA.IsAllowed(args)
+	if GlobalPolicyOPA != nil {
+		ok, err := GlobalPolicyOPA.IsAllowed(args)
 		if err != nil {
 			logger.LogIf(GlobalContext, err)
 		}

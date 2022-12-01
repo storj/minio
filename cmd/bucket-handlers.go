@@ -344,7 +344,7 @@ func (api ObjectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.R
 		// Use the following trick to filter in place
 		// https://github.com/golang/go/wiki/SliceTricks#filter-in-place
 		for _, bucketInfo := range bucketsInfo {
-			if globalIAMSys.IsAllowed(iampolicy.Args{
+			if GlobalIAMSys.IsAllowed(iampolicy.Args{
 				AccountName:     cred.AccessKey,
 				Groups:          cred.Groups,
 				Action:          iampolicy.ListBucketAction,
@@ -714,7 +714,7 @@ func (api ObjectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 				}
 
 				// Load updated bucket metadata into memory.
-				globalNotificationSys.LoadBucketMetadata(GlobalContext, bucket)
+				GlobalNotificationSys.LoadBucketMetadata(GlobalContext, bucket)
 
 				// Make sure to add Location information here only for bucket
 				w.Header().Set(xhttp.Location,
@@ -757,7 +757,7 @@ func (api ObjectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Load updated bucket metadata into memory.
-	globalNotificationSys.LoadBucketMetadata(GlobalContext, bucket)
+	GlobalNotificationSys.LoadBucketMetadata(GlobalContext, bucket)
 
 	// Make sure to add Location information here only for bucket
 	if cp := pathClean(r.URL.Path); cp != "" {
@@ -910,7 +910,7 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 			return
 		}
 
-		if !globalIAMSys.IsAllowed(iampolicy.Args{
+		if !GlobalIAMSys.IsAllowed(iampolicy.Args{
 			AccountName:     cred.AccessKey,
 			Action:          iampolicy.PutObjectAction,
 			ConditionValues: getConditionValues(r, "", cred.AccessKey, claims),
@@ -1237,7 +1237,7 @@ func (api ObjectAPIHandlers) DeleteBucketHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	globalNotificationSys.DeleteBucketMetadata(ctx, bucket)
+	GlobalNotificationSys.DeleteBucketMetadata(ctx, bucket)
 
 	if globalDNSConfig != nil {
 		if err := globalDNSConfig.Delete(bucket); err != nil {
@@ -1636,7 +1636,7 @@ func (api ObjectAPIHandlers) GetBucketReplicationMetricsHandler(w http.ResponseW
 		return
 	}
 
-	bucketStats := globalNotificationSys.GetClusterBucketStats(r.Context(), bucket)
+	bucketStats := GlobalNotificationSys.GetClusterBucketStats(r.Context(), bucket)
 	bucketReplStats := BucketReplicationStats{}
 	// sum up metrics from each node in the cluster
 	for _, bucketStat := range bucketStats {

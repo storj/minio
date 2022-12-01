@@ -160,7 +160,7 @@ func (a adminAPIHandlers) SetConfigKVHandler(w http.ResponseWriter, r *http.Requ
 			writeErrorResponseJSON(ctx, w, toAdminAPIErr(ctx, err), r.URL)
 			return
 		}
-		globalNotificationSys.SignalService(serviceReloadDynamic)
+		GlobalNotificationSys.SignalService(serviceReloadDynamic)
 		// If all values were dynamic, tell the client.
 		w.Header().Set(madmin.ConfigAppliedHeader, madmin.ConfigAppliedTrue)
 	}

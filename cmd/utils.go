@@ -861,7 +861,7 @@ func getMinioMode() string {
 		mode = globalMinioModeDistErasure
 	} else if globalIsErasure {
 		mode = globalMinioModeErasure
-	} else if globalIsGateway {
+	} else if GlobalIsGateway {
 		mode = globalMinioModeGatewayPrefix + globalGatewayName
 	}
 	return mode

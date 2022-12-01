@@ -59,7 +59,7 @@ const (
 	//    It is 64-character obfuscated version of the account ID.
 	// ```
 	// http://docs.aws.amazon.com/AmazonS3/latest/dev/example-walkthroughs-managing-access-example4.html
-	globalMinioDefaultOwnerID      = "02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4"
+	GlobalMinioDefaultOwnerID      = "02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4"
 	globalMinioDefaultStorageClass = "STANDARD"
 	globalWindowsOSName            = "windows"
 	globalMacOSName                = "darwin"
@@ -107,7 +107,7 @@ const (
 	diskFillFraction = 0.95
 )
 
-var globalCLIContext = struct {
+var GlobalCLIContext = struct {
 	JSON, Quiet    bool
 	Anonymous      bool
 	Addr           string
@@ -122,7 +122,7 @@ var (
 	globalIsErasure = false
 
 	// Indicates if the running minio is in gateway mode.
-	globalIsGateway = false
+	GlobalIsGateway = false
 
 	// Name of gateway server, e.g S3, GCS, Azure, etc
 	globalGatewayName = ""
@@ -148,7 +148,7 @@ var (
 	// globalConfigSys server config system.
 	globalConfigSys *ConfigSys
 
-	globalNotificationSys  *NotificationSys
+	GlobalNotificationSys  *NotificationSys
 	globalConfigTargetList *event.TargetList
 	// globalEnvTargetList has list of targets configured via env.
 	globalEnvTargetList *event.TargetList
@@ -156,7 +156,7 @@ var (
 	globalBucketMetadataSys *BucketMetadataSys
 	globalBucketMonitor     *bandwidth.Monitor
 	globalPolicySys         *PolicySys
-	globalIAMSys            *IAMSys
+	GlobalIAMSys            *IAMSys
 
 	globalLifecycleSys       *LifecycleSys
 	globalBucketSSEConfigSys *BucketSSEConfigSys
@@ -173,7 +173,7 @@ var (
 	globalRootCAs *x509.CertPool
 
 	// IsSSL indicates if the server is configured with SSL.
-	globalIsTLS bool
+	GlobalIsTLS bool
 
 	globalTLSCerts *certs.Manager
 
@@ -225,7 +225,7 @@ var (
 	globalDeleteOperationTimeout = newDynamicTimeout(5*time.Minute, 1*time.Minute)  // default time for delete ops
 
 	globalBucketObjectLockSys *BucketObjectLockSys
-	globalBucketQuotaSys      *BucketQuotaSys
+	GlobalBucketQuotaSys      *BucketQuotaSys
 	globalBucketVersioningSys *BucketVersioningSys
 
 	// Disk cache drives
@@ -266,7 +266,7 @@ var (
 	globalOpenIDValidators *openid.Validators
 
 	// OPA policy system.
-	globalPolicyOPA *opa.Opa
+	GlobalPolicyOPA *opa.Opa
 
 	// Deployment ID - unique per deployment
 	globalDeploymentID string
