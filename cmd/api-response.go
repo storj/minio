@@ -752,9 +752,9 @@ func writeSuccessResponseJSON(w http.ResponseWriter, response []byte) {
 	writeResponse(w, http.StatusOK, response, mimeJSON)
 }
 
-// writeSuccessResponseXML writes success headers and response if any,
+// WriteSuccessResponseXML writes success headers and response if any,
 // with content-type set to `application/xml`.
-func writeSuccessResponseXML(w http.ResponseWriter, response []byte) {
+func WriteSuccessResponseXML(w http.ResponseWriter, response []byte) {
 	writeResponse(w, http.StatusOK, response, mimeXML)
 }
 

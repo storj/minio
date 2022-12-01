@@ -104,7 +104,7 @@ func (api ObjectAPIHandlers) GetBucketNotificationHandler(w http.ResponseWriter,
 		return
 	}
 
-	writeSuccessResponseXML(w, configData)
+	WriteSuccessResponseXML(w, configData)
 }
 
 // PutBucketNotificationHandler - This HTTP handler stores given notification configuration as per

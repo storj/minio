@@ -139,7 +139,7 @@ func (api ObjectAPIHandlers) GetBucketLifecycleHandler(w http.ResponseWriter, r 
 	}
 
 	// Write lifecycle configuration to client.
-	writeSuccessResponseXML(w, configData)
+	WriteSuccessResponseXML(w, configData)
 }
 
 // DeleteBucketLifecycleHandler - This HTTP handler removes bucket lifecycle configuration.

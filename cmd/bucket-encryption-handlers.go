@@ -139,7 +139,7 @@ func (api ObjectAPIHandlers) GetBucketEncryptionHandler(w http.ResponseWriter, r
 	}
 
 	// Write bucket encryption configuration to client
-	writeSuccessResponseXML(w, configData)
+	WriteSuccessResponseXML(w, configData)
 }
 
 // DeleteBucketEncryptionHandler - Removes bucket encryption configuration

@@ -214,7 +214,7 @@ func (api ObjectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *
 	}
 
 	// Write success response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }
 
 // ListMultipartUploadsHandler - GET Bucket (List Multipart uploads)
@@ -273,7 +273,7 @@ func (api ObjectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, 
 	encodedSuccessResponse := encodeResponse(response)
 
 	// write success response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }
 
 // ListBucketsHandler - GET Service.
@@ -371,7 +371,7 @@ func (api ObjectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.R
 	encodedSuccessResponse := encodeResponse(response)
 
 	// Write response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }
 
 // DeleteMultipleObjectsHandler - deletes multiple objects.
@@ -596,7 +596,7 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 	encodedSuccessResponse := encodeResponse(response)
 
 	// Write success response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 	for _, dobj := range deletedObjects {
 		if dobj.ObjectName == "" {
 			continue
@@ -1138,7 +1138,7 @@ func (api ObjectAPIHandlers) GetBucketPolicyStatusHandler(w http.ResponseWriter,
 		}(),
 	})
 
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }
 
 // HeadBucketHandler - HEAD Bucket
@@ -1354,7 +1354,7 @@ func (api ObjectAPIHandlers) GetBucketObjectLockConfigHandler(w http.ResponseWri
 	}
 
 	// Write success response.
-	writeSuccessResponseXML(w, configData)
+	WriteSuccessResponseXML(w, configData)
 }
 
 // PutBucketTaggingHandler - PUT Bucket tagging.
@@ -1436,7 +1436,7 @@ func (api ObjectAPIHandlers) GetBucketTaggingHandler(w http.ResponseWriter, r *h
 	}
 
 	// Write success response.
-	writeSuccessResponseXML(w, configData)
+	WriteSuccessResponseXML(w, configData)
 }
 
 // DeleteBucketTaggingHandler - DELETE Bucket tagging.
@@ -1572,7 +1572,7 @@ func (api ObjectAPIHandlers) GetBucketReplicationConfigHandler(w http.ResponseWr
 	}
 
 	// Write success response.
-	writeSuccessResponseXML(w, configData)
+	WriteSuccessResponseXML(w, configData)
 }
 
 // DeleteBucketReplicationConfigHandler - DELETE Bucket replication config.

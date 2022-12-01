@@ -91,7 +91,7 @@ func (api ObjectAPIHandlers) GetBucketAccelerateHandler(w http.ResponseWriter, r
 	}
 
 	const accelerateDefaultConfig = `<?xml version="1.0" encoding="UTF-8"?><AccelerateConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"/>`
-	writeSuccessResponseXML(w, []byte(accelerateDefaultConfig))
+	WriteSuccessResponseXML(w, []byte(accelerateDefaultConfig))
 }
 
 // GetBucketRequestPaymentHandler - GET bucket requestPayment, a dummy api
@@ -125,7 +125,7 @@ func (api ObjectAPIHandlers) GetBucketRequestPaymentHandler(w http.ResponseWrite
 
 	const requestPaymentDefaultConfig = `<?xml version="1.0" encoding="UTF-8"?><RequestPaymentConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Payer>BucketOwner</Payer></RequestPaymentConfiguration>`
 
-	writeSuccessResponseXML(w, []byte(requestPaymentDefaultConfig))
+	WriteSuccessResponseXML(w, []byte(requestPaymentDefaultConfig))
 }
 
 // GetBucketLoggingHandler - GET bucket logging, a dummy api
@@ -158,7 +158,7 @@ func (api ObjectAPIHandlers) GetBucketLoggingHandler(w http.ResponseWriter, r *h
 	}
 
 	const loggingDefaultConfig = `<?xml version="1.0" encoding="UTF-8"?><BucketLoggingStatus xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><!--<LoggingEnabled><TargetBucket>myLogsBucket</TargetBucket><TargetPrefix>add/this/prefix/to/my/log/files/access_log-</TargetPrefix></LoggingEnabled>--></BucketLoggingStatus>`
-	writeSuccessResponseXML(w, []byte(loggingDefaultConfig))
+	WriteSuccessResponseXML(w, []byte(loggingDefaultConfig))
 }
 
 // DeleteBucketWebsiteHandler - DELETE bucket website, a dummy api

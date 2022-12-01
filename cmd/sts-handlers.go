@@ -256,7 +256,7 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	assumeRoleResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-	writeSuccessResponseXML(w, encodeResponse(assumeRoleResponse))
+	WriteSuccessResponseXML(w, encodeResponse(assumeRoleResponse))
 }
 
 func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Request) {
@@ -412,7 +412,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Requ
 		encodedSuccessResponse = encodeResponse(webIdentityResponse)
 	}
 
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }
 
 // AssumeRoleWithWebIdentity - implementation of AWS STS API supporting OAuth2.0
@@ -556,5 +556,5 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 	ldapIdentityResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
 	encodedSuccessResponse := encodeResponse(ldapIdentityResponse)
 
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }

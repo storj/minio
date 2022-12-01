@@ -1370,7 +1370,7 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	// Write success response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 
 	// Notify object created event.
 	sendEvent(eventArgs{
@@ -2131,7 +2131,7 @@ func (api ObjectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r 
 	encodedSuccessResponse := encodeResponse(response)
 
 	// Write success response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }
 
 // CopyObjectPartHandler - uploads a part by copying data from an existing object as data source.
@@ -2346,7 +2346,7 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 		encodedSuccessResponse := encodeResponse(response)
 
 		// Write success response.
-		writeSuccessResponseXML(w, encodedSuccessResponse)
+		WriteSuccessResponseXML(w, encodedSuccessResponse)
 		return
 	}
 
@@ -2454,7 +2454,7 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 	encodedSuccessResponse := encodeResponse(response)
 
 	// Write success response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }
 
 // PutObjectPartHandler - uploads an incoming part for an ongoing multipart operation.
@@ -2853,7 +2853,7 @@ func (api ObjectAPIHandlers) ListObjectPartsHandler(w http.ResponseWriter, r *ht
 	encodedSuccessResponse := encodeResponse(response)
 
 	// Write success response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }
 
 type whiteSpaceWriter struct {
@@ -3090,7 +3090,7 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 	}
 
 	// Write success response.
-	writeSuccessResponseXML(w, encodedSuccessResponse)
+	WriteSuccessResponseXML(w, encodedSuccessResponse)
 
 	// Notify object created event.
 	sendEvent(eventArgs{
@@ -3441,7 +3441,7 @@ func (api ObjectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	writeSuccessResponseXML(w, encodeResponse(legalHold))
+	WriteSuccessResponseXML(w, encodeResponse(legalHold))
 	// Notify object legal hold accessed via a GET request.
 	sendEvent(eventArgs{
 		EventName:    event.ObjectAccessedGetLegalHold,
@@ -3618,7 +3618,7 @@ func (api ObjectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	writeSuccessResponseXML(w, encodeResponse(retention))
+	WriteSuccessResponseXML(w, encodeResponse(retention))
 	// Notify object retention accessed via a GET request.
 	sendEvent(eventArgs{
 		EventName:    event.ObjectAccessedGetRetention,
@@ -3678,7 +3678,7 @@ func (api ObjectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *h
 		w.Header()[xhttp.AmzVersionID] = []string{opts.VersionID}
 	}
 
-	writeSuccessResponseXML(w, encodeResponse(tags))
+	WriteSuccessResponseXML(w, encodeResponse(tags))
 }
 
 // PutObjectTaggingHandler - PUT object tagging
