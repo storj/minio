@@ -30,7 +30,7 @@ import (
 // They are only defined to be used in this file alone.
 
 // GetBucketWebsite  - GET bucket website, a dummy api
-func (api objectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetBucketWebsite")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -62,7 +62,7 @@ func (api objectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *h
 }
 
 // GetBucketAccelerate  - GET bucket accelerate, a dummy api
-func (api objectAPIHandlers) GetBucketAccelerateHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetBucketAccelerateHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetBucketAccelerate")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -95,7 +95,7 @@ func (api objectAPIHandlers) GetBucketAccelerateHandler(w http.ResponseWriter, r
 }
 
 // GetBucketRequestPaymentHandler - GET bucket requestPayment, a dummy api
-func (api objectAPIHandlers) GetBucketRequestPaymentHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetBucketRequestPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetBucketRequestPayment")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -129,7 +129,7 @@ func (api objectAPIHandlers) GetBucketRequestPaymentHandler(w http.ResponseWrite
 }
 
 // GetBucketLoggingHandler - GET bucket logging, a dummy api
-func (api objectAPIHandlers) GetBucketLoggingHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetBucketLoggingHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetBucketLogging")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -162,13 +162,13 @@ func (api objectAPIHandlers) GetBucketLoggingHandler(w http.ResponseWriter, r *h
 }
 
 // DeleteBucketWebsiteHandler - DELETE bucket website, a dummy api
-func (api objectAPIHandlers) DeleteBucketWebsiteHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) DeleteBucketWebsiteHandler(w http.ResponseWriter, r *http.Request) {
 	writeSuccessResponseHeadersOnly(w)
 	w.(http.Flusher).Flush()
 }
 
 // GetBucketCorsHandler - GET bucket cors, a dummy api
-func (api objectAPIHandlers) GetBucketCorsHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetBucketCorsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetBucketCors")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))

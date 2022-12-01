@@ -143,7 +143,7 @@ func testAPIHeadObjectHandler(obj ObjectLayer, instanceType, bucketName string, 
 			t.Fatalf("Test %d: %s: Failed to create HTTP request for Head Object: <ERROR> %v", i+1, instanceType, err)
 		}
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
-		// Call the ServeHTTP to execute the handler,`func (api objectAPIHandlers) GetObjectHandler`  handles the request.
+		// Call the ServeHTTP to execute the handler,`func (api ObjectAPIHandlers) GetObjectHandler`  handles the request.
 		apiRouter.ServeHTTP(rec, req)
 
 		// Assert the response code with the expected status.
@@ -532,7 +532,7 @@ func testAPIGetObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			req.Header.Set("Range", testCase.byteRange)
 		}
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
-		// Call the ServeHTTP to execute the handler,`func (api objectAPIHandlers) GetObjectHandler`  handles the request.
+		// Call the ServeHTTP to execute the handler,`func (api ObjectAPIHandlers) GetObjectHandler`  handles the request.
 		apiRouter.ServeHTTP(rec, req)
 		// Assert the response code with the expected status.
 		if rec.Code != testCase.expectedRespStatus {
@@ -1250,7 +1250,7 @@ func testAPIPutObjectStreamSigV4Handler(obj ObjectLayer, instanceType, bucketNam
 			t.Fatalf("Error injecting faults into the request: <ERROR> %v.", err)
 		}
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
-		// Call the ServeHTTP to execute the handler,`func (api objectAPIHandlers) GetObjectHandler`  handles the request.
+		// Call the ServeHTTP to execute the handler,`func (api ObjectAPIHandlers) GetObjectHandler`  handles the request.
 		apiRouter.ServeHTTP(rec, req)
 		// Assert the response code with the expected status.
 		if rec.Code != testCase.expectedRespStatus {
@@ -1448,7 +1448,7 @@ func testAPIPutObjectHandler(obj ObjectLayer, instanceType, bucketName string, a
 			req.ContentLength = globalMaxObjectSize + 1
 		}
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
-		// Call the ServeHTTP to execute the handler,`func (api objectAPIHandlers) GetObjectHandler`  handles the request.
+		// Call the ServeHTTP to execute the handler,`func (api ObjectAPIHandlers) GetObjectHandler`  handles the request.
 		apiRouter.ServeHTTP(rec, req)
 		// Assert the response code with the expected status.
 		if rec.Code != testCase.expectedRespStatus {
@@ -1630,7 +1630,7 @@ func testAPICopyObjectPartHandlerSanity(obj ObjectLayer, instanceType, bucketNam
 		req.Header.Set("X-Amz-Copy-Source-Range", fmt.Sprintf("bytes=%d-%d", a, b))
 
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
-		// Call the ServeHTTP to execute the handler, `func (api objectAPIHandlers) CopyObjectHandler` handles the request.
+		// Call the ServeHTTP to execute the handler, `func (api ObjectAPIHandlers) CopyObjectHandler` handles the request.
 		a = globalMinPartSize + 1
 		b = len(bytesData[0].byteData) - 1
 		apiRouter.ServeHTTP(rec, req)
@@ -1944,7 +1944,7 @@ func testAPICopyObjectPartHandler(obj ObjectLayer, instanceType, bucketName stri
 		}
 
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
-		// Call the ServeHTTP to execute the handler, `func (api objectAPIHandlers) CopyObjectHandler` handles the request.
+		// Call the ServeHTTP to execute the handler, `func (api ObjectAPIHandlers) CopyObjectHandler` handles the request.
 		apiRouter.ServeHTTP(rec, req)
 		// Assert the response code with the expected status.
 		if rec.Code != testCase.expectedRespStatus {
@@ -2332,7 +2332,7 @@ func testAPICopyObjectHandler(obj ObjectLayer, instanceType, bucketName string, 
 			req.Header.Set("X-Amz-Metadata-Directive", "Unknown")
 		}
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
-		// Call the ServeHTTP to execute the handler, `func (api objectAPIHandlers) CopyObjectHandler` handles the request.
+		// Call the ServeHTTP to execute the handler, `func (api ObjectAPIHandlers) CopyObjectHandler` handles the request.
 		apiRouter.ServeHTTP(rec, req)
 		// Assert the response code with the expected status.
 		if rec.Code != testCase.expectedRespStatus {
@@ -3296,7 +3296,7 @@ func testAPIDeleteObjectHandler(obj ObjectLayer, instanceType, bucketName string
 			t.Fatalf("Test %d: Failed to create HTTP request for Delete Object: <ERROR> %v", i+1, err)
 		}
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
-		// Call the ServeHTTP to execute the handler,`func (api objectAPIHandlers) DeleteObjectHandler`  handles the request.
+		// Call the ServeHTTP to execute the handler,`func (api ObjectAPIHandlers) DeleteObjectHandler`  handles the request.
 		apiRouter.ServeHTTP(rec, req)
 		// Assert the response code with the expected status.
 		if rec.Code != testCase.expectedRespStatus {

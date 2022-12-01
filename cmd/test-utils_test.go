@@ -2006,7 +2006,7 @@ func ExecObjectLayerStaleFilesTest(t *testing.T, objTest objTestStaleFilesType) 
 	defer removeRoots(erasureDisks)
 }
 
-func registerBucketLevelFunc(bucket *mux.Router, api objectAPIHandlers, apiFunctions ...string) {
+func registerBucketLevelFunc(bucket *mux.Router, api ObjectAPIHandlers, apiFunctions ...string) {
 	for _, apiFunction := range apiFunctions {
 		switch apiFunction {
 		case "PostPolicy":
@@ -2097,7 +2097,7 @@ func registerAPIFunctions(muxRouter *mux.Router, objLayer ObjectLayer, apiFuncti
 	// Bucket router.
 	bucketRouter := apiRouter.PathPrefix("/{bucket}").Subrouter()
 
-	// All object storage operations are registered as HTTP handlers on `objectAPIHandlers`.
+	// All object storage operations are registered as HTTP handlers on `ObjectAPIHandlers`.
 	// When the handlers get a HTTP request they use the underlying ObjectLayer to perform operations.
 	globalObjLayerMutex.Lock()
 	globalObjectAPI = objLayer
@@ -2106,7 +2106,7 @@ func registerAPIFunctions(muxRouter *mux.Router, objLayer ObjectLayer, apiFuncti
 	// When cache is enabled, Put and Get operations are passed
 	// to underlying cache layer to manage object layer operation and disk caching
 	// operation
-	api := objectAPIHandlers{
+	api := ObjectAPIHandlers{
 		ObjectAPI: func() ObjectLayer {
 			return globalObjectAPI
 		},

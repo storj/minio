@@ -97,7 +97,7 @@ func redactLDAPPwd(s string) string {
 func getOpName(name string) (op string) {
 	op = strings.TrimPrefix(name, "github.com/minio/minio/cmd.")
 	op = strings.TrimSuffix(op, "Handler-fm")
-	op = strings.Replace(op, "objectAPIHandlers", "s3", 1)
+	op = strings.Replace(op, "ObjectAPIHandlers", "s3", 1)
 	op = strings.Replace(op, "adminAPIHandlers", "admin", 1)
 	op = strings.Replace(op, "(*webAPIHandlers)", "web", 1)
 	op = strings.Replace(op, "(*storageRESTServer)", "internal", 1)

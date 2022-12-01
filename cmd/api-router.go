@@ -63,8 +63,8 @@ func setObjectLayer(o ObjectLayer) {
 	globalObjLayerMutex.Unlock()
 }
 
-// objectAPIHandler implements and provides http handlers for S3 API.
-type objectAPIHandlers struct {
+// ObjectAPIHandler implements and provides http handlers for S3 API.
+type ObjectAPIHandlers struct {
 	ObjectAPI func() ObjectLayer
 	CacheAPI  func() CacheObjectLayer
 }
@@ -179,7 +179,7 @@ func rejectUnsupportedAPIs(router *mux.Router) {
 // registerAPIRouter - registers S3 compatible APIs.
 func registerAPIRouter(router *mux.Router) {
 	// Initialize API.
-	api := objectAPIHandlers{
+	api := ObjectAPIHandlers{
 		ObjectAPI: newObjectLayerFn,
 		CacheAPI:  newCachedObjectLayerFn,
 	}

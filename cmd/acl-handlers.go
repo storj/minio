@@ -58,7 +58,7 @@ type accessControlPolicy struct {
 // This operation uses the ACL subresource
 // to set ACL for a bucket, this is a dummy call
 // only responds success if the ACL is private.
-func (api objectAPIHandlers) PutBucketACLHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutBucketACLHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutBucketACL")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -122,7 +122,7 @@ func (api objectAPIHandlers) PutBucketACLHandler(w http.ResponseWriter, r *http.
 // -----------------
 // This operation uses the ACL
 // subresource to return the ACL of a specified bucket.
-func (api objectAPIHandlers) GetBucketACLHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetBucketACLHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetBucketACL")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -173,7 +173,7 @@ func (api objectAPIHandlers) GetBucketACLHandler(w http.ResponseWriter, r *http.
 // This operation uses the ACL subresource
 // to set ACL for a bucket, this is a dummy call
 // only responds success if the ACL is private.
-func (api objectAPIHandlers) PutObjectACLHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutObjectACLHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutObjectACL")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -237,7 +237,7 @@ func (api objectAPIHandlers) PutObjectACLHandler(w http.ResponseWriter, r *http.
 // -----------------
 // This operation uses the ACL
 // subresource to return the ACL of a specified object.
-func (api objectAPIHandlers) GetObjectACLHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetObjectACLHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetObjectACL")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))

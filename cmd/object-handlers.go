@@ -95,7 +95,7 @@ func setHeadGetRespHeaders(w http.ResponseWriter, reqParams url.Values) {
 // This implementation of the GET operation retrieves object content based
 // on an SQL expression. In the request, along with the sql expression, you must
 // also specify a data serialization format (JSON, CSV) of the object.
-func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "SelectObject")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -306,7 +306,7 @@ func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 // ----------
 // This implementation of the GET operation retrieves object. To use GET,
 // you must have READ access to the object.
-func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetObject")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -545,7 +545,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 // HeadObjectHandler - HEAD Object
 // -----------
 // The HEAD operation retrieves metadata from an object without returning the object itself.
-func (api objectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "HeadObject")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -858,7 +858,7 @@ func isRemoteCallRequired(ctx context.Context, bucket string, objAPI ObjectLayer
 // Currently these keys are:
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
-func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "CopyObject")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -1392,7 +1392,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 // Currently these keys are:
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
-func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutObject")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1710,7 +1710,7 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 // based off from AWS Snowball feature to auto extract compressed
 // stream will be extracted in the same directory it is stored in
 // and the folder structures will be built out accordingly.
-func (api objectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutObjectExtract")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -1990,7 +1990,7 @@ func (api objectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 	writeSuccessResponseHeadersOnly(w)
 }
 
-/// Multipart objectAPIHandlers
+/// Multipart ObjectAPIHandlers
 
 // NewMultipartUploadHandler - New multipart upload.
 // Notice: The S3 client can send secret keys in headers for encryption related jobs,
@@ -1998,7 +1998,7 @@ func (api objectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 // Currently these keys are:
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
-func (api objectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "NewMultipartUpload")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -2135,7 +2135,7 @@ func (api objectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r 
 }
 
 // CopyObjectPartHandler - uploads a part by copying data from an existing object as data source.
-func (api objectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "CopyObjectPart")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -2458,7 +2458,7 @@ func (api objectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 }
 
 // PutObjectPartHandler - uploads an incoming part for an ongoing multipart operation.
-func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutObjectPart")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -2733,7 +2733,7 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 }
 
 // AbortMultipartUploadHandler - Abort multipart upload
-func (api objectAPIHandlers) AbortMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) AbortMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "AbortMultipartUpload")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -2773,7 +2773,7 @@ func (api objectAPIHandlers) AbortMultipartUploadHandler(w http.ResponseWriter, 
 }
 
 // ListObjectPartsHandler - List object parts
-func (api objectAPIHandlers) ListObjectPartsHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) ListObjectPartsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "ListObjectParts")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -2912,7 +2912,7 @@ func sendWhiteSpace(w http.ResponseWriter) <-chan bool {
 }
 
 // CompleteMultipartUploadHandler - Complete multipart upload.
-func (api objectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "CompleteMultipartUpload")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -3104,10 +3104,10 @@ func (api objectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 	})
 }
 
-/// Delete objectAPIHandlers
+/// Delete ObjectAPIHandlers
 
 // DeleteObjectHandler - delete an object
-func (api objectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "DeleteObject")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -3285,7 +3285,7 @@ func (api objectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.
 }
 
 // PutObjectLegalHoldHandler - set legal hold configuration to object,
-func (api objectAPIHandlers) PutObjectLegalHoldHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutObjectLegalHoldHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutObjectLegalHold")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -3390,7 +3390,7 @@ func (api objectAPIHandlers) PutObjectLegalHoldHandler(w http.ResponseWriter, r 
 }
 
 // GetObjectLegalHoldHandler - get legal hold configuration to object,
-func (api objectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetObjectLegalHold")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -3455,7 +3455,7 @@ func (api objectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r 
 }
 
 // PutObjectRetentionHandler - set object hold configuration to object,
-func (api objectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutObjectRetention")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -3568,7 +3568,7 @@ func (api objectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 }
 
 // GetObjectRetentionHandler - get object retention configuration of object,
-func (api objectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetObjectRetention")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -3632,7 +3632,7 @@ func (api objectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r 
 }
 
 // GetObjectTaggingHandler - GET object tagging
-func (api objectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetObjectTagging")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -3682,7 +3682,7 @@ func (api objectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *h
 }
 
 // PutObjectTaggingHandler - PUT object tagging
-func (api objectAPIHandlers) PutObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutObjectTagging")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -3760,7 +3760,7 @@ func (api objectAPIHandlers) PutObjectTaggingHandler(w http.ResponseWriter, r *h
 }
 
 // DeleteObjectTaggingHandler - DELETE object tagging
-func (api objectAPIHandlers) DeleteObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) DeleteObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "DeleteObjectTagging")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
@@ -3833,7 +3833,7 @@ func (api objectAPIHandlers) DeleteObjectTaggingHandler(w http.ResponseWriter, r
 
 // RestoreObjectHandler - POST restore object handler.
 // ----------
-func (api objectAPIHandlers) PostRestoreObjectHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PostRestoreObjectHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PostRestoreObject")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 	vars := mux.Vars(r)

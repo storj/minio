@@ -38,7 +38,7 @@ const (
 
 // PutBucketPolicyHandler - This HTTP handler stores given bucket policy configuration as per
 // https://docs.aws.amazon.com/AmazonS3/latest/dev/access-policy-language-overview.html
-func (api objectAPIHandlers) PutBucketPolicyHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) PutBucketPolicyHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "PutBucketPolicy")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -104,7 +104,7 @@ func (api objectAPIHandlers) PutBucketPolicyHandler(w http.ResponseWriter, r *ht
 }
 
 // DeleteBucketPolicyHandler - This HTTP handler removes bucket policy configuration.
-func (api objectAPIHandlers) DeleteBucketPolicyHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) DeleteBucketPolicyHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "DeleteBucketPolicy")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
@@ -139,7 +139,7 @@ func (api objectAPIHandlers) DeleteBucketPolicyHandler(w http.ResponseWriter, r 
 }
 
 // GetBucketPolicyHandler - This HTTP handler returns bucket policy configuration.
-func (api objectAPIHandlers) GetBucketPolicyHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) GetBucketPolicyHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "GetBucketPolicy")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))

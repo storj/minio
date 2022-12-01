@@ -28,7 +28,7 @@ import (
 	"storj.io/minio/pkg/event"
 )
 
-func (api objectAPIHandlers) ListenNotificationHandler(w http.ResponseWriter, r *http.Request) {
+func (api ObjectAPIHandlers) ListenNotificationHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := newContext(r, w, "ListenNotification")
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
