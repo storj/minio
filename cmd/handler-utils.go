@@ -385,7 +385,7 @@ func HTTPTraceHdrs(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func collectAPIStats(api string, f http.HandlerFunc) http.HandlerFunc {
+func CollectAPIStats(api string, f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		globalHTTPStats.currentS3Requests.Inc(api)
 		defer globalHTTPStats.currentS3Requests.Dec(api)
