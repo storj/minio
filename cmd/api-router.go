@@ -57,7 +57,7 @@ func setCacheObjectLayer(c CacheObjectLayer) {
 	globalObjLayerMutex.Unlock()
 }
 
-func setObjectLayer(o ObjectLayer) {
+func SetObjectLayer(o ObjectLayer) {
 	globalObjLayerMutex.Lock()
 	globalObjectAPI = o
 	globalObjLayerMutex.Unlock()

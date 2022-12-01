@@ -269,7 +269,7 @@ func configRetriableErrors(err error) bool {
 
 func initServer(ctx context.Context, newObject ObjectLayer) error {
 	// Once the config is fully loaded, initialize the new object layer.
-	setObjectLayer(newObject)
+	SetObjectLayer(newObject)
 
 	// Make sure to hold lock for entire migration to avoid
 	// such that only one server should migrate the entire config

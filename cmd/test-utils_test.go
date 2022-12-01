@@ -1889,13 +1889,13 @@ func ExecObjectLayerTest(t TestErrHandler, objTest objTestType) {
 	if localMetacacheMgr != nil {
 		localMetacacheMgr.deleteAll()
 	}
-	defer setObjectLayer(newObjectLayerFn())
+	defer SetObjectLayer(newObjectLayerFn())
 
 	objLayer, fsDir, err := prepareFS()
 	if err != nil {
 		t.Fatalf("Initialization of object layer failed for single node setup: %s", err)
 	}
-	setObjectLayer(objLayer)
+	SetObjectLayer(objLayer)
 
 	newAllSubsystems()
 
@@ -1913,14 +1913,14 @@ func ExecObjectLayerTest(t TestErrHandler, objTest objTestType) {
 	if localMetacacheMgr != nil {
 		localMetacacheMgr.deleteAll()
 	}
-	defer setObjectLayer(newObjectLayerFn())
+	defer SetObjectLayer(newObjectLayerFn())
 
 	newAllSubsystems()
 	objLayer, fsDirs, err := prepareErasureSets32(ctx)
 	if err != nil {
 		t.Fatalf("Initialization of object layer failed for Erasure setup: %s", err)
 	}
-	setObjectLayer(objLayer)
+	SetObjectLayer(objLayer)
 
 	defer objLayer.Shutdown(context.Background())
 
