@@ -451,7 +451,7 @@ func registerAPIRouter(router *mux.Router) {
 
 	// If none of the routes match add default error handler routes
 	apiRouter.NotFoundHandler = CollectAPIStats("notfound", HTTPTraceAll(ErrorResponseHandler))
-	apiRouter.MethodNotAllowedHandler = CollectAPIStats("methodnotallowed", HTTPTraceAll(methodNotAllowedHandler("S3")))
+	apiRouter.MethodNotAllowedHandler = CollectAPIStats("methodnotallowed", HTTPTraceAll(MethodNotAllowedHandler("S3")))
 
 }
 
