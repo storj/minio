@@ -132,8 +132,8 @@ func (t *apiConfig) getRequestsPool() (chan struct{}, time.Duration) {
 	return t.requestsPool, t.requestsDeadline
 }
 
-// maxClients throttles the S3 API calls
-func maxClients(f http.HandlerFunc) http.HandlerFunc {
+// MaxClients throttles the S3 API calls
+func MaxClients(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pool, deadline := globalAPIConfig.getRequestsPool()
 		if pool == nil {
