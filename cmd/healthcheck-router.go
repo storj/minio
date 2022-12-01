@@ -38,14 +38,14 @@ func registerHealthCheckRouter(router *mux.Router) {
 	healthRouter := router.PathPrefix(healthCheckPathPrefix).Subrouter()
 
 	// Cluster check handler to verify cluster is active
-	healthRouter.Methods(http.MethodGet).Path(healthCheckClusterPath).HandlerFunc(httpTraceAll(ClusterCheckHandler))
-	healthRouter.Methods(http.MethodGet).Path(healthCheckClusterReadPath).HandlerFunc(httpTraceAll(ClusterReadCheckHandler))
+	healthRouter.Methods(http.MethodGet).Path(healthCheckClusterPath).HandlerFunc(HTTPTraceAll(ClusterCheckHandler))
+	healthRouter.Methods(http.MethodGet).Path(healthCheckClusterReadPath).HandlerFunc(HTTPTraceAll(ClusterReadCheckHandler))
 
 	// Liveness handler
-	healthRouter.Methods(http.MethodGet).Path(healthCheckLivenessPath).HandlerFunc(httpTraceAll(LivenessCheckHandler))
-	healthRouter.Methods(http.MethodHead).Path(healthCheckLivenessPath).HandlerFunc(httpTraceAll(LivenessCheckHandler))
+	healthRouter.Methods(http.MethodGet).Path(healthCheckLivenessPath).HandlerFunc(HTTPTraceAll(LivenessCheckHandler))
+	healthRouter.Methods(http.MethodHead).Path(healthCheckLivenessPath).HandlerFunc(HTTPTraceAll(LivenessCheckHandler))
 
 	// Readiness handler
-	healthRouter.Methods(http.MethodGet).Path(healthCheckReadinessPath).HandlerFunc(httpTraceAll(ReadinessCheckHandler))
-	healthRouter.Methods(http.MethodHead).Path(healthCheckReadinessPath).HandlerFunc(httpTraceAll(ReadinessCheckHandler))
+	healthRouter.Methods(http.MethodGet).Path(healthCheckReadinessPath).HandlerFunc(HTTPTraceAll(ReadinessCheckHandler))
+	healthRouter.Methods(http.MethodHead).Path(healthCheckReadinessPath).HandlerFunc(HTTPTraceAll(ReadinessCheckHandler))
 }

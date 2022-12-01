@@ -362,7 +362,7 @@ func extractPostPolicyFormValues(ctx context.Context, form *multipart.Form) (fil
 }
 
 // Log headers and body.
-func httpTraceAll(f http.HandlerFunc) http.HandlerFunc {
+func HTTPTraceAll(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if globalTrace.NumSubscribers() == 0 {
 			f.ServeHTTP(w, r)

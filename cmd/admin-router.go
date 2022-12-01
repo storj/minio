@@ -51,36 +51,36 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 
 	for _, adminVersion := range adminVersions {
 		// Restart and stop MinIO service.
-		adminRouter.Methods(http.MethodPost).Path(adminVersion+"/service").HandlerFunc(httpTraceAll(adminAPI.ServiceHandler)).Queries("action", "{action:.*}")
+		adminRouter.Methods(http.MethodPost).Path(adminVersion+"/service").HandlerFunc(HTTPTraceAll(adminAPI.ServiceHandler)).Queries("action", "{action:.*}")
 		// Update MinIO servers.
-		adminRouter.Methods(http.MethodPost).Path(adminVersion+"/update").HandlerFunc(httpTraceAll(adminAPI.ServerUpdateHandler)).Queries("updateURL", "{updateURL:.*}")
+		adminRouter.Methods(http.MethodPost).Path(adminVersion+"/update").HandlerFunc(HTTPTraceAll(adminAPI.ServerUpdateHandler)).Queries("updateURL", "{updateURL:.*}")
 
 		// Info operations
-		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/info").HandlerFunc(httpTraceAll(adminAPI.ServerInfoHandler))
+		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/info").HandlerFunc(HTTPTraceAll(adminAPI.ServerInfoHandler))
 
 		// StorageInfo operations
-		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/storageinfo").HandlerFunc(httpTraceAll(adminAPI.StorageInfoHandler))
+		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/storageinfo").HandlerFunc(HTTPTraceAll(adminAPI.StorageInfoHandler))
 		// DataUsageInfo operations
-		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/datausageinfo").HandlerFunc(httpTraceAll(adminAPI.DataUsageInfoHandler))
+		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/datausageinfo").HandlerFunc(HTTPTraceAll(adminAPI.DataUsageInfoHandler))
 
 		if globalIsDistErasure || globalIsErasure {
 			/// Heal operations
 
 			// Heal processing endpoint.
-			adminRouter.Methods(http.MethodPost).Path(adminVersion + "/heal/").HandlerFunc(httpTraceAll(adminAPI.HealHandler))
-			adminRouter.Methods(http.MethodPost).Path(adminVersion + "/heal/{bucket}").HandlerFunc(httpTraceAll(adminAPI.HealHandler))
-			adminRouter.Methods(http.MethodPost).Path(adminVersion + "/heal/{bucket}/{prefix:.*}").HandlerFunc(httpTraceAll(adminAPI.HealHandler))
+			adminRouter.Methods(http.MethodPost).Path(adminVersion + "/heal/").HandlerFunc(HTTPTraceAll(adminAPI.HealHandler))
+			adminRouter.Methods(http.MethodPost).Path(adminVersion + "/heal/{bucket}").HandlerFunc(HTTPTraceAll(adminAPI.HealHandler))
+			adminRouter.Methods(http.MethodPost).Path(adminVersion + "/heal/{bucket}/{prefix:.*}").HandlerFunc(HTTPTraceAll(adminAPI.HealHandler))
 
-			adminRouter.Methods(http.MethodPost).Path(adminVersion + "/background-heal/status").HandlerFunc(httpTraceAll(adminAPI.BackgroundHealStatusHandler))
+			adminRouter.Methods(http.MethodPost).Path(adminVersion + "/background-heal/status").HandlerFunc(HTTPTraceAll(adminAPI.BackgroundHealStatusHandler))
 
 			/// Health operations
 
 		}
 
 		// Profiling operations
-		adminRouter.Methods(http.MethodPost).Path(adminVersion+"/profiling/start").HandlerFunc(httpTraceAll(adminAPI.StartProfilingHandler)).
+		adminRouter.Methods(http.MethodPost).Path(adminVersion+"/profiling/start").HandlerFunc(HTTPTraceAll(adminAPI.StartProfilingHandler)).
 			Queries("profilerType", "{profilerType:.*}")
-		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/profiling/download").HandlerFunc(httpTraceAll(adminAPI.DownloadProfilingHandler))
+		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/profiling/download").HandlerFunc(HTTPTraceAll(adminAPI.DownloadProfilingHandler))
 
 		// Config KV operations.
 		if enableConfigOps {
@@ -90,11 +90,11 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 		}
 
 		// Enable config help in all modes.
-		adminRouter.Methods(http.MethodGet).Path(adminVersion+"/help-config-kv").HandlerFunc(httpTraceAll(adminAPI.HelpConfigKVHandler)).Queries("subSys", "{subSys:.*}", "key", "{key:.*}")
+		adminRouter.Methods(http.MethodGet).Path(adminVersion+"/help-config-kv").HandlerFunc(HTTPTraceAll(adminAPI.HelpConfigKVHandler)).Queries("subSys", "{subSys:.*}", "key", "{key:.*}")
 
 		// Config KV history operations.
 		if enableConfigOps {
-			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/list-config-history-kv").HandlerFunc(httpTraceAll(adminAPI.ListConfigHistoryKVHandler)).Queries("count", "{count:[0-9]+}")
+			adminRouter.Methods(http.MethodGet).Path(adminVersion+"/list-config-history-kv").HandlerFunc(HTTPTraceAll(adminAPI.ListConfigHistoryKVHandler)).Queries("count", "{count:[0-9]+}")
 			adminRouter.Methods(http.MethodDelete).Path(adminVersion+"/clear-config-history-kv").HandlerFunc(httpTraceHdrs(adminAPI.ClearConfigHistoryKVHandler)).Queries("restoreId", "{restoreId:.*}")
 			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/restore-config-history-kv").HandlerFunc(httpTraceHdrs(adminAPI.RestoreConfigHistoryKVHandler)).Queries("restoreId", "{restoreId:.*}")
 		}
@@ -111,10 +111,10 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 			// -- IAM APIs --
 
 			// Add policy IAM
-			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/add-canned-policy").HandlerFunc(httpTraceAll(adminAPI.AddCannedPolicy)).Queries("name", "{name:.*}")
+			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/add-canned-policy").HandlerFunc(HTTPTraceAll(adminAPI.AddCannedPolicy)).Queries("name", "{name:.*}")
 
 			// Add user IAM
-			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/accountinfo").HandlerFunc(httpTraceAll(adminAPI.AccountInfoHandler))
+			adminRouter.Methods(http.MethodGet).Path(adminVersion + "/accountinfo").HandlerFunc(HTTPTraceAll(adminAPI.AccountInfoHandler))
 
 			adminRouter.Methods(http.MethodPut).Path(adminVersion+"/add-user").HandlerFunc(httpTraceHdrs(adminAPI.AddUser)).Queries("accessKey", "{accessKey:.*}")
 
@@ -203,12 +203,12 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/trace").HandlerFunc(adminAPI.TraceHandler)
 
 		// Console Logs
-		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/log").HandlerFunc(httpTraceAll(adminAPI.ConsoleLogHandler))
+		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/log").HandlerFunc(HTTPTraceAll(adminAPI.ConsoleLogHandler))
 
 		// -- KMS APIs --
 		//
-		adminRouter.Methods(http.MethodPost).Path(adminVersion+"/kms/key/create").HandlerFunc(httpTraceAll(adminAPI.KMSCreateKeyHandler)).Queries("key-id", "{key-id:.*}")
-		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/kms/key/status").HandlerFunc(httpTraceAll(adminAPI.KMSKeyStatusHandler))
+		adminRouter.Methods(http.MethodPost).Path(adminVersion+"/kms/key/create").HandlerFunc(HTTPTraceAll(adminAPI.KMSCreateKeyHandler)).Queries("key-id", "{key-id:.*}")
+		adminRouter.Methods(http.MethodGet).Path(adminVersion + "/kms/key/status").HandlerFunc(HTTPTraceAll(adminAPI.KMSKeyStatusHandler))
 
 		if !globalIsGateway {
 			// Keep obdinfo for backward compatibility with mc
@@ -223,6 +223,6 @@ func registerAdminRouter(router *mux.Router, enableConfigOps, enableIAMOps bool)
 	}
 
 	// If none of the routes match add default error handler routes
-	adminRouter.NotFoundHandler = httpTraceAll(errorResponseHandler)
-	adminRouter.MethodNotAllowedHandler = httpTraceAll(methodNotAllowedHandler("Admin"))
+	adminRouter.NotFoundHandler = HTTPTraceAll(errorResponseHandler)
+	adminRouter.MethodNotAllowedHandler = HTTPTraceAll(methodNotAllowedHandler("Admin"))
 }
