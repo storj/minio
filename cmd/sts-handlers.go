@@ -256,7 +256,7 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	assumeRoleResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-	WriteSuccessResponseXML(w, encodeResponse(assumeRoleResponse))
+	WriteSuccessResponseXML(w, EncodeResponse(assumeRoleResponse))
 }
 
 func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Request) {
@@ -400,7 +400,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Requ
 			},
 		}
 		clientGrantsResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-		encodedSuccessResponse = encodeResponse(clientGrantsResponse)
+		encodedSuccessResponse = EncodeResponse(clientGrantsResponse)
 	case webIdentity:
 		webIdentityResponse := &AssumeRoleWithWebIdentityResponse{
 			Result: WebIdentityResult{
@@ -409,7 +409,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Requ
 			},
 		}
 		webIdentityResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-		encodedSuccessResponse = encodeResponse(webIdentityResponse)
+		encodedSuccessResponse = EncodeResponse(webIdentityResponse)
 	}
 
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -554,7 +554,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 		},
 	}
 	ldapIdentityResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-	encodedSuccessResponse := encodeResponse(ldapIdentityResponse)
+	encodedSuccessResponse := EncodeResponse(ldapIdentityResponse)
 
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }

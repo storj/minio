@@ -1354,7 +1354,7 @@ func (a adminAPIHandlers) HealthInfoHandler(w http.ResponseWriter, r *http.Reque
 	errResp := func(err error) {
 		errorResponse := getAPIErrorResponse(ctx, toAdminAPIErr(ctx, err), r.URL.String(),
 			w.Header().Get(xhttp.AmzRequestID), globalDeploymentID)
-		encodedErrorResponse := encodeResponse(errorResponse)
+		encodedErrorResponse := EncodeResponse(errorResponse)
 		healthInfo.Error = string(encodedErrorResponse)
 		logger.LogIf(ctx, enc.Encode(healthInfo))
 	}

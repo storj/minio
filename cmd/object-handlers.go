@@ -237,7 +237,7 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 	s3Select, err := s3select.NewS3Select(r.Body)
 	if err != nil {
 		if serr, ok := err.(s3select.SelectError); ok {
-			encodedErrorResponse := encodeResponse(APIErrorResponse{
+			encodedErrorResponse := EncodeResponse(APIErrorResponse{
 				Code:       serr.ErrorCode(),
 				Message:    serr.ErrorMessage(),
 				BucketName: bucket,
@@ -256,7 +256,7 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 
 	if err = s3Select.Open(getObject); err != nil {
 		if serr, ok := err.(s3select.SelectError); ok {
-			encodedErrorResponse := encodeResponse(APIErrorResponse{
+			encodedErrorResponse := EncodeResponse(APIErrorResponse{
 				Code:       serr.ErrorCode(),
 				Message:    serr.ErrorMessage(),
 				BucketName: bucket,
@@ -1356,7 +1356,7 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	}
 	objInfo.ETag = getDecryptedETag(r.Header, objInfo, false)
 	response := generateCopyObjectResponse(objInfo.ETag, objInfo.ModTime)
-	encodedSuccessResponse := encodeResponse(response)
+	encodedSuccessResponse := EncodeResponse(response)
 	if replicate, sync := mustReplicate(ctx, r, dstBucket, dstObject, objInfo.UserDefined, objInfo.ReplicationStatus.String()); replicate {
 		scheduleReplication(ctx, objInfo.Clone(), objectAPI, sync, replication.ObjectReplicationType)
 	}
@@ -2128,7 +2128,7 @@ func (api ObjectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r 
 	}
 
 	response := generateInitiateMultipartUploadResponse(bucket, object, uploadID)
-	encodedSuccessResponse := encodeResponse(response)
+	encodedSuccessResponse := EncodeResponse(response)
 
 	// Write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -2343,7 +2343,7 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 		}
 
 		response := generateCopyObjectPartResponse(partInfo.ETag, partInfo.LastModified)
-		encodedSuccessResponse := encodeResponse(response)
+		encodedSuccessResponse := EncodeResponse(response)
 
 		// Write success response.
 		WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -2451,7 +2451,7 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 	}
 
 	response := generateCopyObjectPartResponse(partInfo.ETag, partInfo.LastModified)
-	encodedSuccessResponse := encodeResponse(response)
+	encodedSuccessResponse := EncodeResponse(response)
 
 	// Write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -2850,7 +2850,7 @@ func (api ObjectAPIHandlers) ListObjectPartsHandler(w http.ResponseWriter, r *ht
 	}
 
 	response := generateListPartsResponse(listPartsInfo, encodingType)
-	encodedSuccessResponse := encodeResponse(response)
+	encodedSuccessResponse := EncodeResponse(response)
 
 	// Write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -3075,7 +3075,7 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 	response := generateCompleteMultpartUploadResponse(bucket, object, location, objInfo.ETag)
 	var encodedSuccessResponse []byte
 	if !headerWritten {
-		encodedSuccessResponse = encodeResponse(response)
+		encodedSuccessResponse = EncodeResponse(response)
 	} else {
 		encodedSuccessResponse, err = xml.Marshal(response)
 		if err != nil {
@@ -3441,7 +3441,7 @@ func (api ObjectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	WriteSuccessResponseXML(w, encodeResponse(legalHold))
+	WriteSuccessResponseXML(w, EncodeResponse(legalHold))
 	// Notify object legal hold accessed via a GET request.
 	sendEvent(eventArgs{
 		EventName:    event.ObjectAccessedGetLegalHold,
@@ -3618,7 +3618,7 @@ func (api ObjectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	WriteSuccessResponseXML(w, encodeResponse(retention))
+	WriteSuccessResponseXML(w, EncodeResponse(retention))
 	// Notify object retention accessed via a GET request.
 	sendEvent(eventArgs{
 		EventName:    event.ObjectAccessedGetRetention,
@@ -3678,7 +3678,7 @@ func (api ObjectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *h
 		w.Header()[xhttp.AmzVersionID] = []string{opts.VersionID}
 	}
 
-	WriteSuccessResponseXML(w, encodeResponse(tags))
+	WriteSuccessResponseXML(w, EncodeResponse(tags))
 }
 
 // PutObjectTaggingHandler - PUT object tagging
@@ -3974,7 +3974,7 @@ func (api ObjectAPIHandlers) PostRestoreObjectHandler(w http.ResponseWriter, r *
 			}
 			if err = rreq.SelectParameters.Open(getObject); err != nil {
 				if serr, ok := err.(s3select.SelectError); ok {
-					encodedErrorResponse := encodeResponse(APIErrorResponse{
+					encodedErrorResponse := EncodeResponse(APIErrorResponse{
 						Code:       serr.ErrorCode(),
 						Message:    serr.ErrorMessage(),
 						BucketName: bucket,

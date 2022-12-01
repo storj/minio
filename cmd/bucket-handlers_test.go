@@ -707,7 +707,7 @@ func testAPIDeleteMultipleObjectsHandler(obj ObjectLayer, instanceType, bucketNa
 	}
 
 	// generate multi objects delete response.
-	successRequest0 := encodeResponse(requestList[0])
+	successRequest0 := EncodeResponse(requestList[0])
 
 	deletedObjects := make([]DeletedObject, len(requestList[0].Objects))
 	for i := range requestList[0].Objects {
@@ -717,9 +717,9 @@ func testAPIDeleteMultipleObjectsHandler(obj ObjectLayer, instanceType, bucketNa
 	}
 
 	successResponse0 := generateMultiDeleteResponse(requestList[0].Quiet, deletedObjects, nil)
-	encodedSuccessResponse0 := encodeResponse(successResponse0)
+	encodedSuccessResponse0 := EncodeResponse(successResponse0)
 
-	successRequest1 := encodeResponse(requestList[1])
+	successRequest1 := EncodeResponse(requestList[1])
 
 	deletedObjects = make([]DeletedObject, len(requestList[1].Objects))
 	for i := range requestList[0].Objects {
@@ -729,16 +729,16 @@ func testAPIDeleteMultipleObjectsHandler(obj ObjectLayer, instanceType, bucketNa
 	}
 
 	successResponse1 := generateMultiDeleteResponse(requestList[1].Quiet, deletedObjects, nil)
-	encodedSuccessResponse1 := encodeResponse(successResponse1)
+	encodedSuccessResponse1 := EncodeResponse(successResponse1)
 
 	// generate multi objects delete response for errors.
-	// errorRequest := encodeResponse(requestList[1])
+	// errorRequest := EncodeResponse(requestList[1])
 	errorResponse := generateMultiDeleteResponse(requestList[1].Quiet, deletedObjects, nil)
-	encodedErrorResponse := encodeResponse(errorResponse)
+	encodedErrorResponse := EncodeResponse(errorResponse)
 
-	anonRequest := encodeResponse(requestList[0])
+	anonRequest := EncodeResponse(requestList[0])
 	anonResponse := generateMultiDeleteResponse(requestList[0].Quiet, nil, getDeleteErrorList(requestList[0].Objects))
-	encodedAnonResponse := encodeResponse(anonResponse)
+	encodedAnonResponse := EncodeResponse(anonResponse)
 
 	testCases := []struct {
 		bucket             string

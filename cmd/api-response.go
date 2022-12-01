@@ -797,7 +797,7 @@ func WriteErrorResponse(ctx context.Context, w http.ResponseWriter, err APIError
 	// Generate error response.
 	errorResponse := getAPIErrorResponse(ctx, err, reqURL.Path,
 		w.Header().Get(xhttp.AmzRequestID), globalDeploymentID)
-	encodedErrorResponse := encodeResponse(errorResponse)
+	encodedErrorResponse := EncodeResponse(errorResponse)
 	writeResponse(w, err.HTTPStatusCode, encodedErrorResponse, mimeXML)
 }
 

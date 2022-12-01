@@ -55,7 +55,7 @@ func writeSTSErrorResponse(ctx context.Context, w http.ResponseWriter, isErrCode
 		logKind = logger.All
 	}
 	logger.LogIf(ctx, errCtxt, logKind)
-	encodedErrorResponse := encodeResponse(stsErrorResponse)
+	encodedErrorResponse := EncodeResponse(stsErrorResponse)
 	writeResponse(w, err.HTTPStatusCode, encodedErrorResponse, mimeXML)
 }
 

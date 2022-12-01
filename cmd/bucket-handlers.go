@@ -204,11 +204,11 @@ func (api ObjectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *
 	}
 
 	// Generate response.
-	encodedSuccessResponse := encodeResponse(LocationResponse{})
+	encodedSuccessResponse := EncodeResponse(LocationResponse{})
 	// Get current region.
 	region := globalServerRegion
 	if region != globalMinioDefaultRegion {
-		encodedSuccessResponse = encodeResponse(LocationResponse{
+		encodedSuccessResponse = EncodeResponse(LocationResponse{
 			Location: region,
 		})
 	}
@@ -270,7 +270,7 @@ func (api ObjectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, 
 	}
 	// generate response
 	response := generateListMultipartUploadsResponse(bucket, listMultipartsInfo, encodingType)
-	encodedSuccessResponse := encodeResponse(response)
+	encodedSuccessResponse := EncodeResponse(response)
 
 	// write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -368,7 +368,7 @@ func (api ObjectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.R
 
 	// Generate response.
 	response := generateListBucketsResponse(bucketsInfo)
-	encodedSuccessResponse := encodeResponse(response)
+	encodedSuccessResponse := EncodeResponse(response)
 
 	// Write response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -593,7 +593,7 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 
 	// Generate response
 	response := generateMultiDeleteResponse(deleteObjects.Quiet, deletedObjects, deleteErrors)
-	encodedSuccessResponse := encodeResponse(response)
+	encodedSuccessResponse := EncodeResponse(response)
 
 	// Write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -1069,7 +1069,7 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 	// Decide what http response to send depending on success_action_status parameter
 	switch successStatus {
 	case "201":
-		resp := encodeResponse(PostResponse{
+		resp := EncodeResponse(PostResponse{
 			Bucket:   objInfo.Bucket,
 			Key:      objInfo.Name,
 			ETag:     `"` + objInfo.ETag + `"`,
@@ -1126,7 +1126,7 @@ func (api ObjectAPIHandlers) GetBucketPolicyStatusHandler(w http.ResponseWriter,
 		IsOwner:         false,
 	})
 
-	encodedSuccessResponse := encodeResponse(PolicyStatus{
+	encodedSuccessResponse := EncodeResponse(PolicyStatus{
 		IsPublic: func() string {
 			// Silly to have special 'boolean' values yes
 			// but complying with silly implementation

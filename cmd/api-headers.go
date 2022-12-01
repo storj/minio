@@ -62,7 +62,7 @@ func setCommonHeaders(w http.ResponseWriter) {
 }
 
 // Encodes the response headers into XML format.
-func encodeResponse(response interface{}) []byte {
+func EncodeResponse(response interface{}) []byte {
 	var bytesBuffer bytes.Buffer
 	bytesBuffer.WriteString(xml.Header)
 	e := xml.NewEncoder(&bytesBuffer)
