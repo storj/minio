@@ -185,7 +185,7 @@ func serverHandleCmdArgs(ctx *cli.Context) {
 
 func serverHandleEnvVars() {
 	// Handle common environment variables.
-	handleCommonEnvVars()
+	HandleCommonEnvVars()
 }
 
 var globalHealStateLK sync.RWMutex

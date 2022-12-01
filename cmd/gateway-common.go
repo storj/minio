@@ -364,7 +364,7 @@ func parseGatewaySSE(s string) (gatewaySSE, error) {
 // handle gateway env vars
 func gatewayHandleEnvVars() {
 	// Handle common env vars.
-	handleCommonEnvVars()
+	HandleCommonEnvVars()
 
 	if !globalActiveCred.IsValid() {
 		logger.Fatal(config.ErrInvalidCredentials(nil),
