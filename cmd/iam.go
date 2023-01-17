@@ -291,11 +291,6 @@ func (sys *IAMSys) LoadGroup(objAPI ObjectLayer, group string) error {
 		return errServerNotInitialized
 	}
 
-	if globalEtcdClient != nil {
-		// Watch APIs cover this case, so nothing to do.
-		return nil
-	}
-
 	sys.store.lock()
 	defer sys.store.unlock()
 
@@ -335,12 +330,7 @@ func (sys *IAMSys) LoadPolicy(objAPI ObjectLayer, policyName string) error {
 	sys.store.lock()
 	defer sys.store.unlock()
 
-	if globalEtcdClient == nil {
-		return sys.store.loadPolicyDoc(context.Background(), policyName, sys.iamPolicyDocsMap)
-	}
-
-	// When etcd is set, we use watch APIs so this code is not needed.
-	return nil
+	return sys.store.loadPolicyDoc(context.Background(), policyName, sys.iamPolicyDocsMap)
 }
 
 // LoadPolicyMapping - loads the mapped policy for a user or group
@@ -353,20 +343,18 @@ func (sys *IAMSys) LoadPolicyMapping(objAPI ObjectLayer, userOrGroup string, isG
 	sys.store.lock()
 	defer sys.store.unlock()
 
-	if globalEtcdClient == nil {
-		var err error
-		if isGroup {
-			err = sys.store.loadMappedPolicy(context.Background(), userOrGroup, regularUser, isGroup, sys.iamGroupPolicyMap)
-		} else {
-			err = sys.store.loadMappedPolicy(context.Background(), userOrGroup, regularUser, isGroup, sys.iamUserPolicyMap)
-		}
-
-		// Ignore policy not mapped error
-		if err != nil && err != errNoSuchPolicy {
-			return err
-		}
+	var err error
+	if isGroup {
+		err = sys.store.loadMappedPolicy(context.Background(), userOrGroup, regularUser, isGroup, sys.iamGroupPolicyMap)
+	} else {
+		err = sys.store.loadMappedPolicy(context.Background(), userOrGroup, regularUser, isGroup, sys.iamUserPolicyMap)
 	}
-	// When etcd is set, we use watch APIs so this code is not needed.
+
+	// Ignore policy not mapped error
+	if err != nil && err != errNoSuchPolicy {
+		return err
+	}
+
 	return nil
 }
 
@@ -379,18 +367,16 @@ func (sys *IAMSys) LoadUser(objAPI ObjectLayer, accessKey string, userType IAMUs
 	sys.store.lock()
 	defer sys.store.unlock()
 
-	if globalEtcdClient == nil {
-		err := sys.store.loadUser(context.Background(), accessKey, userType, sys.iamUsersMap)
-		if err != nil {
-			return err
-		}
-		err = sys.store.loadMappedPolicy(context.Background(), accessKey, userType, false, sys.iamUserPolicyMap)
-		// Ignore policy not mapped error
-		if err != nil && err != errNoSuchPolicy {
-			return err
-		}
+	err := sys.store.loadUser(context.Background(), accessKey, userType, sys.iamUsersMap)
+	if err != nil {
+		return err
 	}
-	// When etcd is set, we use watch APIs so this code is not needed.
+	err = sys.store.loadMappedPolicy(context.Background(), accessKey, userType, false, sys.iamUserPolicyMap)
+	// Ignore policy not mapped error
+	if err != nil && err != errNoSuchPolicy {
+		return err
+	}
+
 	return nil
 }
 
@@ -403,13 +389,11 @@ func (sys *IAMSys) LoadServiceAccount(accessKey string) error {
 	sys.store.lock()
 	defer sys.store.unlock()
 
-	if globalEtcdClient == nil {
-		err := sys.store.loadUser(context.Background(), accessKey, srvAccUser, sys.iamUsersMap)
-		if err != nil {
-			return err
-		}
+	err := sys.store.loadUser(context.Background(), accessKey, srvAccUser, sys.iamUsersMap)
+	if err != nil {
+		return err
 	}
-	// When etcd is set, we use watch APIs so this code is not needed.
+
 	return nil
 }
 
@@ -423,11 +407,7 @@ func (sys *IAMSys) InitStore(objAPI ObjectLayer) {
 	sys.Lock()
 	defer sys.Unlock()
 
-	if globalEtcdClient == nil {
-		sys.store = newIAMObjectStore(objAPI)
-	} else {
-		sys.store = newIAMEtcdStore()
-	}
+	sys.store = newIAMObjectStore(objAPI)
 
 	if globalLDAPConfig.Enabled {
 		sys.EnableLDAPSys()
@@ -589,18 +569,6 @@ func (sys *IAMSys) Init(ctx context.Context, objAPI ObjectLayer) {
 			logger.Info("Waiting for all MinIO IAM sub-system to be initialized.. trying to acquire lock")
 			time.Sleep(time.Duration(r.Float64() * float64(5*time.Second)))
 			continue
-		}
-
-		if globalEtcdClient != nil {
-			// ****  WARNING ****
-			// Migrating to encrypted backend on etcd should happen before initialization of
-			// IAM sub-system, make sure that we do not move the above codeblock elsewhere.
-			if err := migrateIAMConfigsEtcdToEncrypted(ctx, globalEtcdClient); err != nil {
-				txnLk.Unlock()
-				logger.LogIf(ctx, fmt.Errorf("Unable to decrypt an encrypted ETCD backend for IAM users and policies: %w", err))
-				logger.LogIf(ctx, errors.New("IAM sub-system is partially initialized, some users may not be available"))
-				return
-			}
 		}
 
 		// These messages only meant primarily for distributed setup, so only log during distributed setup.

@@ -26,11 +26,9 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/minio/minio-go/v7/pkg/set"
-	etcd "go.etcd.io/etcd/clientv3"
 
 	"storj.io/minio/cmd/config/cache"
 	"storj.io/minio/cmd/config/compress"
-	"storj.io/minio/cmd/config/dns"
 	xldap "storj.io/minio/cmd/config/identity/ldap"
 	"storj.io/minio/cmd/config/identity/openid"
 	"storj.io/minio/cmd/config/policy/opa"
@@ -233,16 +231,6 @@ var (
 
 	// Initialized KMS configuration for disk cache
 	globalCacheKMS kms.KMS
-
-	// Allocated etcd endpoint for config and bucket DNS.
-	globalEtcdClient *etcd.Client
-
-	// Is set to true when Bucket federation is requested
-	// and is 'true' when etcdConfig.PathPrefix is empty
-	globalBucketFederation bool
-
-	// Allocated DNS config wrapper over etcd client.
-	globalDNSConfig dns.Store
 
 	// GlobalKMS initialized KMS configuration
 	GlobalKMS kms.KMS

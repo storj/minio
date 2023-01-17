@@ -66,8 +66,6 @@ var GlobalHandlers = []mux.MiddlewareFunc{
 	setHTTPStatsHandler,
 	// Validate all the incoming requests.
 	setRequestValidityHandler,
-	// Forward path style requests to actual host in a bucket federated setup.
-	setBucketForwardingHandler,
 	// set HTTP security headers such as Content-Security-Policy.
 	addSecurityHeaders,
 	// set x-amz-request-id header.

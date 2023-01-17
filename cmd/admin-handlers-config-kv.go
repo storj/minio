@@ -29,7 +29,6 @@ import (
 
 	"storj.io/minio/cmd/config"
 	"storj.io/minio/cmd/config/cache"
-	"storj.io/minio/cmd/config/etcd"
 	xldap "storj.io/minio/cmd/config/identity/ldap"
 	"storj.io/minio/cmd/config/identity/openid"
 	"storj.io/minio/cmd/config/policy/opa"
@@ -438,8 +437,6 @@ func (a adminAPIHandlers) GetConfigHandler(w http.ResponseWriter, r *http.Reques
 		for target, kv := range v {
 			off := kv.Get(config.Enable) == config.EnableOff
 			switch hkv.Key {
-			case config.EtcdSubSys:
-				off = !etcd.Enabled(kv)
 			case config.CacheSubSys:
 				off = !cache.Enabled(kv)
 			case config.StorageClassSubSys:

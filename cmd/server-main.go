@@ -377,21 +377,6 @@ func initAllSubsystems(ctx context.Context, newObject ObjectLayer) (err error) {
 		}
 	}
 
-	// Initialize config system.
-	if err = globalConfigSys.Init(newObject); err != nil {
-		if configRetriableErrors(err) {
-			return fmt.Errorf("Unable to initialize config system: %w", err)
-		}
-		// Any other config errors we simply print a message and proceed forward.
-		logger.LogIf(ctx, fmt.Errorf("Unable to initialize config, some features may be missing %w", err))
-	}
-
-	// Populate existing buckets to the etcd backend
-	if globalDNSConfig != nil {
-		// Background this operation.
-		go initFederatorBackend(buckets, newObject)
-	}
-
 	// Initialize bucket metadata sub-system.
 	globalBucketMetadataSys.Init(ctx, buckets, newObject)
 

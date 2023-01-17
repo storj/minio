@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"sync"
+	"testing/quick"
 
 	"storj.io/minio/cmd/config"
 	"storj.io/minio/cmd/config/cache"
@@ -30,7 +31,6 @@ import (
 	"storj.io/minio/cmd/logger"
 	"storj.io/minio/pkg/auth"
 	"storj.io/minio/pkg/event/target"
-	"storj.io/minio/pkg/quick"
 )
 
 /////////////////// Config V1 ///////////////////

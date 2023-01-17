@@ -24,9 +24,7 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
-	"github.com/minio/minio-go/v7/pkg/set"
 
-	"storj.io/minio/cmd/config/dns"
 	"storj.io/minio/cmd/crypto"
 	xhttp "storj.io/minio/cmd/http"
 	"storj.io/minio/cmd/http/stats"
@@ -443,122 +441,6 @@ func setRequestValidityHandler(h http.Handler) http.Handler {
 		if hasMultipleAuth(r) {
 			WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrInvalidRequest), r.URL, guessIsBrowserReq(r))
 			atomic.AddUint64(&globalHTTPStats.rejectedRequestsInvalid, 1)
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
-}
-
-// setBucketForwardingHandler middleware forwards the path style requests
-// on a bucket to the right bucket location, bucket to IP configuration
-// is obtained from centralized etcd configuration service.
-func setBucketForwardingHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if globalDNSConfig == nil || len(globalDomainNames) == 0 || !globalBucketFederation ||
-			guessIsHealthCheckReq(r) || guessIsMetricsReq(r) ||
-			guessIsRPCReq(r) || guessIsLoginSTSReq(r) || isAdminReq(r) {
-			h.ServeHTTP(w, r)
-			return
-		}
-
-		// For browser requests, when federation is setup we need to
-		// specifically handle download and upload for browser requests.
-		if guessIsBrowserReq(r) {
-			var bucket, _ string
-			switch r.Method {
-			case http.MethodPut:
-				if getRequestAuthType(r) == authTypeJWT {
-					bucket, _ = path2BucketObjectWithBasePath(minioReservedBucketPath+"/upload", r.URL.Path)
-				}
-			case http.MethodGet:
-				if t := r.URL.Query().Get("token"); t != "" {
-					bucket, _ = path2BucketObjectWithBasePath(minioReservedBucketPath+"/download", r.URL.Path)
-				} else if getRequestAuthType(r) != authTypeJWT && !strings.HasPrefix(r.URL.Path, minioReservedBucketPath) {
-					bucket, _ = request2BucketObjectName(r)
-				}
-			}
-			if bucket == "" {
-				h.ServeHTTP(w, r)
-				return
-			}
-			sr, err := globalDNSConfig.Get(bucket)
-			if err != nil {
-				if err == dns.ErrNoEntriesFound {
-					WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrNoSuchBucket),
-						r.URL, guessIsBrowserReq(r))
-				} else {
-					WriteErrorResponse(r.Context(), w, ToAPIError(r.Context(), err),
-						r.URL, guessIsBrowserReq(r))
-				}
-				return
-			}
-			if globalDomainIPs.Intersection(set.CreateStringSet(getHostsSlice(sr)...)).IsEmpty() {
-				r.URL.Scheme = "http"
-				if GlobalIsTLS {
-					r.URL.Scheme = "https"
-				}
-				r.URL.Host = getHostFromSrv(sr)
-				// Make sure we remove any existing headers before
-				// proxying the request to another node.
-				for k := range w.Header() {
-					w.Header().Del(k)
-				}
-				globalForwarder.ServeHTTP(w, r)
-				return
-			}
-			h.ServeHTTP(w, r)
-			return
-		}
-
-		bucket, object := request2BucketObjectName(r)
-
-		// Requests in federated setups for STS type calls which are
-		// performed at '/' resource should be routed by the muxer,
-		// the assumption is simply such that requests without a bucket
-		// in a federated setup cannot be proxied, so serve them at
-		// current server.
-		if bucket == "" {
-			h.ServeHTTP(w, r)
-			return
-		}
-
-		// MakeBucket requests should be handled at current endpoint
-		if r.Method == http.MethodPut && bucket != "" && object == "" && r.URL.RawQuery == "" {
-			h.ServeHTTP(w, r)
-			return
-		}
-
-		// CopyObject requests should be handled at current endpoint as path style
-		// requests have target bucket and object in URI and source details are in
-		// header fields
-		if r.Method == http.MethodPut && r.Header.Get(xhttp.AmzCopySource) != "" {
-			bucket, object = path2BucketObject(r.Header.Get(xhttp.AmzCopySource))
-			if bucket == "" || object == "" {
-				h.ServeHTTP(w, r)
-				return
-			}
-		}
-		sr, err := globalDNSConfig.Get(bucket)
-		if err != nil {
-			if err == dns.ErrNoEntriesFound {
-				WriteErrorResponse(r.Context(), w, errorCodes.ToAPIErr(ErrNoSuchBucket), r.URL, guessIsBrowserReq(r))
-			} else {
-				WriteErrorResponse(r.Context(), w, ToAPIError(r.Context(), err), r.URL, guessIsBrowserReq(r))
-			}
-			return
-		}
-		if globalDomainIPs.Intersection(set.CreateStringSet(getHostsSlice(sr)...)).IsEmpty() {
-			r.URL.Scheme = "http"
-			if GlobalIsTLS {
-				r.URL.Scheme = "https"
-			}
-			r.URL.Host = getHostFromSrv(sr)
-			// Make sure we remove any existing headers before
-			// proxying the request to another node.
-			for k := range w.Header() {
-				w.Header().Del(k)
-			}
-			globalForwarder.ServeHTTP(w, r)
 			return
 		}
 		h.ServeHTTP(w, r)

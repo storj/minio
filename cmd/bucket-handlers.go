@@ -28,17 +28,13 @@ import (
 	"net/textproto"
 	"net/url"
 	"path"
-	"sort"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/minio/minio-go/v7/pkg/set"
 	"github.com/minio/minio-go/v7/pkg/tags"
 
-	"storj.io/minio/cmd/config/dns"
 	"storj.io/minio/cmd/crypto"
 	xhttp "storj.io/minio/cmd/http"
 	"storj.io/minio/cmd/logger"
@@ -50,7 +46,6 @@ import (
 	"storj.io/minio/pkg/handlers"
 	"storj.io/minio/pkg/hash"
 	iampolicy "storj.io/minio/pkg/iam/policy"
-	"storj.io/minio/pkg/sync/errgroup"
 )
 
 const (
@@ -58,121 +53,6 @@ const (
 	bucketTaggingConfig     = "tagging.xml"
 	bucketReplicationConfig = "replication.xml"
 )
-
-// Check if there are buckets on server without corresponding entry in etcd backend and
-// make entries. Here is the general flow
-// - Range over all the available buckets
-// - Check if a bucket has an entry in etcd backend
-// -- If no, make an entry
-// -- If yes, check if the entry matches local IP check if we
-//    need to update the entry then proceed to update
-// -- If yes, check if the IP of entry matches local IP.
-//    This means entry is for this instance.
-// -- If IP of the entry doesn't match, this means entry is
-//    for another instance. Log an error to console.
-func initFederatorBackend(buckets []BucketInfo, objLayer ObjectLayer) {
-	if len(buckets) == 0 {
-		return
-	}
-
-	// Get buckets in the DNS
-	dnsBuckets, err := globalDNSConfig.List()
-	if err != nil && !IsErrIgnored(err, dns.ErrNoEntriesFound, dns.ErrNotImplemented, dns.ErrDomainMissing) {
-		logger.LogIf(GlobalContext, err)
-		return
-	}
-
-	bucketsSet := set.NewStringSet()
-	bucketsToBeUpdated := set.NewStringSet()
-	bucketsInConflict := set.NewStringSet()
-
-	// This means that domain is updated, we should update
-	// all bucket entries with new domain name.
-	domainMissing := err == dns.ErrDomainMissing
-	if dnsBuckets != nil {
-		for _, bucket := range buckets {
-			bucketsSet.Add(bucket.Name)
-			r, ok := dnsBuckets[bucket.Name]
-			if !ok {
-				bucketsToBeUpdated.Add(bucket.Name)
-				continue
-			}
-			if !globalDomainIPs.Intersection(set.CreateStringSet(getHostsSlice(r)...)).IsEmpty() {
-				if globalDomainIPs.Difference(set.CreateStringSet(getHostsSlice(r)...)).IsEmpty() && !domainMissing {
-					// No difference in terms of domainIPs and nothing
-					// has changed so we don't change anything on the etcd.
-					//
-					// Additionally also check if domain is updated/missing with more
-					// entries, if that is the case we should update the
-					// new domain entries as well.
-					continue
-				}
-
-				// if domain IPs intersect then it won't be an empty set.
-				// such an intersection means that bucket exists on etcd.
-				// but if we do see a difference with local domain IPs with
-				// hostSlice from etcd then we should update with newer
-				// domainIPs, we proceed to do that here.
-				bucketsToBeUpdated.Add(bucket.Name)
-				continue
-			}
-
-			// No IPs seem to intersect, this means that bucket exists but has
-			// different IP addresses perhaps from a different deployment.
-			// bucket names are globally unique in federation at a given
-			// path prefix, name collision is not allowed. We simply log
-			// an error and continue.
-			bucketsInConflict.Add(bucket.Name)
-		}
-	}
-
-	// Add/update buckets that are not registered with the DNS
-	bucketsToBeUpdatedSlice := bucketsToBeUpdated.ToSlice()
-	g := errgroup.WithNErrs(len(bucketsToBeUpdatedSlice)).WithConcurrency(50)
-	ctx, cancel := g.WithCancelOnError(GlobalContext)
-	defer cancel()
-
-	for index := range bucketsToBeUpdatedSlice {
-		index := index
-		g.Go(func() error {
-			return globalDNSConfig.Put(bucketsToBeUpdatedSlice[index])
-		}, index)
-	}
-
-	if err := g.WaitErr(); err != nil {
-		logger.LogIf(ctx, err)
-		return
-	}
-
-	for _, bucket := range bucketsInConflict.ToSlice() {
-		logger.LogIf(ctx, fmt.Errorf("Unable to add bucket DNS entry for bucket %s, an entry exists for the same bucket by a different tenant. This local bucket will be ignored. Bucket names are globally unique in federated deployments. Use path style requests on following addresses '%v' to access this bucket", bucket, globalDomainIPs.ToSlice()))
-	}
-
-	var wg sync.WaitGroup
-	// Remove buckets that are in DNS for this server, but aren't local
-	for bucket, records := range dnsBuckets {
-		if bucketsSet.Contains(bucket) {
-			continue
-		}
-
-		if globalDomainIPs.Intersection(set.CreateStringSet(getHostsSlice(records)...)).IsEmpty() {
-			// This is not for our server, so we can continue
-			continue
-		}
-
-		wg.Add(1)
-		go func(bucket string) {
-			defer wg.Done()
-			// We go to here, so we know the bucket no longer exists,
-			// but is registered in DNS to this server
-			if err := globalDNSConfig.Delete(bucket); err != nil {
-				logger.LogIf(GlobalContext, fmt.Errorf("Failed to remove DNS entry for %s due to %w",
-					bucket, err))
-			}
-		}(bucket)
-	}
-	wg.Wait()
-}
 
 // GetBucketLocationHandler - GET Bucket location.
 // -------------------------
@@ -299,35 +179,11 @@ func (api ObjectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// If etcd, dns federation configured list buckets from etcd.
-	var bucketsInfo []BucketInfo
-	if globalDNSConfig != nil && globalBucketFederation {
-		dnsBuckets, err := globalDNSConfig.List()
-		if err != nil && !IsErrIgnored(err,
-			dns.ErrNoEntriesFound,
-			dns.ErrDomainMissing) {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		for _, dnsRecords := range dnsBuckets {
-			bucketsInfo = append(bucketsInfo, BucketInfo{
-				Name:    dnsRecords[0].Key,
-				Created: dnsRecords[0].CreationDate,
-			})
-		}
-
-		sort.Slice(bucketsInfo, func(i, j int) bool {
-			return bucketsInfo[i].Name < bucketsInfo[j].Name
-		})
-
-	} else {
-		// Invoke the list buckets.
-		var err error
-		bucketsInfo, err = listBuckets(ctx)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
+	// Invoke the list buckets.
+	bucketsInfo, err := listBuckets(ctx)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
 	}
 
 	if s3Error == ErrAccessDenied {
@@ -693,60 +549,6 @@ func (api ObjectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 	opts := BucketOptions{
 		Location:    location,
 		LockEnabled: objectLockEnabled,
-	}
-
-	if globalDNSConfig != nil {
-		sr, err := globalDNSConfig.Get(bucket)
-		if err != nil {
-			// ErrNotImplemented indicates a DNS backend that doesn't need to check if bucket already
-			// exists elsewhere
-			if err == dns.ErrNoEntriesFound || err == dns.ErrNotImplemented {
-				// Proceed to creating a bucket.
-				if err = objectAPI.MakeBucketWithLocation(ctx, bucket, opts); err != nil {
-					WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-					return
-				}
-
-				if err = globalDNSConfig.Put(bucket); err != nil {
-					objectAPI.DeleteBucket(ctx, bucket, false)
-					WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-					return
-				}
-
-				// Load updated bucket metadata into memory.
-				GlobalNotificationSys.LoadBucketMetadata(GlobalContext, bucket)
-
-				// Make sure to add Location information here only for bucket
-				w.Header().Set(xhttp.Location,
-					getObjectLocation(r, globalDomainNames, bucket, ""))
-
-				writeSuccessResponseHeadersOnly(w)
-
-				sendEvent(eventArgs{
-					EventName:    event.BucketCreated,
-					BucketName:   bucket,
-					ReqParams:    extractReqParams(r),
-					RespElements: extractRespElements(w),
-					UserAgent:    r.UserAgent(),
-					Host:         handlers.GetSourceIP(r),
-				})
-
-				return
-			}
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-
-		}
-		apiErr := ErrBucketAlreadyExists
-		if !globalDomainIPs.Intersection(set.CreateStringSet(getHostsSlice(sr)...)).IsEmpty() {
-			apiErr = ErrBucketAlreadyOwnedByYou
-		}
-		// No IPs seem to intersect, this means that bucket exists but has
-		// different IP addresses perhaps from a different deployment.
-		// bucket names are globally unique in federation at a given
-		// path prefix, name collision is not allowed. Return appropriate error.
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(apiErr), r.URL, guessIsBrowserReq(r))
-		return
 	}
 
 	// Proceed to creating a bucket.
@@ -1238,14 +1040,6 @@ func (api ObjectAPIHandlers) DeleteBucketHandler(w http.ResponseWriter, r *http.
 	}
 
 	GlobalNotificationSys.DeleteBucketMetadata(ctx, bucket)
-
-	if globalDNSConfig != nil {
-		if err := globalDNSConfig.Delete(bucket); err != nil {
-			logger.LogIf(ctx, fmt.Errorf("Unable to delete bucket DNS entry %w, please delete it manually", err))
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-	}
 
 	// Write success response.
 	writeSuccessNoContent(w)

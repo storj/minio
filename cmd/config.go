@@ -182,56 +182,7 @@ func readServerConfig(ctx context.Context, objAPI ObjectLayer) (config.Config, e
 // ConfigSys - config system.
 type ConfigSys struct{}
 
-// Load - load config.json.
-func (sys *ConfigSys) Load(objAPI ObjectLayer) error {
-	return sys.Init(objAPI)
-}
-
-// Init - initializes config system from config.json.
-func (sys *ConfigSys) Init(objAPI ObjectLayer) error {
-	if objAPI == nil {
-		return errInvalidArgument
-	}
-
-	return initConfig(objAPI)
-}
-
 // NewConfigSys - creates new config system object.
 func NewConfigSys() *ConfigSys {
 	return &ConfigSys{}
-}
-
-// Initialize and load config from remote etcd or local config directory
-func initConfig(objAPI ObjectLayer) error {
-	if objAPI == nil {
-		return errServerNotInitialized
-	}
-
-	if isFile(getConfigFile()) {
-		if err := migrateConfig(); err != nil {
-			return err
-		}
-	}
-
-	// Migrates ${HOME}/.minio/config.json or config.json.deprecated
-	// to '<export_path>/.minio.sys/config/config.json'
-	// ignore if the file doesn't exist.
-	// If etcd is set then migrates /config/config.json
-	// to '<export_path>/.minio.sys/config/config.json'
-	if err := migrateConfigToMinioSys(objAPI); err != nil {
-		return err
-	}
-
-	// Migrates backend '<export_path>/.minio.sys/config/config.json' to latest version.
-	if err := migrateMinioSysConfig(objAPI); err != nil {
-		return err
-	}
-
-	// Migrates backend '<export_path>/.minio.sys/config/config.json' to
-	// latest config format.
-	if err := migrateMinioSysConfigToKV(objAPI); err != nil {
-		return err
-	}
-
-	return loadConfig(objAPI)
 }

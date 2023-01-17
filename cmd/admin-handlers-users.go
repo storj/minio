@@ -23,11 +23,9 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"sort"
 
 	"github.com/gorilla/mux"
 
-	"storj.io/minio/cmd/config/dns"
 	"storj.io/minio/cmd/logger"
 	"storj.io/minio/pkg/auth"
 	iampolicy "storj.io/minio/pkg/iam/policy"
@@ -969,31 +967,10 @@ func (a adminAPIHandlers) AccountInfoHandler(w http.ResponseWriter, r *http.Requ
 		logger.LogIf(ctx, err)
 	}
 
-	// If etcd, dns federation configured list buckets from etcd.
-	var buckets []BucketInfo
-	if globalDNSConfig != nil && globalBucketFederation {
-		dnsBuckets, err := globalDNSConfig.List()
-		if err != nil && !IsErrIgnored(err,
-			dns.ErrNoEntriesFound,
-			dns.ErrDomainMissing) {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		for _, dnsRecords := range dnsBuckets {
-			buckets = append(buckets, BucketInfo{
-				Name:    dnsRecords[0].Key,
-				Created: dnsRecords[0].CreationDate,
-			})
-		}
-		sort.Slice(buckets, func(i, j int) bool {
-			return buckets[i].Name < buckets[j].Name
-		})
-	} else {
-		buckets, err = objectAPI.ListBuckets(ctx)
-		if err != nil {
-			writeErrorResponseJSON(ctx, w, toAdminAPIErr(ctx, err), r.URL)
-			return
-		}
+	buckets, err := objectAPI.ListBuckets(ctx)
+	if err != nil {
+		writeErrorResponseJSON(ctx, w, toAdminAPIErr(ctx, err), r.URL)
+		return
 	}
 
 	accountName := cred.AccessKey

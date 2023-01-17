@@ -24,14 +24,12 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"net"
 	"net/http"
 	"path"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -40,7 +38,6 @@ import (
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 
 	"storj.io/minio/cmd/config/compress"
-	"storj.io/minio/cmd/config/dns"
 	"storj.io/minio/cmd/config/storageclass"
 	"storj.io/minio/cmd/crypto"
 	xhttp "storj.io/minio/cmd/http"
@@ -356,38 +353,6 @@ func isMinioMetaBucket(bucketName string) bool {
 // Returns true if input bucket is a reserved minio bucket 'minio'.
 func isMinioReservedBucket(bucketName string) bool {
 	return bucketName == minioReservedBucket
-}
-
-// returns a slice of hosts by reading a slice of DNS records
-func getHostsSlice(records []dns.SrvRecord) []string {
-	hosts := make([]string, len(records))
-	for i, r := range records {
-		hosts[i] = net.JoinHostPort(r.Host, string(r.Port))
-	}
-	return hosts
-}
-
-// returns an online host (and corresponding port) from a slice of DNS records
-func getHostFromSrv(records []dns.SrvRecord) (host string) {
-	hosts := getHostsSlice(records)
-	rng := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
-	var d net.Dialer
-	var retry int
-	for retry < len(hosts) {
-		ctx, cancel := context.WithTimeout(GlobalContext, 300*time.Millisecond)
-
-		host = hosts[rng.Intn(len(hosts))]
-		conn, err := d.DialContext(ctx, "tcp", host)
-		cancel()
-		if err != nil {
-			retry++
-			continue
-		}
-		conn.Close()
-		break
-	}
-
-	return host
 }
 
 // IsCompressed returns true if the object is marked as compressed.
