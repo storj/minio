@@ -28,7 +28,7 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/jcmturner/gokrb5/v8 v8.4.2
-	github.com/json-iterator/go v1.1.10
+	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.13.4
 	github.com/klauspost/cpuid/v2 v2.0.4
 	github.com/klauspost/pgzip v1.2.5
@@ -108,7 +108,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/minio/md5-simd v1.1.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nats-io/jwt/v2 v2.2.1-0.20220113022732-58e87895b296 // indirect
 	github.com/nats-io/nats-streaming-server v0.21.1 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect
