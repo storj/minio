@@ -96,9 +96,11 @@ type dataUpdateFilter struct {
 	bf  bloomFilter
 }
 
-type bloomFilter struct {
+type BloomFilter struct {
 	*bloom.BloomFilter
 }
+
+type bloomFilter = BloomFilter
 
 // emptyBloomFilter returns an empty bloom filter.
 func emptyBloomFilter() bloomFilter {
