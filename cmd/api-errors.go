@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -1775,12 +1776,8 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 
 	// Only return ErrClientDisconnected if the provided context is actually canceled.
 	// This way downstream context.Canceled will still report ErrOperationTimedOut
-	select {
-	case <-ctx.Done():
-		if ctx.Err() == context.Canceled {
-			return ErrClientDisconnected
-		}
-	default:
+	if contextCanceled(ctx) && errors.Is(ctx.Err(), context.Canceled) {
+		return ErrClientDisconnected
 	}
 
 	switch err {
