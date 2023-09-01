@@ -48,7 +48,7 @@ const (
 	GlobalMinioDefaultPort = "9000"
 
 	globalMinioDefaultRegion = ""
-	// This is a sha256 output of ``arn:aws:iam::minio:user/admin``,
+	// This is a sha256 output of ``arn:aws:iam::storj:user/admin``,
 	// this is kept in present form to be compatible with S3 owner ID
 	// requirements -
 	//
@@ -57,7 +57,8 @@ const (
 	//    It is 64-character obfuscated version of the account ID.
 	// ```
 	// http://docs.aws.amazon.com/AmazonS3/latest/dev/example-walkthroughs-managing-access-example4.html
-	GlobalMinioDefaultOwnerID      = "02d6176db174dc93cb1b899f7c6078f08654445fe8cf1b6ce98d8855f66bdbf4"
+	GlobalMinioDefaultOwnerID      = "7b25a206cc747e61355f1af9395c2e1dc93664b7b64838ca859b245e20dead3c"
+	GlobalMinioDefaultOwnerDisplayName = "storj"
 	globalMinioDefaultStorageClass = "STANDARD"
 	globalWindowsOSName            = "windows"
 	globalMacOSName                = "darwin"

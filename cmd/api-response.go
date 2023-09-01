@@ -418,7 +418,7 @@ func generateListBucketsResponse(buckets []BucketInfo) ListBucketsResponse {
 	var data = ListBucketsResponse{}
 	var owner = Owner{
 		ID:          GlobalMinioDefaultOwnerID,
-		DisplayName: "minio",
+		DisplayName: GlobalMinioDefaultOwnerDisplayName,
 	}
 
 	for _, bucket := range buckets {
@@ -439,7 +439,7 @@ func generateListVersionsResponse(bucket, prefix, marker, versionIDMarker, delim
 	versions := make([]ObjectVersion, 0, len(resp.Objects))
 	var owner = Owner{
 		ID:          GlobalMinioDefaultOwnerID,
-		DisplayName: "minio",
+		DisplayName: GlobalMinioDefaultOwnerDisplayName,
 	}
 	var data = ListVersionsResponse{}
 
@@ -497,7 +497,7 @@ func generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingTy
 	contents := make([]Object, 0, len(resp.Objects))
 	var owner = Owner{
 		ID:          GlobalMinioDefaultOwnerID,
-		DisplayName: "minio",
+		DisplayName: GlobalMinioDefaultOwnerDisplayName,
 	}
 	var data = ListObjectsResponse{}
 
@@ -546,7 +546,7 @@ func generateListObjectsV2Response(bucket, prefix, token, nextToken, startAfter,
 	contents := make([]Object, 0, len(objects))
 	var owner = Owner{
 		ID:          GlobalMinioDefaultOwnerID,
-		DisplayName: "minio",
+		DisplayName: GlobalMinioDefaultOwnerDisplayName,
 	}
 	var data = ListObjectsV2Response{}
 
