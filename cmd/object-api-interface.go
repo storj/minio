@@ -26,6 +26,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/tags"
 
 	"storj.io/minio/pkg/bucket/policy"
+	"storj.io/minio/pkg/bucket/versioning"
 	"storj.io/minio/pkg/madmin"
 )
 
@@ -108,6 +109,9 @@ type ObjectLayer interface {
 	ListObjectVersions(ctx context.Context, bucket, prefix, marker, versionMarker, delimiter string, maxKeys int) (result ListObjectVersionsInfo, err error)
 	// Walk lists all objects including versions, delete markers.
 	Walk(ctx context.Context, bucket, prefix string, results chan<- ObjectInfo, opts ObjectOptions) error
+
+	SetBucketVersioning(ctx context.Context, bucket string, versioning *versioning.Versioning) (err error)
+	GetBucketVersioning(ctx context.Context, bucket string) (*versioning.Versioning, error)
 
 	// Object operations.
 

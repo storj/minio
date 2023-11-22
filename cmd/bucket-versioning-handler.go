@@ -63,30 +63,13 @@ func (api ObjectAPIHandlers) PutBucketVersioningHandler(w http.ResponseWriter, r
 		return
 	}
 
-	if rcfg, _ := globalBucketObjectLockSys.Get(bucket); rcfg.LockEnabled && v.Suspended() {
-		WriteErrorResponse(ctx, w, APIError{
-			Code:           "InvalidBucketState",
-			Description:    "An Object Lock configuration is present on this bucket, so the versioning state cannot be changed.",
-			HTTPStatusCode: http.StatusConflict,
-		}, r.URL, guessIsBrowserReq(r))
-		return
-	}
-	if _, err := getReplicationConfig(ctx, bucket); err == nil && v.Suspended() {
-		WriteErrorResponse(ctx, w, APIError{
-			Code:           "InvalidBucketState",
-			Description:    "A replication configuration is present on this bucket, so the versioning state cannot be changed.",
-			HTTPStatusCode: http.StatusConflict,
-		}, r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	configData, err := xml.Marshal(v)
+	_, err = xml.Marshal(v)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	if err = globalBucketMetadataSys.Update(bucket, bucketVersioningConfig, configData); err != nil {
+	if err = objectAPI.SetBucketVersioning(ctx, bucket, v); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -115,13 +98,7 @@ func (api ObjectAPIHandlers) GetBucketVersioningHandler(w http.ResponseWriter, r
 		return
 	}
 
-	// Check if bucket exists.
-	if _, err := objectAPI.GetBucketInfo(ctx, bucket); err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	config, err := globalBucketVersioningSys.Get(bucket)
+	config, err := objectAPI.GetBucketVersioning(ctx, bucket)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
