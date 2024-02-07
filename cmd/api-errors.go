@@ -25,10 +25,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Azure/azure-storage-blob-go/azblob"
 	minio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/tags"
-	"google.golang.org/api/googleapi"
 
 	"storj.io/minio/cmd/crypto"
 	"storj.io/minio/cmd/logger"
@@ -2124,25 +2122,6 @@ func ToAPIError(ctx context.Context, err error) APIError {
 					HTTPStatusCode: http.StatusNotImplemented,
 				}
 			}
-		case *googleapi.Error:
-			apiErr = APIError{
-				Code:           "XGCSInternalError",
-				Description:    e.Message,
-				HTTPStatusCode: e.Code,
-			}
-			// GCS may send multiple errors, just pick the first one
-			// since S3 only sends one Error XML response.
-			if len(e.Errors) >= 1 {
-				apiErr.Code = e.Errors[0].Reason
-
-			}
-		case azblob.StorageError:
-			apiErr = APIError{
-				Code:           string(e.ServiceCode()),
-				Description:    e.Error(),
-				HTTPStatusCode: e.Response().StatusCode,
-			}
-			// Add more Gateway SDKs here if any in future.
 		default:
 			apiErr = APIError{
 				Code:           apiErr.Code,

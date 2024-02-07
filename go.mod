@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	git.apache.org/thrift.git v0.13.0
-	github.com/Azure/azure-storage-blob-go v0.10.0
 	github.com/Shopify/sarama v1.27.2
 	github.com/VividCortex/ewma v1.1.1
 	github.com/alecthomas/participle v0.2.1
@@ -70,13 +69,10 @@ require (
 	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	golang.org/x/sys v0.0.0-20220111092808-5a964db01320
-	google.golang.org/api v0.14.0
 	gopkg.in/yaml.v2 v2.3.0
 )
 
 require (
-	github.com/Azure/azure-pipeline-go v0.2.2 // indirect
-	github.com/Azure/go-autorest/autorest/adal v0.9.1 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -97,7 +93,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
-	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/minio/md5-simd v1.1.1 // indirect
