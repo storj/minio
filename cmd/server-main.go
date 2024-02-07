@@ -213,9 +213,6 @@ func newAllSubsystems() {
 	// Create the bucket bandwidth monitor
 	globalBucketMonitor = bandwidth.NewMonitor(GlobalServiceDoneCh)
 
-	// Create a new config system.
-	globalConfigSys = NewConfigSys()
-
 	// Create new IAM system.
 	GlobalIAMSys = NewIAMSys()
 

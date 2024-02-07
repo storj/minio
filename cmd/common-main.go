@@ -47,7 +47,6 @@ import (
 	"storj.io/minio/pkg/certs"
 	"storj.io/minio/pkg/console"
 	"storj.io/minio/pkg/env"
-	"storj.io/minio/pkg/handlers"
 	"storj.io/minio/pkg/kms"
 )
 
@@ -75,16 +74,6 @@ func init() {
 	}
 
 	initGlobalContext()
-
-	globalForwarder = handlers.NewForwarder(&handlers.Forwarder{
-		PassHost:     true,
-		RoundTripper: newGatewayHTTPTransport(1 * time.Hour),
-		Logger: func(err error) {
-			if err != nil && !errors.Is(err, context.Canceled) {
-				logger.LogIf(GlobalContext, err)
-			}
-		},
-	})
 
 	globalTransitionState = newTransitionState()
 

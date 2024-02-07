@@ -38,7 +38,6 @@ import (
 	"storj.io/minio/pkg/bucket/bandwidth"
 	"storj.io/minio/pkg/certs"
 	"storj.io/minio/pkg/event"
-	"storj.io/minio/pkg/handlers"
 	"storj.io/minio/pkg/kms"
 	"storj.io/minio/pkg/pubsub"
 )
@@ -57,17 +56,17 @@ const (
 	//    It is 64-character obfuscated version of the account ID.
 	// ```
 	// http://docs.aws.amazon.com/AmazonS3/latest/dev/example-walkthroughs-managing-access-example4.html
-	GlobalMinioDefaultOwnerID      = "7b25a206cc747e61355f1af9395c2e1dc93664b7b64838ca859b245e20dead3c"
+	GlobalMinioDefaultOwnerID          = "7b25a206cc747e61355f1af9395c2e1dc93664b7b64838ca859b245e20dead3c"
 	GlobalMinioDefaultOwnerDisplayName = "storj"
-	globalMinioDefaultStorageClass = "STANDARD"
-	globalWindowsOSName            = "windows"
-	globalMacOSName                = "darwin"
-	globalMinioModeFS              = "mode-server-fs"
-	globalMinioModeErasure         = "mode-server-xl"
-	globalMinioModeDistErasure     = "mode-server-distributed-xl"
-	globalMinioModeGatewayPrefix   = "mode-gateway-"
-	globalDirSuffix                = "__XLDIR__"
-	globalDirSuffixWithSlash       = globalDirSuffix + slashSeparator
+	globalMinioDefaultStorageClass     = "STANDARD"
+	globalWindowsOSName                = "windows"
+	globalMacOSName                    = "darwin"
+	globalMinioModeFS                  = "mode-server-fs"
+	globalMinioModeErasure             = "mode-server-xl"
+	globalMinioModeDistErasure         = "mode-server-distributed-xl"
+	globalMinioModeGatewayPrefix       = "mode-gateway-"
+	globalDirSuffix                    = "__XLDIR__"
+	globalDirSuffixWithSlash           = globalDirSuffix + slashSeparator
 
 	// Add new global values here.
 )
@@ -144,9 +143,6 @@ var (
 	// Holds the possible host endpoint.
 	globalMinioEndpoint = ""
 
-	// globalConfigSys server config system.
-	globalConfigSys *ConfigSys
-
 	GlobalNotificationSys  *NotificationSys
 	globalConfigTargetList *event.TargetList
 	// globalEnvTargetList has list of targets configured via env.
@@ -208,12 +204,6 @@ var (
 	globalBootTime = UTCNow()
 
 	globalActiveCred auth.Credentials
-
-	// Hold the old server credentials passed by the environment
-	globalOldCred auth.Credentials
-
-	// Indicates if config is to be encrypted
-	globalConfigEncrypted bool
 
 	globalPublicCerts []*x509.Certificate
 
@@ -279,9 +269,6 @@ var (
 	globalProxyTransport http.RoundTripper
 
 	globalDNSCache *xhttp.DNSCache
-
-	globalForwarder *handlers.Forwarder
-	// Add new variable global values here.
 )
 
 var errSelfTestFailure = errors.New("self test failed. unsafe to start server")
