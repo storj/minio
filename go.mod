@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	git.apache.org/thrift.git v0.13.0
-	github.com/Azure/azure-pipeline-go v0.2.2
 	github.com/Azure/azure-storage-blob-go v0.10.0
 	github.com/Shopify/sarama v1.27.2
 	github.com/VividCortex/ewma v1.1.1
@@ -13,7 +12,6 @@ require (
 	github.com/beevik/ntp v0.3.0
 	github.com/cespare/xxhash/v2 v2.1.1
 	github.com/cheggaaa/pb v1.0.29
-	github.com/colinmarc/hdfs/v2 v2.2.0
 	github.com/dchest/siphash v1.2.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/djherbis/atime v1.0.0
@@ -27,7 +25,6 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.13.4
 	github.com/klauspost/cpuid/v2 v2.0.4
@@ -78,6 +75,7 @@ require (
 )
 
 require (
+	github.com/Azure/azure-pipeline-go v0.2.2 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.9.1 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
@@ -95,11 +93,7 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
-	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
-	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
-	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect

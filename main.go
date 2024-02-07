@@ -26,9 +26,6 @@ import (
 	"os"
 
 	minio "storj.io/minio/cmd"
-
-	// Import gateway
-	_ "storj.io/minio/cmd/gateway"
 )
 
 func main() {
