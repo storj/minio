@@ -30,6 +30,7 @@ import (
 
 	xhttp "storj.io/minio/cmd/http"
 	"storj.io/minio/cmd/logger"
+	"storj.io/minio/pkg/env"
 	"storj.io/minio/pkg/handlers"
 )
 
@@ -773,13 +774,15 @@ func writeSuccessResponseHeadersOnly(w http.ResponseWriter) {
 	writeResponse(w, http.StatusOK, nil, mimeNone)
 }
 
+var storjRetryAfter = env.Get("STORJ_MINIO_RETRY_AFTER", "12")
+
 // writeErrorRespone writes error headers
 func WriteErrorResponse(ctx context.Context, w http.ResponseWriter, err APIError, reqURL *url.URL, browser bool) {
 	switch err.Code {
 	case "SlowDown", "XMinioServerNotInitialized", "XMinioReadQuorum", "XMinioWriteQuorum":
 		// Set retry-after header to indicate user-agents to retry request after 120secs.
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
-		w.Header().Set(xhttp.RetryAfter, "120")
+		w.Header().Set(xhttp.RetryAfter, storjRetryAfter)
 	case "InvalidRegion":
 		err.Description = fmt.Sprintf("Region does not match; expecting '%s'.", globalServerRegion)
 	case "AuthorizationHeaderMalformed":
