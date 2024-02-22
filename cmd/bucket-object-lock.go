@@ -20,6 +20,8 @@ import (
 	"context"
 	"math"
 	"net/http"
+	"os"
+	"strconv"
 
 	xhttp "storj.io/minio/cmd/http"
 	"storj.io/minio/cmd/logger"
@@ -40,6 +42,9 @@ func (sys *BucketObjectLockSys) Get(bucketName string) (r objectlock.Retention, 
 			return r, errServerNotInitialized
 		}
 
+		if v, err := strconv.ParseBool(os.Getenv("STORJ_MINIO_LOCK_ENABLED")); err == nil && v {
+			r.LockEnabled = true
+		}
 		return r, nil
 	}
 
