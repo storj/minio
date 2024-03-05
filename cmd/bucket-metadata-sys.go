@@ -21,6 +21,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"sync"
 
 	"github.com/minio/minio-go/v7/pkg/tags"
@@ -401,6 +403,11 @@ func (sys *BucketMetadataSys) GetConfig(bucket string) (BucketMetadata, error) {
 	}
 
 	if GlobalIsGateway {
+		if v, err := strconv.ParseBool(os.Getenv("STORJ_MINIO_LOCK_ENABLED")); err == nil && v {
+			b := newBucketMetadata(bucket)
+			b.objectLockConfig = objectlock.NewObjectLockConfig()
+			return b, nil
+		}
 		return newBucketMetadata(bucket), NotImplemented{}
 	}
 
