@@ -284,6 +284,10 @@ func trimAwsChunkedContentEncoding(contentEnc string) (trimmedContentEnc string)
 func validateFormFieldSize(ctx context.Context, formValues http.Header) error {
 	// Iterate over form values
 	for k := range formValues {
+		// File can be larger
+		if k == "File" {
+			continue
+		}
 		// Check if value's field exceeds S3 limit
 		if int64(len(formValues.Get(k))) > maxFormFieldSize {
 			logger.LogIf(ctx, errSizeUnexpected)

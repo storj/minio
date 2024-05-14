@@ -42,6 +42,7 @@ import (
 	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/bucket/replication"
+	"storj.io/minio/pkg/env"
 	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/handlers"
 	"storj.io/minio/pkg/hash"
@@ -104,7 +105,6 @@ func (api ObjectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *
 // using the Initiate Multipart Upload request, but has not yet been
 // completed or aborted. This operation returns at most 1,000 multipart
 // uploads in the response.
-//
 func (api ObjectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := NewContext(r, w, "ListMultipartUploads")
 
@@ -578,6 +578,8 @@ func (api ObjectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 	})
 }
 
+var storjMaxFormMemory, _ = env.GetInt("STORJ_MINIO_MAX_FORM_MEMORY", maxFormMemory)
+
 // PostPolicyBucketHandler - POST policy
 // ----------
 // This implementation of the POST operation handles object creation with a specified
@@ -634,7 +636,7 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 	}
 
 	// Read multipart data and save in memory and in the disk if needed
-	form, err := reader.ReadForm(maxFormMemory)
+	form, err := reader.ReadForm(int64(storjMaxFormMemory))
 	if err != nil {
 		logger.LogIf(ctx, err, logger.Application)
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMalformedPOSTRequest), r.URL, guessIsBrowserReq(r))
