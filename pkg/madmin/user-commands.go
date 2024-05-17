@@ -330,7 +330,7 @@ func (adm *AdminClient) AddServiceAccount(ctx context.Context, opts AddServiceAc
 type UpdateServiceAccountReq struct {
 	NewPolicy    *iampolicy.Policy `json:"newPolicy,omitempty"`
 	NewSecretKey string            `json:"newSecretKey,omitempty"`
-	NewStatus    string            `json:"newStatus,omityempty"`
+	NewStatus    string            `json:"newStatus,omitempty"`
 }
 
 // UpdateServiceAccount - edit an existing service account
