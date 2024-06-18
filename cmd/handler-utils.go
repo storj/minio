@@ -284,10 +284,6 @@ func trimAwsChunkedContentEncoding(contentEnc string) (trimmedContentEnc string)
 func validateFormFieldSize(ctx context.Context, formValues http.Header) error {
 	// Iterate over form values
 	for k := range formValues {
-		// File can be larger
-		if k == "File" {
-			continue
-		}
 		// Check if value's field exceeds S3 limit
 		if int64(len(formValues.Get(k))) > maxFormFieldSize {
 			logger.LogIf(ctx, errSizeUnexpected)
@@ -363,6 +359,53 @@ func extractPostPolicyFormValues(ctx context.Context, form *multipart.Form) (fil
 		}
 	}
 	return filePart, fileName, fileSize, formValues, nil
+}
+
+// readPostPolicyForm parses a multipart message and returns a filePart reader
+func readPostPolicyForm(reader *multipart.Reader) (filePart io.ReadCloser, fileName string, formValues http.Header, err error) {
+	formValues = make(http.Header)
+	maxMemoryBytes := maxFormMemory
+	for {
+		p, err := reader.NextPart()
+		if err != nil {
+			if err == io.EOF {
+				return nil, "", formValues, nil
+			}
+			return nil, "", nil, err
+		}
+
+		name := http.CanonicalHeaderKey(p.FormName())
+		if name == "" {
+			continue
+		}
+		maxMemoryBytes -= int64(len(name))
+		if maxMemoryBytes < 0 {
+			return nil, "", nil, errSizeUnexpected
+		}
+
+		var b bytes.Buffer
+		if name != "" && name != "File" {
+			// value, store as string in memory
+			n, err := io.CopyN(&b, p, maxFormFieldSize+1)
+			if err != nil && err != io.EOF {
+				return nil, "", nil, err
+			}
+			if n == maxFormFieldSize+1 {
+				return nil, "", nil, errSizeUnexpected
+			}
+			maxMemoryBytes -= n
+			if maxMemoryBytes < 0 {
+				return nil, "", nil, errSizeUnexpected
+			}
+			formValues[name] = append(formValues[name], b.String())
+			continue
+		}
+
+		if name == "File" {
+			fileName = p.FileName()
+			return p, fileName, formValues, nil
+		}
+	}
 }
 
 // Log headers and body.

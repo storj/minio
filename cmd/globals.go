@@ -77,7 +77,7 @@ const (
 	maxFormFieldSize = int64(1 * humanize.MiByte)
 
 	// Limit memory allocation to store multipart data
-	maxFormMemory = 5 * humanize.MiByte
+	maxFormMemory = int64(5 * humanize.MiByte)
 
 	// The maximum allowed time difference between the incoming request
 	// date and server date during signature verification.

@@ -20,7 +20,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/textproto"
 	"os"
@@ -126,6 +129,146 @@ func TestValidateFormFieldSize(t *testing.T) {
 			if err.Error() != testCase.err.Error() {
 				t.Errorf("Test %d: Expected error %s, got %s", i+1, testCase.err, err)
 			}
+		}
+	}
+}
+
+// Test read post policy form
+func TestReadPostPolicyForm(t *testing.T) {
+	testCases := []struct {
+		body     string
+		filename string
+		file     []byte
+		err      error
+	}{
+		// unexpected EOF
+		{
+			body: `
+--MyBoundary
+foo-bar: baz
+
+Oh no, premature EOF!
+`,
+			err: io.EOF,
+		},
+		// Valid with filename
+		{
+			body: `
+--MyBoundary
+Content-Disposition: form-data; name="file"; filename="beans"
+
+Hello World
+--MyBoundary--
+`,
+			filename: "beans",
+			file:     []byte("Hello World"),
+			err:      nil,
+		},
+		// Valid without filename
+		{
+			body: `
+--MyBoundary
+Content-Disposition: form-data; name="file"
+
+Hello World
+--MyBoundary--
+`,
+			filename: "",
+			file:     []byte("Hello World"),
+			err:      nil,
+		},
+		// Missing file
+		{
+			body: `
+--MyBoundary
+Content-Disposition: form-data; name="x-amz-date"
+
+20240517T180615Z
+--MyBoundary--
+`,
+			filename: "",
+			err:      nil,
+		},
+		// form field size too large
+		{
+			body: `
+--MyBoundary
+Content-Disposition: form-data; name="x-amz-date"
+
+` + strings.Repeat("a", int(maxFormFieldSize)+1) +
+				`
+--MyBoundary
+Content-Disposition: form-data; name="file"
+
+Hello World
+--MyBoundary--
+`,
+			filename: "",
+			err:      errSizeUnexpected,
+		},
+		// form memory too large
+		{
+			body: `
+--MyBoundary
+Content-Disposition: form-data; name="a"
+
+` + strings.Repeat("a", int(maxFormFieldSize)) +
+				`
+--MyBoundary
+Content-Disposition: form-data; name="b"
+
+` + strings.Repeat("a", int(maxFormFieldSize)) +
+				`
+--MyBoundary
+Content-Disposition: form-data; name="c"
+
+` + strings.Repeat("a", int(maxFormFieldSize)) +
+				`
+--MyBoundary
+Content-Disposition: form-data; name="d"
+
+` + strings.Repeat("a", int(maxFormFieldSize)) +
+				`
+--MyBoundary
+Content-Disposition: form-data; name="e"
+
+` + strings.Repeat("a", int(maxFormFieldSize)) +
+				`
+--MyBoundary
+Content-Disposition: form-data; name="file"
+
+Hello World
+--MyBoundary--
+`,
+			filename: "",
+			err:      errSizeUnexpected,
+		},
+	}
+
+	// Run validate form field size check under all test cases.
+	for i, testCase := range testCases {
+		body := strings.ReplaceAll(testCase.body, "\n", "\r\n")
+		bodyReader := strings.NewReader(body)
+		r := multipart.NewReader(bodyReader, "MyBoundary")
+		fileReader, filename, _, err := readPostPolicyForm(r)
+		if err != nil || testCase.err != nil {
+			if !errors.Is(err, testCase.err) {
+				t.Errorf("Test %d: Expected error %s, got %s", i+1, testCase.err, err)
+			}
+			continue
+		}
+		if filename != testCase.filename {
+			t.Errorf("Test %d: Expected filename %s, got %s", i+1, testCase.filename, filename)
+		}
+		var file []byte
+		if fileReader != nil {
+			file, err = io.ReadAll(fileReader)
+			if err != nil {
+				t.Fatalf("Test %d failed reading file %s", i+1, err)
+			}
+		}
+		if !bytes.Equal(file, testCase.file) {
+			t.Errorf("Test %d: Expected file: %s, got: %s", i+1, testCase.file, file)
 		}
 	}
 }

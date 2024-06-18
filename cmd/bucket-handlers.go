@@ -42,7 +42,6 @@ import (
 	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/bucket/replication"
-	"storj.io/minio/pkg/env"
 	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/handlers"
 	"storj.io/minio/pkg/hash"
@@ -578,8 +577,6 @@ func (api ObjectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 	})
 }
 
-var storjMaxFormMemory, _ = env.GetInt("STORJ_MINIO_MAX_FORM_MEMORY", maxFormMemory)
-
 // PostPolicyBucketHandler - POST policy
 // ----------
 // This implementation of the POST operation handles object creation with a specified
@@ -626,8 +623,6 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	// Here the parameter is the size of the form data that should
-	// be loaded in memory, the remaining being put in temporary files.
 	reader, err := r.MultipartReader()
 	if err != nil {
 		logger.LogIf(ctx, err)
@@ -635,19 +630,7 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	// Read multipart data and save in memory and in the disk if needed
-	form, err := reader.ReadForm(int64(storjMaxFormMemory))
-	if err != nil {
-		logger.LogIf(ctx, err, logger.Application)
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMalformedPOSTRequest), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	// Remove all tmp files created during multipart upload
-	defer form.RemoveAll()
-
-	// Extract all form fields
-	fileBody, fileName, fileSize, formValues, err := extractPostPolicyFormValues(ctx, form)
+	fileBody, fileName, formValues, err := readPostPolicyForm(reader)
 	if err != nil {
 		logger.LogIf(ctx, err, logger.Application)
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMalformedPOSTRequest), r.URL, guessIsBrowserReq(r))
@@ -734,9 +717,10 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 		return
 	}
 
+	var postPolicyForm PostPolicyForm
 	// Handle policy if it is set.
 	if len(policyBytes) > 0 {
-		postPolicyForm, err := parsePostPolicyForm(bytes.NewReader(policyBytes))
+		postPolicyForm, err = parsePostPolicyForm(bytes.NewReader(policyBytes))
 		if err != nil {
 			errAPI := errorCodes.ToAPIErr(ErrPostPolicyConditionInvalidFormat)
 			errAPI.Description = fmt.Sprintf("%s '(%s)'", errAPI.Description, err)
@@ -749,21 +733,6 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 			WriteErrorResponse(ctx, w, errorCodes.ToAPIErrWithErr(ErrAccessDenied, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
-
-		// Ensure that the object size is within expected range, also the file size
-		// should not exceed the maximum single Put size (5 GiB)
-		lengthRange := postPolicyForm.Conditions.ContentLengthRange
-		if lengthRange.Valid {
-			if fileSize < lengthRange.Min {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, errDataTooSmall), r.URL, guessIsBrowserReq(r))
-				return
-			}
-
-			if fileSize > lengthRange.Max || isMaxObjectSize(fileSize) {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, errDataTooLarge), r.URL, guessIsBrowserReq(r))
-				return
-			}
-		}
 	}
 
 	// Extract metadata to be saved from received Form.
@@ -774,7 +743,7 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	hashReader, err := hash.NewReader(fileBody, fileSize, "", "", fileSize)
+	hashReader, err := hash.NewReader(fileBody, -1, "", "", -1)
 	if err != nil {
 		logger.LogIf(ctx, err)
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
@@ -799,6 +768,8 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 		writeErrorResponseHeadersOnly(w, ToAPIError(ctx, err))
 		return
 	}
+	opts.PostPolicy = postPolicyForm
+
 	if objectAPI.IsEncryptionSupported() {
 		if _, ok := crypto.IsRequested(formValues); ok && !HasSuffix(object, SlashSeparator) { // handle SSE requests
 			if crypto.SSECopy.IsRequested(r.Header) {
@@ -819,9 +790,8 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return
 			}
-			info := ObjectInfo{Size: fileSize}
 			// do not try to verify encrypted content
-			hashReader, err = hash.NewReader(reader, info.EncryptedSize(), "", "", fileSize)
+			hashReader, err = hash.NewReader(reader, -1, "", "", -1)
 			if err != nil {
 				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return

@@ -39,12 +39,13 @@ type GetObjectInfoFn func(ctx context.Context, bucket, object string, opts Objec
 // ObjectOptions represents object options for ObjectLayer object operations
 type ObjectOptions struct {
 	ServerSideEncryption encrypt.ServerSide
-	VersionSuspended     bool      // indicates if the bucket was previously versioned but is currently suspended.
-	Versioned            bool      // indicates if the bucket is versioned
-	WalkVersions         bool      // indicates if the we are interested in walking versions
-	VersionID            string    // Specifies the versionID which needs to be overwritten or read
-	MTime                time.Time // Is only set in POST/PUT operations
-	Expires              time.Time // Is only used in POST/PUT operations
+	VersionSuspended     bool           // indicates if the bucket was previously versioned but is currently suspended.
+	Versioned            bool           // indicates if the bucket is versioned
+	WalkVersions         bool           // indicates if the we are interested in walking versions
+	VersionID            string         // Specifies the versionID which needs to be overwritten or read
+	MTime                time.Time      // Is only set in POST/PUT operations
+	Expires              time.Time      // Is only used in POST/PUT operations
+	PostPolicy           PostPolicyForm // Is only used in POST/PUT operations
 
 	DeleteMarker                  bool                                                  // Is only set in DELETE operations for delete marker replication
 	UserDefined                   map[string]string                                     // only set in case of POST/PUT operations
