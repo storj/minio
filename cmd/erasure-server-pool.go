@@ -34,6 +34,7 @@ import (
 
 	"storj.io/minio/cmd/config/storageclass"
 	"storj.io/minio/cmd/logger"
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/madmin"
 	"storj.io/minio/pkg/sync/errgroup"
 	"storj.io/minio/pkg/wildcard"
@@ -1238,6 +1239,10 @@ func (z *erasureServerPools) GetBucketInfo(ctx context.Context, bucket string) (
 	return bucketInfo, BucketNotFound{
 		Bucket: bucket,
 	}
+}
+
+func (z *erasureServerPools) GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error) {
+	return nil, NotImplemented{}
 }
 
 // IsNotificationSupported returns whether bucket notification is applicable for this layer.

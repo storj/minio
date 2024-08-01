@@ -25,7 +25,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/tags"
 
-	"storj.io/minio/pkg/bucket/object/lock"
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/bucket/versioning"
 	"storj.io/minio/pkg/madmin"
@@ -48,7 +48,7 @@ type ObjectOptions struct {
 	Expires              time.Time      // Is only used in POST/PUT operations
 	PostPolicy           PostPolicyForm // Is only used in POST/PUT operations
 
-	Retention *lock.ObjectRetention // Optional retention configuration for the object
+	Retention *objectlock.ObjectRetention // Optional retention configuration for the object
 
 	DeleteMarker                  bool                                                  // Is only set in DELETE operations for delete marker replication
 	UserDefined                   map[string]string                                     // only set in case of POST/PUT operations
@@ -117,8 +117,9 @@ type ObjectLayer interface {
 	SetBucketVersioning(ctx context.Context, bucket string, versioning *versioning.Versioning) (err error)
 	GetBucketVersioning(ctx context.Context, bucket string) (*versioning.Versioning, error)
 
-	SetObjectRetention(ctx context.Context, bucket, object, versionID string, retention *lock.ObjectRetention) (err error)
-	GetObjectRetention(ctx context.Context, bucket, object, versionID string) (*lock.ObjectRetention, error)
+	GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error)
+	SetObjectRetention(ctx context.Context, bucket, object, versionID string, retention *objectlock.ObjectRetention) (err error)
+	GetObjectRetention(ctx context.Context, bucket, object, versionID string) (*objectlock.ObjectRetention, error)
 
 	// Object operations.
 

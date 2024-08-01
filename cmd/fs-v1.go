@@ -39,6 +39,7 @@ import (
 	"storj.io/minio/cmd/config"
 	xhttp "storj.io/minio/cmd/http"
 	"storj.io/minio/cmd/logger"
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/color"
 	xioutil "storj.io/minio/pkg/ioutil"
@@ -493,6 +494,10 @@ func (fs *FSObjects) GetBucketInfo(ctx context.Context, bucket string) (bi Bucke
 		Name:    bucket,
 		Created: createdTime,
 	}, nil
+}
+
+func (fs *FSObjects) GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error) {
+	return nil, NotImplemented{}
 }
 
 // ListBuckets - list all s3 compatible buckets (directories) at fsPath.
