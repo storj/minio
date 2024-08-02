@@ -25,6 +25,7 @@ import (
 	"storj.io/minio/cmd/logger"
 	bucketsse "storj.io/minio/pkg/bucket/encryption"
 	"storj.io/minio/pkg/bucket/lifecycle"
+	"storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/bucket/versioning"
 	"storj.io/minio/pkg/madmin"
@@ -142,6 +143,18 @@ func (a GatewayUnsupported) SetBucketVersioning(ctx context.Context, bucket stri
 
 // GetBucketVersioning retrieves versioning configuration of a bucket.
 func (a GatewayUnsupported) GetBucketVersioning(ctx context.Context, bucket string) (*versioning.Versioning, error) {
+	logger.LogIf(ctx, NotImplemented{})
+	return nil, NotImplemented{}
+}
+
+// SetObjectRetention sets object lock configuration for object.
+func (a GatewayUnsupported) SetObjectRetention(ctx context.Context, bucket, object, versionID string, retention *lock.ObjectRetention) error {
+	logger.LogIf(ctx, NotImplemented{})
+	return NotImplemented{}
+}
+
+// GetObjectRetention receives object lock configuration for object.
+func (a GatewayUnsupported) GetObjectRetention(ctx context.Context, bucket, object, versionID string) (*lock.ObjectRetention, error) {
 	logger.LogIf(ctx, NotImplemented{})
 	return nil, NotImplemented{}
 }

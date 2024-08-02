@@ -3348,24 +3348,14 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	cred, owner, claims, s3Err := validateSignature(getRequestAuthType(r), r)
+	_, _, _, s3Err := validateSignature(getRequestAuthType(r), r)
 	if s3Err != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	if _, err := objectAPI.GetBucketInfo(ctx, bucket); err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
 	if !hasContentMD5(r.Header) {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentMD5), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	if rcfg, _ := globalBucketObjectLockSys.Get(bucket); !rcfg.LockEnabled {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidBucketObjectLockConfiguration), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -3383,62 +3373,17 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
+	if !objRetention.Mode.Valid() {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNoSuchObjectLockConfiguration), r.URL, guessIsBrowserReq(r))
+		return
 	}
 
-	objInfo, s3Err := enforceRetentionBypassForPut(ctx, r, bucket, object, getObjectInfo, objRetention, cred, owner, claims)
-	if s3Err != ErrNone {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-	if objInfo.DeleteMarker {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMethodNotAllowed), r.URL, guessIsBrowserReq(r))
-		return
-	}
-	if objRetention.Mode.Valid() {
-		objInfo.UserDefined[strings.ToLower(xhttp.AmzObjectLockMode)] = string(objRetention.Mode)
-		objInfo.UserDefined[strings.ToLower(xhttp.AmzObjectLockRetainUntilDate)] = objRetention.RetainUntilDate.UTC().Format(time.RFC3339)
-	} else {
-		objInfo.UserDefined[strings.ToLower(xhttp.AmzObjectLockMode)] = ""
-		objInfo.UserDefined[strings.ToLower(xhttp.AmzObjectLockRetainUntilDate)] = ""
-	}
-	replicate, sync := mustReplicate(ctx, r, bucket, object, objInfo.UserDefined, "")
-	if replicate {
-		objInfo.UserDefined[xhttp.AmzBucketReplicationStatus] = replication.Pending.String()
-	}
-	// if version-id is not specified retention is supposed to be set on the latest object.
-	if opts.VersionID == "" {
-		opts.VersionID = objInfo.VersionID
-	}
-	popts := ObjectOptions{
-		MTime:       opts.MTime,
-		VersionID:   opts.VersionID,
-		UserDefined: make(map[string]string, len(objInfo.UserDefined)),
-	}
-	for k, v := range objInfo.UserDefined {
-		popts.UserDefined[k] = v
-	}
-	if _, err = objectAPI.PutObjectMetadata(ctx, bucket, object, popts); err != nil {
+	if err = objectAPI.SetObjectRetention(ctx, bucket, object, opts.VersionID, objRetention); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
-	if replicate {
-		scheduleReplication(ctx, objInfo.Clone(), objectAPI, sync, replication.MetadataReplicationType)
-	}
 
 	writeSuccessNoContent(w)
-	// Notify object  event.
-	sendEvent(eventArgs{
-		EventName:    event.ObjectCreatedPutRetention,
-		BucketName:   bucket,
-		Object:       objInfo,
-		ReqParams:    extractReqParams(r),
-		RespElements: extractRespElements(w),
-		UserAgent:    r.UserAgent(),
-		Host:         handlers.GetSourceIP(r),
-	})
 }
 
 // GetObjectRetentionHandler - get object retention configuration of object,
@@ -3464,45 +3409,24 @@ func (api ObjectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
-	}
-
-	if rcfg, _ := globalBucketObjectLockSys.Get(bucket); !rcfg.LockEnabled {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidBucketObjectLockConfiguration), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
 	opts, err := getOpts(ctx, r, bucket, object)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	objInfo, err := getObjectInfo(ctx, bucket, object, opts)
+	objRetention, err := objectAPI.GetObjectRetention(ctx, bucket, object, opts.VersionID)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	retention := objectlock.GetObjectRetentionMeta(objInfo.UserDefined)
-	if !retention.Mode.Valid() {
+	if !objRetention.Mode.Valid() {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNoSuchObjectLockConfiguration), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	WriteSuccessResponseXML(w, EncodeResponse(retention))
-	// Notify object retention accessed via a GET request.
-	sendEvent(eventArgs{
-		EventName:    event.ObjectAccessedGetRetention,
-		BucketName:   bucket,
-		Object:       objInfo,
-		ReqParams:    extractReqParams(r),
-		RespElements: extractRespElements(w),
-		UserAgent:    r.UserAgent(),
-		Host:         handlers.GetSourceIP(r),
-	})
+	WriteSuccessResponseXML(w, EncodeResponse(objRetention))
 }
 
 // GetObjectTaggingHandler - GET object tagging

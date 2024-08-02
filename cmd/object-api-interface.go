@@ -25,6 +25,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/encrypt"
 	"github.com/minio/minio-go/v7/pkg/tags"
 
+	"storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/bucket/versioning"
 	"storj.io/minio/pkg/madmin"
@@ -113,6 +114,9 @@ type ObjectLayer interface {
 
 	SetBucketVersioning(ctx context.Context, bucket string, versioning *versioning.Versioning) (err error)
 	GetBucketVersioning(ctx context.Context, bucket string) (*versioning.Versioning, error)
+
+	SetObjectRetention(ctx context.Context, bucket, object, versionID string, retention *lock.ObjectRetention) (err error)
+	GetObjectRetention(ctx context.Context, bucket, object, versionID string) (*lock.ObjectRetention, error)
 
 	// Object operations.
 
