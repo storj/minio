@@ -48,6 +48,8 @@ type ObjectOptions struct {
 	Expires              time.Time      // Is only used in POST/PUT operations
 	PostPolicy           PostPolicyForm // Is only used in POST/PUT operations
 
+	Retention *lock.ObjectRetention // Optional retention configuration for the object
+
 	DeleteMarker                  bool                                                  // Is only set in DELETE operations for delete marker replication
 	UserDefined                   map[string]string                                     // only set in case of POST/PUT operations
 	PartNumber                    int                                                   // only useful in case of GetObject/HeadObject
