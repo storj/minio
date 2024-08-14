@@ -3373,11 +3373,6 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	if !objRetention.Mode.Valid() {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNoSuchObjectLockConfiguration), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
 	if err = objectAPI.SetObjectRetention(ctx, bucket, object, opts.VersionID, objRetention); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
