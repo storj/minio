@@ -1196,14 +1196,9 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 
 	srcInfo.UserDefined = objectlock.FilterObjectLockMetadata(srcInfo.UserDefined, true, true)
 	retPerms := isPutActionAllowed(ctx, getRequestAuthType(r), dstBucket, dstObject, r, iampolicy.PutObjectRetentionAction)
-	holdPerms := isPutActionAllowed(ctx, getRequestAuthType(r), dstBucket, dstObject, r, iampolicy.PutObjectLegalHoldAction)
-	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
-	}
 
 	// apply default bucket configuration/governance headers for dest side.
-	retentionMode, retentionDate, legalHold, s3Err := checkPutObjectLockAllowed(ctx, r, dstBucket, dstObject, getObjectInfo, retPerms, holdPerms)
+	retentionMode, retentionDate, legalHold, s3Err := parseObjectLockHeaders(ctx, r, dstBucket, dstObject, retPerms)
 	if s3Err == ErrNone && retentionMode.Valid() {
 		if dstOpts.Retention == nil {
 			dstOpts.Retention = &objectlock.ObjectRetention{}
@@ -1763,15 +1758,9 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 	}
 
 	retPerms := isPutActionAllowed(ctx, getRequestAuthType(r), bucket, object, r, iampolicy.PutObjectRetentionAction)
-	holdPerms := isPutActionAllowed(ctx, getRequestAuthType(r), bucket, object, r, iampolicy.PutObjectLegalHoldAction)
 
 	if api.CacheAPI() != nil {
 		putObject = api.CacheAPI().PutObject
-	}
-
-	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
 	}
 
 	putObjectTar := func(reader io.Reader, info os.FileInfo, object string) {
@@ -1816,7 +1805,7 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 		}
 		opts.MTime = info.ModTime()
 
-		retentionMode, retentionDate, legalHold, s3Err := checkPutObjectLockAllowed(ctx, r, bucket, object, getObjectInfo, retPerms, holdPerms)
+		retentionMode, retentionDate, legalHold, s3Err := parseObjectLockHeaders(ctx, r, bucket, object, retPerms)
 		if s3Err == ErrNone && retentionMode.Valid() {
 			metadata[strings.ToLower(xhttp.AmzObjectLockMode)] = string(retentionMode)
 			metadata[strings.ToLower(xhttp.AmzObjectLockRetainUntilDate)] = retentionDate.UTC().Format(iso8601TimeFormat)
@@ -2838,13 +2827,13 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 	}
 
 	// Reject retention or governance headers if set, CompleteMultipartUpload spec
-	// does not use these headers, and should not be passed down to checkPutObjectLockAllowed
+	// does not use these headers, and should not be passed down to parseObjectLockHeaders
 	if objectlock.IsObjectLockRequested(r.Header) || objectlock.IsObjectLockGovernanceBypassSet(r.Header) {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidRequest), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	if _, _, _, s3Err := checkPutObjectLockAllowed(ctx, r, bucket, object, objectAPI.GetObjectInfo, ErrNone, ErrNone); s3Err != ErrNone {
+	if _, _, _, s3Err := parseObjectLockHeaders(ctx, r, bucket, object, ErrNone); s3Err != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
 		return
 	}

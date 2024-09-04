@@ -970,7 +970,6 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	retPerms := ErrAccessDenied
-	holdPerms := ErrAccessDenied
 	replPerms := ErrAccessDenied
 	if authErr != nil {
 		if authErr == errNoAuthToken {
@@ -1015,17 +1014,6 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 			Claims:          claims.Map(),
 		}) {
 			retPerms = ErrNone
-		}
-		if GlobalIAMSys.IsAllowed(iampolicy.Args{
-			AccountName:     claims.AccessKey,
-			Action:          iampolicy.PutObjectLegalHoldAction,
-			BucketName:      bucket,
-			ConditionValues: getConditionValues(r, "", claims.AccessKey, claims.Map()),
-			IsOwner:         owner,
-			ObjectName:      object,
-			Claims:          claims.Map(),
-		}) {
-			holdPerms = ErrNone
 		}
 		if GlobalIAMSys.IsAllowed(iampolicy.Args{
 			AccountName:     claims.AccessKey,
@@ -1146,14 +1134,12 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 	crypto.RemoveSensitiveEntries(metadata)
 
 	putObject := objectAPI.PutObject
-	getObjectInfo := objectAPI.GetObjectInfo
 	if web.CacheAPI() != nil {
 		putObject = web.CacheAPI().PutObject
-		getObjectInfo = web.CacheAPI().GetObjectInfo
 	}
 
 	// enforce object retention rules
-	retentionMode, retentionDate, _, s3Err := checkPutObjectLockAllowed(ctx, r, bucket, object, getObjectInfo, retPerms, holdPerms)
+	retentionMode, retentionDate, _, s3Err := parseObjectLockHeaders(ctx, r, bucket, object, retPerms)
 	if s3Err != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
 		return
