@@ -122,6 +122,9 @@ type ObjectLayer interface {
 	SetObjectRetention(ctx context.Context, bucket, object, versionID string, retention *objectlock.ObjectRetention) (err error)
 	GetObjectRetention(ctx context.Context, bucket, object, versionID string) (*objectlock.ObjectRetention, error)
 
+	SetObjectLegalHold(ctx context.Context, bucket, object, versionID string, legalHold *objectlock.ObjectLegalHold) (err error)
+	GetObjectLegalHold(ctx context.Context, bucket, object, versionID string) (*objectlock.ObjectLegalHold, error)
+
 	// Object operations.
 
 	// GetObjectNInfo returns a GetObjectReader that satisfies the

@@ -147,6 +147,18 @@ func (a GatewayUnsupported) GetBucketVersioning(ctx context.Context, bucket stri
 	return nil, NotImplemented{}
 }
 
+// SetObjectLegalHold sets object lock legal hold configuration for object.
+func (a GatewayUnsupported) SetObjectLegalHold(ctx context.Context, bucket, object, versionID string, legalHold *lock.ObjectLegalHold) error {
+	logger.LogIf(ctx, NotImplemented{})
+	return NotImplemented{}
+}
+
+// GetObjectLegalHold receives object lock legal hold configuration for object.
+func (a GatewayUnsupported) GetObjectLegalHold(ctx context.Context, bucket, object, versionID string) (*lock.ObjectLegalHold, error) {
+	logger.LogIf(ctx, NotImplemented{})
+	return nil, NotImplemented{}
+}
+
 // SetObjectRetention sets object lock configuration for object.
 func (a GatewayUnsupported) SetObjectRetention(ctx context.Context, bucket, object, versionID string, retention *lock.ObjectRetention) error {
 	logger.LogIf(ctx, NotImplemented{})

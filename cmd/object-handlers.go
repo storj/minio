@@ -3016,17 +3016,8 @@ func (api ObjectAPIHandlers) PutObjectLegalHoldHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	if _, err := objectAPI.GetBucketInfo(ctx, bucket); err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
 	if !hasContentMD5(r.Header) {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentMD5), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	if rcfg, _ := globalBucketObjectLockSys.Get(bucket); !rcfg.LockEnabled {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidBucketObjectLockConfiguration), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
@@ -3036,63 +3027,18 @@ func (api ObjectAPIHandlers) PutObjectLegalHoldHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
-	}
-
 	opts, err := getOpts(ctx, r, bucket, object)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	objInfo, err := getObjectInfo(ctx, bucket, object, opts)
-	if err != nil {
+	if err = objectAPI.SetObjectLegalHold(ctx, bucket, object, opts.VersionID, legalHold); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
-	if objInfo.DeleteMarker {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMethodNotAllowed), r.URL, guessIsBrowserReq(r))
-		return
-	}
-	objInfo.UserDefined[strings.ToLower(xhttp.AmzObjectLockLegalHold)] = strings.ToUpper(string(legalHold.Status))
-	replicate, sync := mustReplicate(ctx, r, bucket, object, objInfo.UserDefined, "")
-	if replicate {
-		objInfo.UserDefined[xhttp.AmzBucketReplicationStatus] = replication.Pending.String()
-	}
-	// if version-id is not specified retention is supposed to be set on the latest object.
-	if opts.VersionID == "" {
-		opts.VersionID = objInfo.VersionID
-	}
-	popts := ObjectOptions{
-		MTime:       opts.MTime,
-		VersionID:   opts.VersionID,
-		UserDefined: make(map[string]string, len(objInfo.UserDefined)),
-	}
-	for k, v := range objInfo.UserDefined {
-		popts.UserDefined[k] = v
-	}
-	if _, err = objectAPI.PutObjectMetadata(ctx, bucket, object, popts); err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-	if replicate {
-		scheduleReplication(ctx, objInfo.Clone(), objectAPI, sync, replication.MetadataReplicationType)
-	}
+
 	writeSuccessResponseHeadersOnly(w)
-
-	// Notify object event.
-	sendEvent(eventArgs{
-		EventName:    event.ObjectCreatedPutLegalHold,
-		BucketName:   bucket,
-		Object:       objInfo,
-		ReqParams:    extractReqParams(r),
-		RespElements: extractRespElements(w),
-		UserAgent:    r.UserAgent(),
-		Host:         handlers.GetSourceIP(r),
-	})
-
 }
 
 // GetObjectLegalHoldHandler - get legal hold configuration to object,
@@ -3119,45 +3065,24 @@ func (api ObjectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
-	}
-
-	if rcfg, _ := globalBucketObjectLockSys.Get(bucket); !rcfg.LockEnabled {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidBucketObjectLockConfiguration), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
 	opts, err := getOpts(ctx, r, bucket, object)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	objInfo, err := getObjectInfo(ctx, bucket, object, opts)
+	legalHold, err := objectAPI.GetObjectLegalHold(ctx, bucket, object, opts.VersionID)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	legalHold := objectlock.GetObjectLegalHoldMeta(objInfo.UserDefined)
 	if legalHold.IsEmpty() {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNoSuchObjectLockConfiguration), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	WriteSuccessResponseXML(w, EncodeResponse(legalHold))
-	// Notify object legal hold accessed via a GET request.
-	sendEvent(eventArgs{
-		EventName:    event.ObjectAccessedGetLegalHold,
-		BucketName:   bucket,
-		Object:       objInfo,
-		ReqParams:    extractReqParams(r),
-		RespElements: extractRespElements(w),
-		UserAgent:    r.UserAgent(),
-		Host:         handlers.GetSourceIP(r),
-	})
 }
 
 // PutObjectRetentionHandler - set object hold configuration to object,
