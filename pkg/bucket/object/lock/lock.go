@@ -566,10 +566,13 @@ func FilterObjectLockMetadata(metadata map[string]string, filterRetention, filte
 		delKey(AmzObjectLockLegalHold)
 	}
 
+	// remove keys in either case to be sure.
 	ret := GetObjectRetentionMeta(metadata)
 	if !ret.Mode.Valid() || filterRetention {
 		delKey(AmzObjectLockMode)
+		delKey(strings.ToLower(AmzObjectLockMode))
 		delKey(AmzObjectLockRetainUntilDate)
+		delKey(strings.ToLower(AmzObjectLockRetainUntilDate))
 		return dst
 	}
 	return dst
