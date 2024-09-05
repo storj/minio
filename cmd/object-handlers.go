@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"encoding/hex"
 	"encoding/xml"
@@ -2470,31 +2469,6 @@ func (api ObjectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 		}
 	}
 
-	mi, err := objectAPI.GetMultipartInfo(ctx, bucket, object, uploadID, opts)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	// Read compression metadata preserved in the init multipart for the decision.
-	_, isCompressed := mi.UserDefined[ReservedMetadataPrefix+"compression"]
-
-	if objectAPI.IsCompressionSupported() && isCompressed {
-		actualReader, err := hash.NewReader(reader, size, md5hex, sha256hex, actualSize)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-
-		// Set compression metrics.
-		s2c := newS2CompressReader(actualReader, actualSize)
-		defer s2c.Close()
-		reader = etag.Wrap(s2c, actualReader)
-		size = -1   // Since compressed size is un-predictable.
-		md5hex = "" // Do not try to verify the content.
-		sha256hex = ""
-	}
-
 	hashReader, err := hash.NewReader(reader, size, md5hex, sha256hex, actualSize)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
@@ -2502,67 +2476,6 @@ func (api ObjectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 	}
 	rawReader := hashReader
 	pReader := NewPutObjReader(rawReader)
-
-	_, isEncrypted := crypto.IsEncrypted(mi.UserDefined)
-	var objectEncryptionKey crypto.ObjectKey
-	if objectAPI.IsEncryptionSupported() && isEncrypted {
-		if !crypto.SSEC.IsRequested(r.Header) && crypto.SSEC.IsEncrypted(mi.UserDefined) {
-			WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrSSEMultipartEncrypted), r.URL, guessIsBrowserReq(r))
-			return
-		}
-
-		opts, err = putOpts(ctx, r, bucket, object, mi.UserDefined)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-
-		var key []byte
-		if crypto.SSEC.IsRequested(r.Header) {
-			key, err = ParseSSECustomerRequest(r)
-			if err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return
-			}
-		}
-
-		// Calculating object encryption key
-		key, err = decryptObjectInfo(key, bucket, object, mi.UserDefined)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		copy(objectEncryptionKey[:], key)
-
-		partEncryptionKey := objectEncryptionKey.DerivePartKey(uint32(partID))
-		in := io.Reader(hashReader)
-		if size > encryptBufferThreshold {
-			// The encryption reads in blocks of 64KB.
-			// We add a buffer on bigger files to reduce the number of syscalls upstream.
-			in = bufio.NewReaderSize(hashReader, encryptBufferSize)
-		}
-		reader, err = sio.EncryptReader(in, sio.Config{Key: partEncryptionKey[:], CipherSuites: fips.CipherSuitesDARE()})
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		wantSize := int64(-1)
-		if size >= 0 {
-			info := ObjectInfo{Size: size}
-			wantSize = info.EncryptedSize()
-		}
-		// do not try to verify encrypted content
-		hashReader, err = hash.NewReader(etag.Wrap(reader, hashReader), wantSize, "", "", actualSize)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		pReader, err = pReader.WithEncryption(hashReader, &objectEncryptionKey)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-	}
 
 	putObjectPart := objectAPI.PutObjectPart
 
@@ -2574,21 +2487,6 @@ func (api ObjectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 	}
 
 	etag := partInfo.ETag
-	switch kind, encrypted := crypto.IsEncrypted(mi.UserDefined); {
-	case encrypted:
-		switch kind {
-		case crypto.S3:
-			w.Header().Set(xhttp.AmzServerSideEncryption, xhttp.AmzEncryptionAES)
-			etag = tryDecryptETag(objectEncryptionKey[:], etag, false)
-		case crypto.SSEC:
-			w.Header().Set(xhttp.AmzServerSideEncryptionCustomerAlgorithm, r.Header.Get(xhttp.AmzServerSideEncryptionCustomerAlgorithm))
-			w.Header().Set(xhttp.AmzServerSideEncryptionCustomerKeyMD5, r.Header.Get(xhttp.AmzServerSideEncryptionCustomerKeyMD5))
-
-			if len(etag) >= 32 && strings.Count(etag, "-") != 1 {
-				etag = etag[len(etag)-32:]
-			}
-		}
-	}
 
 	// We must not use the http.Header().Set method here because some (broken)
 	// clients expect the ETag header key to be literally "ETag" - not "Etag" (case-sensitive).
@@ -2841,58 +2739,10 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 		return
 	}
 
-	var objectEncryptionKey []byte
-	var isEncrypted, ssec bool
-	if objectAPI.IsEncryptionSupported() {
-		mi, err := objectAPI.GetMultipartInfo(ctx, bucket, object, uploadID, ObjectOptions{})
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		if _, ok := crypto.IsEncrypted(mi.UserDefined); ok {
-			var key []byte
-			isEncrypted = true
-			ssec = crypto.SSEC.IsEncrypted(mi.UserDefined)
-			if crypto.S3.IsEncrypted(mi.UserDefined) {
-				// Calculating object encryption key
-				objectEncryptionKey, err = decryptObjectInfo(key, bucket, object, mi.UserDefined)
-				if err != nil {
-					WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-					return
-				}
-			}
-		}
-	}
-
-	partsMap := make(map[string]PartInfo)
-	if isEncrypted {
-		maxParts := 10000
-		listPartsInfo, err := objectAPI.ListObjectParts(ctx, bucket, object, uploadID, 0, maxParts, ObjectOptions{})
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		for _, part := range listPartsInfo.Parts {
-			partsMap[strconv.Itoa(part.PartNumber)] = part
-		}
-	}
-
 	// Complete parts.
 	completeParts := make([]CompletePart, 0, len(complMultipartUpload.Parts))
 	for _, part := range complMultipartUpload.Parts {
 		part.ETag = canonicalizeETag(part.ETag)
-		if isEncrypted {
-			// ETag is stored in the backend in encrypted form. Validate client sent ETag with
-			// decrypted ETag.
-			if bkPartInfo, ok := partsMap[strconv.Itoa(part.PartNumber)]; ok {
-				bkETag := tryDecryptETag(objectEncryptionKey, bkPartInfo.ETag, ssec)
-				if bkETag != part.ETag {
-					WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidPart), r.URL, guessIsBrowserReq(r))
-					return
-				}
-				part.ETag = bkPartInfo.ETag
-			}
-		}
 		completeParts = append(completeParts, part)
 	}
 
