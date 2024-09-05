@@ -1199,16 +1199,19 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 
 	// apply default bucket configuration/governance headers for dest side.
 	retentionMode, retentionDate, legalHold, s3Err := parseObjectLockHeaders(ctx, r, dstBucket, dstObject, retPerms)
-	if s3Err == ErrNone && retentionMode.Valid() {
-		if dstOpts.Retention == nil {
-			dstOpts.Retention = &objectlock.ObjectRetention{}
+	if s3Err == ErrNone {
+		if retentionMode.Valid() {
+			if dstOpts.Retention == nil {
+				dstOpts.Retention = &objectlock.ObjectRetention{}
+			}
+			dstOpts.Retention.Mode = retentionMode
+			dstOpts.Retention.RetainUntilDate = retentionDate
 		}
-		dstOpts.Retention.Mode = retentionMode
-		dstOpts.Retention.RetainUntilDate = retentionDate
+		if legalHold.Status.Valid() {
+			dstOpts.LegalHold = &legalHold.Status
+		}
 	}
-	if s3Err == ErrNone && legalHold.Status.Valid() {
-		srcInfo.UserDefined[strings.ToLower(xhttp.AmzObjectLockLegalHold)] = string(legalHold.Status)
-	}
+
 	if s3Err != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
 		return
