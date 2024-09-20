@@ -3130,7 +3130,10 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	if err = objectAPI.SetObjectRetention(ctx, bucket, object, opts.VersionID, objRetention); err != nil {
+	if err = objectAPI.SetObjectRetention(ctx, bucket, object, opts.VersionID, ObjectOptions{
+		Retention:                 objRetention,
+		BypassGovernanceRetention: objectlock.IsObjectLockGovernanceBypassSet(r.Header),
+	}); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}

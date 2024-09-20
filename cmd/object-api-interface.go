@@ -120,7 +120,7 @@ type ObjectLayer interface {
 	GetBucketVersioning(ctx context.Context, bucket string) (*versioning.Versioning, error)
 
 	GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error)
-	SetObjectRetention(ctx context.Context, bucket, object, versionID string, retention *objectlock.ObjectRetention) (err error)
+	SetObjectRetention(ctx context.Context, bucket, object, versionID string, opts ObjectOptions) (err error)
 	GetObjectRetention(ctx context.Context, bucket, object, versionID string) (*objectlock.ObjectRetention, error)
 
 	SetObjectLegalHold(ctx context.Context, bucket, object, versionID string, legalHold *objectlock.ObjectLegalHold) (err error)

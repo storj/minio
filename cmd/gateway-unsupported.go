@@ -160,7 +160,7 @@ func (a GatewayUnsupported) GetObjectLegalHold(ctx context.Context, bucket, obje
 }
 
 // SetObjectRetention sets object lock configuration for object.
-func (a GatewayUnsupported) SetObjectRetention(ctx context.Context, bucket, object, versionID string, retention *lock.ObjectRetention) error {
+func (a GatewayUnsupported) SetObjectRetention(ctx context.Context, bucket, object, versionID string, opts ObjectOptions) error {
 	logger.LogIf(ctx, NotImplemented{})
 	return NotImplemented{}
 }
