@@ -30,6 +30,7 @@ import (
 	"storj.io/minio/cmd/crypto"
 	xhttp "storj.io/minio/cmd/http"
 	"storj.io/minio/cmd/logger"
+	objectlock "storj.io/minio/pkg/bucket/object/lock"
 )
 
 // set encryption options for pass through to backend in the case of gateway and UserDefined metadata
@@ -156,6 +157,7 @@ func delOpts(ctx context.Context, r *http.Request, bucket, object string) (opts 
 	}
 	opts.Versioned = versioned
 	opts.VersionSuspended = globalBucketVersioningSys.Suspended(bucket)
+	opts.BypassGovernanceRetention = objectlock.IsObjectLockGovernanceBypassSet(r.Header)
 	delMarker := strings.TrimSpace(r.Header.Get(xhttp.MinIOSourceDeleteMarker))
 	if delMarker != "" {
 		switch delMarker {
