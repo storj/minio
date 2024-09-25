@@ -252,7 +252,8 @@ func parseObjectLockHeaders(ctx context.Context, rq *http.Request, bucket, objec
 	legalHoldRequested := objectlock.IsObjectLockLegalHoldRequested(rq.Header)
 
 	if legalHoldRequested {
-		if legalHold, err := objectlock.ParseObjectLockLegalHoldHeaders(rq.Header); err != nil {
+		var err error
+		if legalHold, err = objectlock.ParseObjectLockLegalHoldHeaders(rq.Header); err != nil {
 			return mode, retainDate, legalHold, toAPIErrorCode(ctx, err)
 		}
 	}

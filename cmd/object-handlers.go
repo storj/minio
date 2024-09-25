@@ -1506,19 +1506,25 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 		putObject = api.CacheAPI().PutObject
 	}
 
-	retentionRequested := objectlock.IsObjectLockRetentionRequested(r.Header)
+	retPerms := isPutActionAllowed(ctx, getRequestAuthType(r), bucket, object, r, iampolicy.PutObjectRetentionAction)
 
-	if retentionRequested {
-		retentionMode, retentionDate, err := objectlock.ParseObjectLockRetentionHeaders(r.Header)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
+	retentionMode, retentionDate, legalHold, s3Err := parseObjectLockHeaders(ctx, r, bucket, object, retPerms)
+	if s3Err == ErrNone {
+		if retentionMode.Valid() {
+			if opts.Retention == nil {
+				opts.Retention = &objectlock.ObjectRetention{}
+			}
+			opts.Retention.Mode = retentionMode
+			opts.Retention.RetainUntilDate = retentionDate
 		}
+		if legalHold.Status.Valid() {
+			opts.LegalHold = &legalHold.Status
+		}
+	}
 
-		opts.Retention = &objectlock.ObjectRetention{
-			Mode:            retentionMode,
-			RetainUntilDate: retentionDate,
-		}
+	if s3Err != ErrNone {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
+		return
 	}
 
 	if ok, _ := mustReplicate(ctx, r, bucket, object, metadata, ""); ok {
@@ -1808,13 +1814,17 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 		opts.MTime = info.ModTime()
 
 		retentionMode, retentionDate, legalHold, s3Err := parseObjectLockHeaders(ctx, r, bucket, object, retPerms)
-		if s3Err == ErrNone && retentionMode.Valid() {
-			metadata[strings.ToLower(xhttp.AmzObjectLockMode)] = string(retentionMode)
-			metadata[strings.ToLower(xhttp.AmzObjectLockRetainUntilDate)] = retentionDate.UTC().Format(iso8601TimeFormat)
-		}
-
-		if s3Err == ErrNone && legalHold.Status.Valid() {
-			metadata[strings.ToLower(xhttp.AmzObjectLockLegalHold)] = string(legalHold.Status)
+		if s3Err == ErrNone {
+			if retentionMode.Valid() {
+				if opts.Retention == nil {
+					opts.Retention = &objectlock.ObjectRetention{}
+				}
+				opts.Retention.Mode = retentionMode
+				opts.Retention.RetainUntilDate = retentionDate
+			}
+			if legalHold.Status.Valid() {
+				opts.LegalHold = &legalHold.Status
+			}
 		}
 
 		if s3Err != ErrNone {
