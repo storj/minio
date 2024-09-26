@@ -3140,6 +3140,13 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
+	// if requesting governance bypass, object layer only removes the active
+	// retention if retention is nil.
+	governanceBypassSet := objectlock.IsObjectLockGovernanceBypassSet(r.Header)
+	if governanceBypassSet && objRetention.Mode == "" && objRetention.RetainUntilDate.IsZero() {
+		objRetention = nil
+	}
+
 	opts, err := getOpts(ctx, r, bucket, object)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
@@ -3148,7 +3155,7 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 
 	if err = objectAPI.SetObjectRetention(ctx, bucket, object, opts.VersionID, ObjectOptions{
 		Retention:                 objRetention,
-		BypassGovernanceRetention: objectlock.IsObjectLockGovernanceBypassSet(r.Header),
+		BypassGovernanceRetention: governanceBypassSet,
 	}); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
