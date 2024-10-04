@@ -158,8 +158,8 @@ func (r Retention) Retain(created time.Time) bool {
 type DefaultRetention struct {
 	XMLName xml.Name `xml:"DefaultRetention"`
 	Mode    RetMode  `xml:"Mode"`
-	Days    *uint64  `xml:"Days"`
-	Years   *uint64  `xml:"Years"`
+	Days    *int32   `xml:"Days"`
+	Years   *int32   `xml:"Years"`
 }
 
 // Maximum support retention days and years supported by AWS S3.
@@ -194,13 +194,13 @@ func (dr *DefaultRetention) UnmarshalXML(d *xml.Decoder, start xml.StartElement)
 	}
 
 	if retention.Days != nil {
-		if *retention.Days == 0 {
+		if *retention.Days <= 0 {
 			return fmt.Errorf("Default retention period must be a positive integer value for 'Days'")
 		}
 		if *retention.Days > maximumRetentionDays {
 			return fmt.Errorf("Default retention period too large for 'Days' %d", *retention.Days)
 		}
-	} else if *retention.Years == 0 {
+	} else if *retention.Years <= 0 {
 		return fmt.Errorf("Default retention period must be a positive integer value for 'Years'")
 	} else if *retention.Years > maximumRetentionYears {
 		return fmt.Errorf("Default retention period too large for 'Years' %d", *retention.Years)

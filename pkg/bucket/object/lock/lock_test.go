@@ -84,10 +84,10 @@ func TestParseLegalHoldStatus(t *testing.T) {
 // TestUnmarshalDefaultRetention checks if default retention
 // marshaling and unmarshaling work as expected
 func TestUnmarshalDefaultRetention(t *testing.T) {
-	days := uint64(4)
-	years := uint64(1)
-	zerodays := uint64(0)
-	invalidDays := uint64(maximumRetentionDays + 1)
+	days := int32(4)
+	years := int32(1)
+	zerodays := int32(0)
+	invalidDays := int32(maximumRetentionDays + 1)
 	tests := []struct {
 		value       DefaultRetention
 		expectedErr error
