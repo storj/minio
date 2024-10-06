@@ -1245,6 +1245,10 @@ func (z *erasureServerPools) GetObjectLockConfig(ctx context.Context, bucket str
 	return nil, NotImplemented{}
 }
 
+func (z *erasureServerPools) SetObjectLockConfig(ctx context.Context, bucket string, config *objectlock.Config) error {
+	return NotImplemented{}
+}
+
 // IsNotificationSupported returns whether bucket notification is applicable for this layer.
 func (z *erasureServerPools) IsNotificationSupported() bool {
 	return true

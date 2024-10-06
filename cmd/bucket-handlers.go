@@ -1049,10 +1049,6 @@ func (api ObjectAPIHandlers) PutBucketObjectLockConfigHandler(w http.ResponseWri
 		writeErrorResponseJSON(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL)
 		return
 	}
-	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketObjectLockConfigurationAction, bucket, ""); s3Error != ErrNone {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
-		return
-	}
 
 	config, err := objectlock.ParseObjectLockConfig(r.Body)
 	if err != nil {
@@ -1062,19 +1058,7 @@ func (api ObjectAPIHandlers) PutBucketObjectLockConfigHandler(w http.ResponseWri
 		return
 	}
 
-	configData, err := xml.Marshal(config)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	// Deny object locking configuration settings on existing buckets without object lock enabled.
-	if _, err = globalBucketMetadataSys.GetObjectLockConfig(bucket); err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	if err = globalBucketMetadataSys.Update(bucket, objectLockConfig, configData); err != nil {
+	if err = objectAPI.SetObjectLockConfig(ctx, bucket, config); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}

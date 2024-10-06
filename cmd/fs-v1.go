@@ -500,6 +500,10 @@ func (fs *FSObjects) GetObjectLockConfig(ctx context.Context, bucket string) (*o
 	return nil, NotImplemented{}
 }
 
+func (fs *FSObjects) SetObjectLockConfig(ctx context.Context, bucket string, config *objectlock.Config) error {
+	return NotImplemented{}
+}
+
 // ListBuckets - list all s3 compatible buckets (directories) at fsPath.
 func (fs *FSObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
 	if err := checkPathLength(fs.fsPath); err != nil {

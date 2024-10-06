@@ -120,11 +120,7 @@ type ObjectLayer interface {
 	GetBucketVersioning(ctx context.Context, bucket string) (*versioning.Versioning, error)
 
 	GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error)
-	SetObjectRetention(ctx context.Context, bucket, object, versionID string, opts ObjectOptions) (err error)
-	GetObjectRetention(ctx context.Context, bucket, object, versionID string) (*objectlock.ObjectRetention, error)
-
-	SetObjectLegalHold(ctx context.Context, bucket, object, versionID string, legalHold *objectlock.ObjectLegalHold) (err error)
-	GetObjectLegalHold(ctx context.Context, bucket, object, versionID string) (*objectlock.ObjectLegalHold, error)
+	SetObjectLockConfig(ctx context.Context, bucket string, config *objectlock.Config) error
 
 	// Object operations.
 
@@ -140,6 +136,12 @@ type ObjectLayer interface {
 	CopyObject(ctx context.Context, srcBucket, srcObject, destBucket, destObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (objInfo ObjectInfo, err error)
 	DeleteObject(ctx context.Context, bucket, object string, opts ObjectOptions) (ObjectInfo, error)
 	DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []error)
+
+	SetObjectRetention(ctx context.Context, bucket, object, versionID string, opts ObjectOptions) (err error)
+	GetObjectRetention(ctx context.Context, bucket, object, versionID string) (*objectlock.ObjectRetention, error)
+
+	SetObjectLegalHold(ctx context.Context, bucket, object, versionID string, legalHold *objectlock.ObjectLegalHold) (err error)
+	GetObjectLegalHold(ctx context.Context, bucket, object, versionID string) (*objectlock.ObjectLegalHold, error)
 
 	// Multipart operations.
 	ListMultipartUploads(ctx context.Context, bucket, prefix, keyMarker, uploadIDMarker, delimiter string, maxUploads int) (result ListMultipartsInfo, err error)
