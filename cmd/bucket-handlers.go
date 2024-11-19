@@ -440,15 +440,22 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 		}
 	}
 
-	var deleteErrors []DeleteError
+	var deleteErrorsResult []DeleteError
 	for _, dErr := range dErrs {
 		if dErr.Code != "" {
-			deleteErrors = append(deleteErrors, dErr)
+			deleteErrorsResult = append(deleteErrorsResult, dErr)
+		}
+	}
+
+	var deletedObjectsResult []DeletedObject
+	for _, dObj := range deletedObjects {
+		if dObj.ObjectName != "" {
+			deletedObjectsResult = append(deletedObjectsResult, dObj)
 		}
 	}
 
 	// Generate response
-	response := generateMultiDeleteResponse(deleteObjects.Quiet, deletedObjects, deleteErrors)
+	response := generateMultiDeleteResponse(deleteObjects.Quiet, deletedObjectsResult, deleteErrorsResult)
 	encodedSuccessResponse := EncodeResponse(response)
 
 	// Write success response.
