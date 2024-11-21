@@ -76,6 +76,7 @@ const (
 	ErrIncompleteBody
 	ErrInternalError
 	ErrInvalidAccessKeyID
+	ErrInvalidArgument
 	ErrInvalidBucketName
 	ErrInvalidDigest
 	ErrInvalidRange
@@ -494,6 +495,11 @@ var errorCodes = errorCodeMap{
 		Code:           "InvalidAccessKeyId",
 		Description:    "The Access Key Id you provided does not exist in our records.",
 		HTTPStatusCode: http.StatusForbidden,
+	},
+	ErrInvalidArgument: {
+		Code:           "InvalidArgument",
+		Description:    "Invalid argument",
+		HTTPStatusCode: http.StatusBadRequest,
 	},
 	ErrInvalidBucketName: {
 		Code:           "InvalidBucketName",

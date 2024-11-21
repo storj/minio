@@ -1055,7 +1055,7 @@ func (api ObjectAPIHandlers) PutBucketObjectLockConfigHandler(w http.ResponseWri
 
 	config, err := objectlock.ParseObjectLockConfig(r.Body)
 	if err != nil {
-		apiErr := errorCodes.ToAPIErr(ErrMalformedXML)
+		apiErr := errorCodes.ToAPIErr(ErrInvalidArgument)
 		apiErr.Description = err.Error()
 		WriteErrorResponse(ctx, w, apiErr, r.URL, guessIsBrowserReq(r))
 		return
