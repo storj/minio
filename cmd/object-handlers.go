@@ -3161,7 +3161,7 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	writeSuccessNoContent(w)
+	writeSuccessResponseHeadersOnly(w)
 }
 
 // GetObjectRetentionHandler - get object retention configuration of object,
