@@ -346,7 +346,7 @@ func ParseObjectRetention(reader io.Reader) (*ObjectRetention, error) {
 		return nil, err
 	}
 	if ret.Mode != "" && !ret.Mode.Valid() {
-		return &ret, ErrUnknownWORMModeDirective
+		return &ret, ErrMalformedXML
 	}
 
 	if ret.Mode.Valid() && ret.RetainUntilDate.IsZero() {

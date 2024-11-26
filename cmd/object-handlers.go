@@ -3134,9 +3134,7 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 
 	objRetention, err := objectlock.ParseObjectRetention(r.Body)
 	if err != nil {
-		apiErr := errorCodes.ToAPIErr(ErrMalformedXML)
-		apiErr.Description = err.Error()
-		WriteErrorResponse(ctx, w, apiErr, r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
