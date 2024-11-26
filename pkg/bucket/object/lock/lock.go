@@ -115,6 +115,10 @@ var (
 	ErrObjectLockInvalidHeaders = errors.New("x-amz-object-lock-retain-until-date and x-amz-object-lock-mode must both be supplied")
 	// ErrMalformedXML - generic error indicating malformed XML
 	ErrMalformedXML = errors.New("the XML you provided was not well-formed or did not validate against our published schema")
+	// ErrInvalidRetentionPeriod - indicates invalid input for default retention period
+	ErrInvalidRetentionPeriod = errors.New("default retention period must be a positive integer value for 'Days' or 'Years'")
+	// ErrRetentionPeriodTooLarge - indicates invalid input that is too large for the default retention period
+	ErrRetentionPeriodTooLarge = errors.New("default retention period too large for 'Days' or 'Years'")
 )
 
 const (
@@ -176,34 +180,34 @@ func (dr *DefaultRetention) UnmarshalXML(d *xml.Decoder, start xml.StartElement)
 	retention := defaultRetention{}
 
 	if err := d.DecodeElement(&retention, &start); err != nil {
-		return err
+		return ErrMalformedXML
 	}
 
 	switch retention.Mode {
 	case RetGovernance, RetCompliance:
 	default:
-		return fmt.Errorf("unknown retention mode %v", retention.Mode)
+		return ErrMalformedXML
 	}
 
 	if retention.Days == nil && retention.Years == nil {
-		return fmt.Errorf("either Days or Years must be specified")
+		return ErrMalformedXML
 	}
 
 	if retention.Days != nil && retention.Years != nil {
-		return fmt.Errorf("either Days or Years must be specified, not both")
+		return ErrMalformedXML
 	}
 
 	if retention.Days != nil {
 		if *retention.Days <= 0 {
-			return fmt.Errorf("Default retention period must be a positive integer value for 'Days'")
+			return ErrInvalidRetentionPeriod
 		}
 		if *retention.Days > maximumRetentionDays {
-			return fmt.Errorf("Default retention period too large for 'Days' %d", *retention.Days)
+			return ErrRetentionPeriodTooLarge
 		}
 	} else if *retention.Years <= 0 {
-		return fmt.Errorf("Default retention period must be a positive integer value for 'Years'")
+		return ErrInvalidRetentionPeriod
 	} else if *retention.Years > maximumRetentionYears {
-		return fmt.Errorf("Default retention period too large for 'Years' %d", *retention.Years)
+		return ErrRetentionPeriodTooLarge
 	}
 
 	*dr = DefaultRetention(retention)
@@ -229,11 +233,14 @@ func (config *Config) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error
 	parsedConfig := objectLockConfig{}
 
 	if err := d.DecodeElement(&parsedConfig, &start); err != nil {
-		return err
+		if errors.Is(err, ErrInvalidRetentionPeriod) || errors.Is(err, ErrRetentionPeriodTooLarge) {
+			return err
+		}
+		return ErrMalformedXML
 	}
 
 	if parsedConfig.ObjectLockEnabled != "Enabled" {
-		return fmt.Errorf("only 'Enabled' value is allowed to ObjectLockEnabled element")
+		return ErrMalformedXML
 	}
 
 	*config = Config(parsedConfig)

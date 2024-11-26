@@ -19,7 +19,6 @@ package lock
 import (
 	"encoding/xml"
 	"errors"
-	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -95,12 +94,12 @@ func TestUnmarshalDefaultRetention(t *testing.T) {
 	}{
 		{
 			value:       DefaultRetention{Mode: "retain"},
-			expectedErr: fmt.Errorf("unknown retention mode retain"),
+			expectedErr: ErrMalformedXML,
 			expectErr:   true,
 		},
 		{
 			value:       DefaultRetention{Mode: RetGovernance},
-			expectedErr: fmt.Errorf("either Days or Years must be specified"),
+			expectedErr: ErrMalformedXML,
 			expectErr:   true,
 		},
 		{
@@ -115,17 +114,17 @@ func TestUnmarshalDefaultRetention(t *testing.T) {
 		},
 		{
 			value:       DefaultRetention{Mode: RetGovernance, Days: &days, Years: &years},
-			expectedErr: fmt.Errorf("either Days or Years must be specified, not both"),
+			expectedErr: ErrMalformedXML,
 			expectErr:   true,
 		},
 		{
 			value:       DefaultRetention{Mode: RetGovernance, Days: &zerodays},
-			expectedErr: fmt.Errorf("Default retention period must be a positive integer value for 'Days'"),
+			expectedErr: ErrInvalidRetentionPeriod,
 			expectErr:   true,
 		},
 		{
 			value:       DefaultRetention{Mode: RetGovernance, Days: &invalidDays},
-			expectedErr: fmt.Errorf("Default retention period too large for 'Days' %d", invalidDays),
+			expectedErr: ErrRetentionPeriodTooLarge,
 			expectErr:   true,
 		},
 	}
@@ -156,12 +155,17 @@ func TestParseObjectLockConfig(t *testing.T) {
 	}{
 		{
 			value:       `<ObjectLockConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><ObjectLockEnabled>yes</ObjectLockEnabled></ObjectLockConfiguration>`,
-			expectedErr: fmt.Errorf("only 'Enabled' value is allowed to ObjectLockEnabled element"),
+			expectedErr: ErrMalformedXML,
 			expectErr:   true,
 		},
 		{
 			value:       `<ObjectLockConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><ObjectLockEnabled>Enabled</ObjectLockEnabled><Rule><DefaultRetention><Mode>COMPLIANCE</Mode><Days>0</Days></DefaultRetention></Rule></ObjectLockConfiguration>`,
-			expectedErr: fmt.Errorf("Default retention period must be a positive integer value for 'Days'"),
+			expectedErr: ErrInvalidRetentionPeriod,
+			expectErr:   true,
+		},
+		{
+			value:       `<ObjectLockConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><ObjectLockEnabled>Enabled</ObjectLockEnabled><Rule><DefaultRetention><Mode>COMPLIANCE</Mode><Days>36501</Days></DefaultRetention></Rule></ObjectLockConfiguration>`,
+			expectedErr: ErrRetentionPeriodTooLarge,
 			expectErr:   true,
 		},
 		{

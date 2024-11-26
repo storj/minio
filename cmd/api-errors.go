@@ -77,6 +77,8 @@ const (
 	ErrInternalError
 	ErrInvalidAccessKeyID
 	ErrInvalidArgument
+	ErrInvalidRetentionPeriod
+	ErrRetentionPeriodTooLarge
 	ErrInvalidBucketName
 	ErrInvalidDigest
 	ErrInvalidRange
@@ -499,6 +501,16 @@ var errorCodes = errorCodeMap{
 	ErrInvalidArgument: {
 		Code:           "InvalidArgument",
 		Description:    "Invalid argument",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrInvalidRetentionPeriod: {
+		Code:           "InvalidArgument",
+		Description:    "Default retention period must be a positive integer value for 'Days' or 'Years'",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+	ErrRetentionPeriodTooLarge: {
+		Code:           "InvalidArgument",
+		Description:    "Default retention period too large for 'Days' or 'Years'",
 		HTTPStatusCode: http.StatusBadRequest,
 	},
 	ErrInvalidBucketName: {
@@ -1850,6 +1862,10 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 		apiErr = ErrObjectLockInvalidHeaders
 	case objectlock.ErrMalformedXML:
 		apiErr = ErrMalformedXML
+	case objectlock.ErrInvalidRetentionPeriod:
+		apiErr = ErrInvalidRetentionPeriod
+	case objectlock.ErrRetentionPeriodTooLarge:
+		apiErr = ErrRetentionPeriodTooLarge
 	}
 
 	// Compression errors
