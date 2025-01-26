@@ -220,6 +220,9 @@ func registerAPIRouter(router *mux.Router) {
 		// HeadObject
 		router.Methods(http.MethodHead).Path("/{object:.+}").HandlerFunc(
 			CollectAPIStats("headobject", MaxClients(HTTPTraceAll(api.HeadObjectHandler))))
+		// GetObjectAttributes
+		router.Methods(http.MethodGet).Path("/{object:.+}").HandlerFunc(
+			CollectAPIStats("getobjectattributes", MaxClients(HTTPTraceAll(api.GetObjectAttributesHandler)))).Queries("attributes", "")
 		// CopyObjectPart
 		router.Methods(http.MethodPut).Path("/{object:.+}").
 			HeadersRegexp(xhttp.AmzCopySource, ".*?(\\/|%2F).*?").

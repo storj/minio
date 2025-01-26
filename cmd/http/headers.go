@@ -110,6 +110,13 @@ const (
 	AmzSecurityToken        = "X-Amz-Security-Token"
 	AmzDecodedContentLength = "X-Amz-Decoded-Content-Length"
 
+	// GetObjectAttributes header and request attributes.
+	AmzObjectAttributes = "X-Amz-Object-Attributes"
+	StorageClass        = "StorageClass"
+	ObjectSize          = "ObjectSize"
+	Checksum            = "Checksum"
+	ObjectParts         = "ObjectParts"
+
 	AmzMetaUnencryptedContentLength = "X-Amz-Meta-X-Amz-Unencrypted-Content-Length"
 	AmzMetaUnencryptedContentMD5    = "X-Amz-Meta-X-Amz-Unencrypted-Content-Md5"
 

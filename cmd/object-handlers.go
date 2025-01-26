@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -536,6 +537,88 @@ func (api ObjectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		UserAgent:    r.UserAgent(),
 		Host:         handlers.GetSourceIP(r),
 	})
+}
+
+// GetObjectAttributes.
+func (api ObjectAPIHandlers) GetObjectAttributesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := NewContext(r, w, "GetObjectAttributes")
+
+	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
+
+	objectAPI := api.ObjectAPI()
+	if objectAPI == nil {
+		writeErrorResponseHeadersOnly(w, errorCodes.ToAPIErr(ErrServerNotInitialized))
+		return
+	}
+
+	vars := mux.Vars(r)
+	bucket := vars["bucket"]
+	object, err := unescapePath(vars["object"])
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
+	writeArgumentErrorResponse := func(apiErr APIError, argumentName, argumentValue string) {
+		response := ObjectAttributesErrorResponse{
+			ArgumentName:     argumentName,
+			ArgumentValue:    argumentValue,
+			APIErrorResponse: getAPIErrorResponse(ctx, apiErr, r.URL.Path, w.Header().Get(xhttp.AmzRequestID), globalDeploymentID),
+		}
+		writeResponse(w, apiErr.HTTPStatusCode, EncodeResponse(response), mimeXML)
+	}
+
+	opts, err := getOpts(ctx, r, bucket, object)
+	if err != nil {
+		var invalidVersionErr InvalidVersionID
+		switch {
+		case errors.As(err, &invalidVersionErr):
+			writeArgumentErrorResponse(ToAPIError(ctx, err), "versionId", invalidVersionErr.VersionID)
+		default:
+			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		}
+		return
+	}
+
+	objInfo, err := objectAPI.GetObjectInfo(ctx, bucket, object, opts)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
+	requestedAttributes := strings.TrimSpace(r.Header.Get(xhttp.AmzObjectAttributes))
+	if requestedAttributes == "" {
+		writeArgumentErrorResponse(errorCodes.ToAPIErr(ErrInvalidAttributeName), strings.ToLower(xhttp.AmzObjectAttributes), "")
+		return
+	}
+
+	// TODO: checksum and object parts are not supported yet.
+	var response ObjectAttributesResponse
+	for _, name := range strings.Split(requestedAttributes, ",") {
+		switch name {
+		case xhttp.ETag:
+			response.ETag = objInfo.ETag
+		case xhttp.StorageClass:
+			response.StorageClass = storageclass.STANDARD
+			if objInfo.StorageClass != "" {
+				response.StorageClass = objInfo.StorageClass
+			}
+		case xhttp.ObjectSize:
+			response.ObjectSize = objInfo.Size
+		case xhttp.Checksum:
+		case xhttp.ObjectParts:
+		default:
+			writeArgumentErrorResponse(errorCodes.ToAPIErr(ErrInvalidAttributeName), strings.ToLower(xhttp.AmzObjectAttributes), name)
+			return
+		}
+	}
+
+	if objInfo.VersionID != "" {
+		w.Header().Set(xhttp.AmzVersionID, objInfo.VersionID)
+	}
+	w.Header().Set(xhttp.LastModified, objInfo.ModTime.UTC().Format(http.TimeFormat))
+
+	WriteSuccessResponseXML(w, EncodeResponse(response))
 }
 
 // HeadObjectHandler - HEAD Object

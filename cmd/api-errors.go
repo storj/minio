@@ -241,6 +241,7 @@ const (
 	ErrClientDisconnected
 	ErrOperationMaxedOut
 	ErrInvalidRequest
+	ErrInvalidAttributeName
 	// MinIO storage class error codes
 	ErrInvalidStorageClass
 	ErrBackendDown
@@ -1277,6 +1278,12 @@ var errorCodes = errorCodeMap{
 	ErrMaximumExpires: {
 		Code:           "AuthorizationQueryParametersError",
 		Description:    "X-Amz-Expires must be less than a week (in seconds); that is, the given X-Amz-Expires must be less than 604800 seconds",
+		HTTPStatusCode: http.StatusBadRequest,
+	},
+
+	ErrInvalidAttributeName: {
+		Code:           "InvalidArgument",
+		Description:    "Invalid attribute name specified.",
 		HTTPStatusCode: http.StatusBadRequest,
 	},
 

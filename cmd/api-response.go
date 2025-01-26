@@ -310,6 +310,23 @@ type Object struct {
 	UserMetadata StringMap `xml:"UserMetadata,omitempty"`
 }
 
+// ObjectAttributesResponse returns metadata for GetObjectAttributes response.
+// TODO: checksum and object parts are not supported yet.
+type ObjectAttributesResponse struct {
+	XMLName      xml.Name `xml:"GetObjectAttributesOutput" json:"-"`
+	ETag         string   `xml:"ETag,omitempty"`
+	StorageClass string   `xml:"StorageClass,omitempty"`
+	ObjectSize   int64    `xml:"ObjectSize,omitempty"`
+}
+
+// ObjectAttributesErrorResponse is a variation of APIErrorResponse that includes
+// two additional argument fields specifically for GetObjectAttributes
+type ObjectAttributesErrorResponse struct {
+	ArgumentName  string `xml:"ArgumentName,omitempty"`
+	ArgumentValue string `xml:"ArgumentValue,omitempty"`
+	APIErrorResponse
+}
+
 // CopyObjectResponse container returns ETag and LastModified of the successfully copied object
 type CopyObjectResponse struct {
 	XMLName      xml.Name `xml:"http://s3.amazonaws.com/doc/2006-03-01/ CopyObjectResult" json:"-"`
