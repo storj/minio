@@ -313,7 +313,7 @@ type Object struct {
 // ObjectAttributesResponse returns metadata for GetObjectAttributes response.
 // TODO: checksum and object parts are not supported yet.
 type ObjectAttributesResponse struct {
-	XMLName      xml.Name `xml:"GetObjectAttributesOutput" json:"-"`
+	XMLName      xml.Name `xml:"http://s3.amazonaws.com/doc/2006-03-01/ GetObjectAttributesResponse" json:"-"`
 	ETag         string   `xml:"ETag,omitempty"`
 	StorageClass string   `xml:"StorageClass,omitempty"`
 	ObjectSize   int64    `xml:"ObjectSize,omitempty"`
