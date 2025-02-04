@@ -1431,7 +1431,8 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 
 	// Validate storage class metadata if present
 	if sc := r.Header.Get(xhttp.AmzStorageClass); sc != "" {
-		if !storageclass.IsValid(sc) {
+		// Allow ONEZONE here only, we don't want to make it valid elsewhere
+		if sc != storageclass.ONEZONE && !storageclass.IsValid(sc) {
 			WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidStorageClass), r.URL, guessIsBrowserReq(r))
 			return
 		}
@@ -1480,6 +1481,11 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
+	}
+
+	// Convert ONEZONE storage class to STANDARD (unset)
+	if val, exists := metadata[xhttp.AmzStorageClass]; exists && val == storageclass.ONEZONE {
+		delete(metadata, xhttp.AmzStorageClass)
 	}
 
 	if objTags := r.Header.Get(xhttp.AmzObjectTagging); objTags != "" {

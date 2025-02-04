@@ -34,6 +34,8 @@ const (
 	RRS = "REDUCED_REDUNDANCY"
 	// Standard storage class
 	STANDARD = "STANDARD"
+	// Onezone storage class
+	ONEZONE = "ONEZONE_IA"
 	// DMA storage class
 	DMA = "DMA"
 
