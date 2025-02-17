@@ -63,6 +63,7 @@ type ObjectOptions struct {
 	ProxyRequest                  bool                                                  // only set for GET/HEAD in active-active replication scenario
 	ProxyHeaderSet                bool                                                  // only set for GET/HEAD in active-active replication scenario
 	ParentIsObject                func(ctx context.Context, bucket, parent string) bool // Used to verify if parent is an object.
+	Quiet                         bool                                                  // Is only useful for DeleteObjects
 
 	// Use the maximum parity (N/2), used when
 	// saving server configuration files

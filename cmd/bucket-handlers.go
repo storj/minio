@@ -408,6 +408,7 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 		Versioned:                 globalBucketVersioningSys.Enabled(bucket),
 		VersionSuspended:          globalBucketVersioningSys.Suspended(bucket),
 		BypassGovernanceRetention: objectlock.IsObjectLockGovernanceBypassSet(r.Header),
+		Quiet:                     deleteObjects.Quiet,
 	})
 	deletedObjects := make([]DeletedObject, len(deleteObjects.Objects))
 	for i := range errs {
