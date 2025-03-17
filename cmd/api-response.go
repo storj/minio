@@ -76,7 +76,7 @@ type ListVersionsResponse struct {
 	// NextVersionIdMarker specifies the first object version not
 	// returned that satisfies the search criteria. Use this value
 	// for the version-id-marker request parameter in a subsequent request.
-	NextVersionIDMarker string `xml:"NextVersionIdMarker"`
+	NextVersionIDMarker string `xml:"NextVersionIdMarker,omitempty"`
 
 	// Marks the last version of the Key returned in a truncated response.
 	VersionIDMarker string `xml:"VersionIdMarker"`
