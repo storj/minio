@@ -82,7 +82,7 @@ type ListVersionsResponse struct {
 	VersionIDMarker string `xml:"VersionIdMarker"`
 
 	MaxKeys   int
-	Delimiter string
+	Delimiter string `xml:"Delimiter,omitempty"`
 	// A flag that indicates whether or not ListObjects returned all of the results
 	// that satisfied the search criteria.
 	IsTruncated bool
@@ -112,7 +112,7 @@ type ListObjectsResponse struct {
 	NextMarker string `xml:"NextMarker,omitempty"`
 
 	MaxKeys   int
-	Delimiter string
+	Delimiter string `xml:"Delimiter,omitempty"`
 	// A flag that indicates whether or not ListObjects returned all of the results
 	// that satisfied the search criteria.
 	IsTruncated bool
@@ -143,7 +143,7 @@ type ListObjectsV2Response struct {
 
 	KeyCount  int
 	MaxKeys   int
-	Delimiter string
+	Delimiter string `xml:"Delimiter,omitempty"`
 	// A flag that indicates whether or not ListObjects returned all of the results
 	// that satisfied the search criteria.
 	IsTruncated bool
@@ -195,7 +195,7 @@ type ListMultipartUploadsResponse struct {
 	UploadIDMarker     string `xml:"UploadIdMarker"`
 	NextKeyMarker      string
 	NextUploadIDMarker string `xml:"NextUploadIdMarker"`
-	Delimiter          string
+	Delimiter          string `xml:"Delimiter,omitempty"`
 	Prefix             string
 	EncodingType       string `xml:"EncodingType,omitempty"`
 	MaxUploads         int
