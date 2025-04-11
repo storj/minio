@@ -897,7 +897,7 @@ func (s *erasureSets) DeleteObject(ctx context.Context, bucket string, object st
 // Bulk delete is only possible within one set. For that purpose
 // objects are group by set first, and then bulk delete is invoked
 // for each set, the error response of each delete will be returned
-func (s *erasureSets) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []error) {
+func (s *erasureSets) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []DeleteObjectsError, error) {
 	type delObj struct {
 		// Set index associated to this object
 		setIndex int
@@ -918,10 +918,10 @@ func (s *erasureSets) DeleteObjects(ctx context.Context, bucket string, objects 
 	}
 
 	// The result of delete operation on all passed objects
-	var delErrs = make([]error, len(objects))
+	var delErrs = make([]DeleteObjectsError, 0, len(objects))
 
 	// The result of delete objects
-	var delObjects = make([]DeletedObject, len(objects))
+	var delObjects = make([]DeletedObject, 0, len(objects))
 
 	// A map between a set and its associated objects
 	var objSetMap = make(map[int][]delObj)
@@ -936,17 +936,28 @@ func (s *erasureSets) DeleteObjects(ctx context.Context, bucket string, objects 
 	// the result of the delete operation
 	for _, objsGroup := range objSetMap {
 		set := s.getHashedSet(objsGroup[0].object.ObjectName)
-		dobjects, errs := set.DeleteObjects(ctx, bucket, toNames(objsGroup), opts)
-		for i, obj := range objsGroup {
-			delErrs[obj.origIndex] = errs[i]
-			delObjects[obj.origIndex] = dobjects[i]
-			if errs[i] == nil {
-				auditObjectErasureSet(ctx, obj.object.ObjectName, set)
+
+		dObjects, dErrs, err := set.DeleteObjects(ctx, bucket, toNames(objsGroup), opts)
+		if err != nil {
+			for _, obj := range objsGroup {
+				delErrs = append(delErrs, DeleteObjectsError{
+					ObjectName: obj.object.ObjectName,
+					VersionID: obj.object.VersionID,
+					Error: err,
+				})
 			}
+			continue
+		}
+
+		delObjects = append(delObjects, dObjects...)
+		delErrs = append(delErrs, dErrs...)
+
+		for _, obj := range objsGroup {
+			auditObjectErasureSet(ctx, obj.object.ObjectName, set)
 		}
 	}
 
-	return delObjects, delErrs
+	return delObjects, delErrs, nil
 }
 
 // CopyObject - copies objects from one hashedSet to another hashedSet, on server side.

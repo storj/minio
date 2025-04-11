@@ -1223,27 +1223,33 @@ func (fs *FSObjects) putObject(ctx context.Context, bucket string, object string
 
 // DeleteObjects - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
-func (fs *FSObjects) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []error) {
-	errs := make([]error, len(objects))
-	dobjects := make([]DeletedObject, len(objects))
+func (fs *FSObjects) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []DeleteObjectsError, error) {
+	errs := make([]DeleteObjectsError, 0, len(objects))
+	dobjects := make([]DeletedObject, 0, len(objects))
+
 	for idx, object := range objects {
 		if object.VersionID != "" {
-			errs[idx] = VersionNotFound{
-				Bucket:    bucket,
-				Object:    object.ObjectName,
+			errs = append(errs, DeleteObjectsError{
+				ObjectName:    object.ObjectName,
 				VersionID: object.VersionID,
-			}
+				Error: VersionNotFound{
+					Bucket:    bucket,
+					Object:    object.ObjectName,
+					VersionID: object.VersionID,
+				},
+			})
 			continue
 		}
-		_, errs[idx] = fs.DeleteObject(ctx, bucket, object.ObjectName, opts)
-		if errs[idx] == nil || isErrObjectNotFound(errs[idx]) {
+
+		_, err := fs.DeleteObject(ctx, bucket, object.ObjectName, opts)
+		if err == nil || isErrObjectNotFound(err) {
 			dobjects[idx] = DeletedObject{
 				ObjectName: object.ObjectName,
 			}
-			errs[idx] = nil
 		}
 	}
-	return dobjects, errs
+
+	return dobjects, errs, nil
 }
 
 // DeleteObject - deletes an object from a bucket, this operation is destructive

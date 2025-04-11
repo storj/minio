@@ -296,7 +296,7 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 		return
 	}
 
-	var objectsToDelete = map[ObjectToDelete]int{}
+	deleteObjectsIndex := make(map[bucketObjectLocation]int, len(deleteObjects.Objects))
 	getObjectInfoFn := objectAPI.GetObjectInfo
 	if api.CacheAPI() != nil {
 		getObjectInfoFn = api.CacheAPI().GetObjectInfo
@@ -305,6 +305,7 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 		hasLockEnabled, hasLifecycleConfig, replicateSync bool
 		goi                                               ObjectInfo
 		gerr                                              error
+		filteredIndex                                     int
 	)
 	replicateDeletes := hasReplicationRules(ctx, bucket, deleteObjects.Objects)
 	if rcfg, _ := globalBucketObjectLockSys.Get(bucket); rcfg.LockEnabled {
@@ -313,32 +314,44 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 	if _, err := globalBucketMetadataSys.GetLifecycleConfig(bucket); err == nil {
 		hasLifecycleConfig = true
 	}
-	dErrs := make([]DeleteError, len(deleteObjects.Objects))
-	for index, object := range deleteObjects.Objects {
+	dErrs := make([]DeleteError, 0, len(deleteObjects.Objects))
+	for _, object := range deleteObjects.Objects {
+		loc := bucketObjectLocation{
+			Key:       object.ObjectName,
+			VersionID: object.VersionID,
+		}
+
+		// Skip duplicate objects.
+		if _, ok := deleteObjectsIndex[loc]; ok {
+			continue
+		}
+		deleteObjectsIndex[loc] = -1
+
 		if apiErrCode := checkRequestAuthType(ctx, r, policy.DeleteObjectAction, bucket, object.ObjectName); apiErrCode != ErrNone {
 			if apiErrCode == ErrSignatureDoesNotMatch || apiErrCode == ErrInvalidAccessKeyID {
 				WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(apiErrCode), r.URL, guessIsBrowserReq(r))
 				return
 			}
 			apiErr := errorCodes.ToAPIErr(apiErrCode)
-			dErrs[index] = DeleteError{
+			dErrs = append(dErrs, DeleteError{
 				Code:      apiErr.Code,
 				Message:   apiErr.Description,
 				Key:       object.ObjectName,
 				VersionID: object.VersionID,
-			}
+			})
 			continue
 		}
+
 		if object.VersionID != "" && object.VersionID != nullVersionID {
 			if _, err := uuid.Parse(object.VersionID); err != nil {
 				logger.LogIf(ctx, fmt.Errorf("invalid version-id specified %w", err))
 				apiErr := errorCodes.ToAPIErr(ErrNoSuchVersion)
-				dErrs[index] = DeleteError{
+				dErrs = append(dErrs, DeleteError{
 					Code:      apiErr.Code,
 					Message:   apiErr.Description,
 					Key:       object.ObjectName,
 					VersionID: object.VersionID,
-				}
+				})
 				continue
 			}
 		}
@@ -372,73 +385,92 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 				}
 			}
 		}
+
 		if object.VersionID != "" {
 			if hasLockEnabled {
 				if apiErrCode := enforceRetentionBypassForDelete(ctx, r, bucket, object, goi, gerr); apiErrCode != ErrNone {
 					apiErr := errorCodes.ToAPIErr(apiErrCode)
-					dErrs[index] = DeleteError{
+					dErrs = append(dErrs, DeleteError{
 						Code:      apiErr.Code,
 						Message:   apiErr.Description,
 						Key:       object.ObjectName,
 						VersionID: object.VersionID,
-					}
+					})
 					continue
 				}
 			}
 		}
 
-		// Avoid duplicate objects, we use map to filter them out.
-		if _, ok := objectsToDelete[object]; !ok {
-			objectsToDelete[object] = index
-		}
+		deleteObjects.Objects[filteredIndex] = object
+		deleteObjectsIndex[loc] = filteredIndex
+		filteredIndex++
+	}
+	deleteObjects.Objects = deleteObjects.Objects[:filteredIndex]
+
+	deleteList := make([]ObjectToDelete, 0, len(deleteObjects.Objects))
+	for _, object := range deleteObjects.Objects {
+		deleteList = append(deleteList, ObjectToDelete{
+			ObjectName:                    object.ObjectName,
+			VersionID:                     object.VersionID,
+			DeleteMarkerReplicationStatus: object.DeleteMarkerReplicationStatus,
+			VersionPurgeStatus:            object.VersionPurgeStatus,
+			PurgeTransitioned:             object.PurgeTransitioned,
+		})
 	}
 
-	toNames := func(input map[ObjectToDelete]int) (output []ObjectToDelete) {
-		output = make([]ObjectToDelete, len(input))
-		idx := 0
-		for obj := range input {
-			output[idx] = obj
-			idx++
-		}
-		return
-	}
-
-	deleteList := toNames(objectsToDelete)
-	dObjects, errs := deleteObjectsFn(ctx, bucket, deleteList, ObjectOptions{
+	dObjects, dObjectsErrs, err := deleteObjectsFn(ctx, bucket, deleteList, ObjectOptions{
 		Versioned:                 globalBucketVersioningSys.Enabled(bucket),
 		VersionSuspended:          globalBucketVersioningSys.Suspended(bucket),
 		BypassGovernanceRetention: objectlock.IsObjectLockGovernanceBypassSet(r.Header),
 		Quiet:                     deleteObjects.Quiet,
 	})
-	deletedObjects := make([]DeletedObject, len(deleteObjects.Objects))
-	for i := range errs {
-		// DeleteMarkerVersionID is not used specifically to avoid
-		// lookup errors, since DeleteMarkerVersionID is only
-		// created during DeleteMarker creation when client didn't
-		// specify a versionID.
-		objToDel := ObjectToDelete{
-			ObjectName:                    dObjects[i].ObjectName,
-			VersionID:                     dObjects[i].VersionID,
-			VersionPurgeStatus:            dObjects[i].VersionPurgeStatus,
-			DeleteMarkerReplicationStatus: dObjects[i].DeleteMarkerReplicationStatus,
-			PurgeTransitioned:             dObjects[i].PurgeTransitioned,
-		}
-		dindex := objectsToDelete[objToDel]
-		if errs[i] == nil || isErrObjectNotFound(errs[i]) || isErrVersionNotFound(errs[i]) {
-			if replicateDeletes {
-				dObjects[i].DeleteMarkerReplicationStatus = deleteList[i].DeleteMarkerReplicationStatus
-				dObjects[i].VersionPurgeStatus = deleteList[i].VersionPurgeStatus
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
+	deletedObjects := make([]DeletedObject, 0, len(deleteObjects.Objects))
+	if replicateDeletes {
+		for i := range dObjects {
+			loc := bucketObjectLocation{
+				Key:       dObjects[i].ObjectName,
+				VersionID: dObjects[i].VersionID,
 			}
-			deletedObjects[dindex] = dObjects[i]
+			if dindex, ok := deleteObjectsIndex[loc]; ok {
+				dObjects[i].DeleteMarkerReplicationStatus = deleteObjects.Objects[dindex].DeleteMarkerReplicationStatus
+				dObjects[i].VersionPurgeStatus = deleteObjects.Objects[dindex].VersionPurgeStatus
+			}
+		}
+	}
+	deletedObjects = append(deletedObjects, dObjects...)
+
+	for _, dObjectsErr := range dObjectsErrs {
+		if isErrObjectNotFound(dObjectsErr.Error) || isErrVersionNotFound(dObjectsErr.Error) {
+			deletedObject := DeletedObject{
+				ObjectName: dObjectsErr.ObjectName,
+				VersionID: dObjectsErr.VersionID,
+			}
+			if replicateDeletes {
+				loc := bucketObjectLocation{
+					Key:       dObjectsErr.ObjectName,
+					VersionID: dObjectsErr.VersionID,
+				}
+				if dindex, ok := deleteObjectsIndex[loc]; ok && replicateDeletes {
+					deletedObject.DeleteMarkerReplicationStatus = deleteObjects.Objects[dindex].DeleteMarkerReplicationStatus
+					deletedObject.VersionPurgeStatus = deleteObjects.Objects[dindex].VersionPurgeStatus
+				}
+			}
+			deletedObjects = append(deletedObjects, deletedObject)
 			continue
 		}
-		apiErr := ToAPIError(ctx, errs[i])
-		dErrs[dindex] = DeleteError{
+
+		apiErr := ToAPIError(ctx, dObjectsErr.Error)
+		dErrs = append(dErrs, DeleteError{
 			Code:      apiErr.Code,
 			Message:   apiErr.Description,
-			Key:       deleteList[i].ObjectName,
-			VersionID: deleteList[i].VersionID,
-		}
+			Key:       dObjectsErr.ObjectName,
+			VersionID: dObjectsErr.VersionID,
+		})
 	}
 
 	var deleteErrorsResult []DeleteError

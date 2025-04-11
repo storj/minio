@@ -76,7 +76,7 @@ type CacheObjectLayer interface {
 	GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error)
 	GetObjectInfo(ctx context.Context, bucket, object string, opts ObjectOptions) (objInfo ObjectInfo, err error)
 	DeleteObject(ctx context.Context, bucket, object string, opts ObjectOptions) (ObjectInfo, error)
-	DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []error)
+	DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []DeleteObjectsError, error)
 	PutObject(ctx context.Context, bucket, object string, data *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, err error)
 	CopyObject(ctx context.Context, srcBucket, srcObject, destBucket, destObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (objInfo ObjectInfo, err error)
 	// Storage operations.
@@ -162,31 +162,37 @@ func (c *cacheObjects) DeleteObject(ctx context.Context, bucket, object string, 
 }
 
 // DeleteObjects batch deletes objects in slice, and clears any cached entries
-func (c *cacheObjects) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []error) {
-	errs := make([]error, len(objects))
-	objInfos := make([]ObjectInfo, len(objects))
+func (c *cacheObjects) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []DeleteObjectsError, error) {
+	deleteErrs := make([]DeleteObjectsError, 0, len(objects))
+	deletedObjects := make([]DeletedObject, 0, len(objects))
+
 	for idx, object := range objects {
 		opts.VersionID = object.VersionID
-		objInfos[idx], errs[idx] = c.DeleteObject(ctx, bucket, object.ObjectName, opts)
-	}
-	deletedObjects := make([]DeletedObject, len(objInfos))
-	for idx := range errs {
-		if errs[idx] != nil {
+		deleted, err := c.DeleteObject(ctx, bucket, object.ObjectName, opts)
+		if err != nil {
+			deleteErrs = append(deleteErrs, DeleteObjectsError{
+				ObjectName: object.ObjectName,
+				VersionID: object.VersionID,
+				Error: err,
+			})
 			continue
 		}
-		if objInfos[idx].DeleteMarker {
+
+		if deleted.DeleteMarker {
 			deletedObjects[idx] = DeletedObject{
-				DeleteMarker:          objInfos[idx].DeleteMarker,
-				DeleteMarkerVersionID: objInfos[idx].VersionID,
+				DeleteMarker:          deleted.DeleteMarker,
+				DeleteMarkerVersionID: deleted.VersionID,
 			}
 			continue
 		}
+
 		deletedObjects[idx] = DeletedObject{
-			ObjectName: objInfos[idx].Name,
-			VersionID:  objInfos[idx].VersionID,
+			ObjectName: object.ObjectName,
+			VersionID:  object.VersionID,
 		}
 	}
-	return deletedObjects, errs
+
+	return deletedObjects, deleteErrs, nil
 }
 
 // construct a metadata k-v map

@@ -769,14 +769,20 @@ func (z *erasureServerPools) DeleteObject(ctx context.Context, bucket string, ob
 	return z.serverPools[idx].DeleteObject(ctx, bucket, object, opts)
 }
 
-func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []error) {
-	derrs := make([]error, len(objects))
-	dobjects := make([]DeletedObject, len(objects))
+func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []DeleteObjectsError, error) {
+	derrs := make([]DeleteObjectsError, 0, len(objects))
+	dobjects := make([]DeletedObject, 0, len(objects))
 	objSets := set.NewStringSet()
-	for i := range derrs {
+	for i := range objects {
 		objects[i].ObjectName = encodeDirObject(objects[i].ObjectName)
 
-		derrs[i] = checkDelObjArgs(ctx, bucket, objects[i].ObjectName)
+		if err := checkDelObjArgs(ctx, bucket, objects[i].ObjectName); err != nil {
+			derrs[i] = DeleteObjectsError{
+				ObjectName: objects[i].ObjectName,
+				VersionID: objects[i].VersionID,
+				Error: err,
+			}
+		}
 		objSets.Add(objects[i].ObjectName)
 	}
 
@@ -786,15 +792,23 @@ func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, o
 		for j, obj := range objects {
 			idx, err := z.getPoolIdxExisting(ctx, bucket, obj.ObjectName)
 			if isErrObjectNotFound(err) {
-				derrs[j] = err
+				derrs[j] = DeleteObjectsError{
+					ObjectName: obj.ObjectName,
+					VersionID: obj.VersionID,
+					Error: err,
+				}
 				continue
 			}
 			if err != nil {
 				// Unhandled errors return right here.
 				for i := range derrs {
-					derrs[i] = err
+					derrs[i] = DeleteObjectsError{
+						ObjectName: objects[i].ObjectName,
+						VersionID: objects[i].VersionID,
+						Error: err,
+					}
 				}
-				return dobjects, derrs
+				return dobjects, derrs, nil
 			}
 			poolObjIdxMap[idx] = append(poolObjIdxMap[idx], obj)
 			origIndexMap[idx] = append(origIndexMap[idx], j)
@@ -807,9 +821,13 @@ func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, o
 	ctx, err = multiDeleteLock.GetLock(ctx, globalOperationTimeout)
 	if err != nil {
 		for i := range derrs {
-			derrs[i] = err
+			derrs[i] = DeleteObjectsError{
+				ObjectName: objects[i].ObjectName,
+				VersionID: objects[i].VersionID,
+				Error: err,
+			}
 		}
-		return dobjects, derrs
+		return dobjects, derrs, nil
 	}
 	defer multiDeleteLock.Unlock()
 
@@ -820,15 +838,23 @@ func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, o
 	for idx, pool := range z.serverPools {
 		objs := poolObjIdxMap[idx]
 		orgIndexes := origIndexMap[idx]
-		deletedObjects, errs := pool.DeleteObjects(ctx, bucket, objs, opts)
-		for i, derr := range errs {
-			if derr != nil {
-				derrs[orgIndexes[i]] = derr
+
+		poolDeletedObjects, poolDeleteErrors, err := pool.DeleteObjects(ctx, bucket, objs, opts)
+		if err != nil {
+			for _, orgIndex := range orgIndexes {
+				derrs[orgIndex] = DeleteObjectsError{
+					ObjectName: objects[orgIndex].ObjectName,
+					VersionID: objects[orgIndex].VersionID,
+					Error: err,
+				}
 			}
-			dobjects[orgIndexes[i]] = deletedObjects[i]
+			continue
 		}
+		dobjects = append(dobjects, poolDeletedObjects...)
+		derrs = append(derrs, poolDeleteErrors...)
 	}
-	return dobjects, derrs
+
+	return dobjects, derrs, nil
 }
 
 func (z *erasureServerPools) CopyObject(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (objInfo ObjectInfo, err error) {
@@ -1471,7 +1497,11 @@ func (z *erasureServerPools) Walk(ctx context.Context, bucket, prefix string, re
 				}
 
 				for _, obj := range loi.Objects {
-					results <- obj
+					select {
+					case results <- obj:
+					case <-ctx.Done():
+						return
+					}
 				}
 
 				if !loi.IsTruncated {

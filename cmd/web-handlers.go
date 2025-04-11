@@ -568,6 +568,9 @@ func (web *webAPIHandlers) RemoveObject(r *http.Request, args *RemoveObjectArgs,
 	reqParams["accessKey"] = claims.GetAccessKey()
 	sourceIP := handlers.GetSourceIP(r)
 
+	walkCtx, cancelWalk := context.WithCancel(ctx)
+	defer cancelWalk()
+
 next:
 	for _, objectName := range args.Objects {
 		// If not a directory, remove the object.
@@ -708,7 +711,7 @@ next:
 		objInfoCh := make(chan ObjectInfo)
 
 		// Walk through all objects
-		if err = objectAPI.Walk(ctx, args.BucketName, objectName, objInfoCh, ObjectOptions{}); err != nil {
+		if err = objectAPI.Walk(walkCtx, args.BucketName, objectName, objInfoCh, ObjectOptions{}); err != nil {
 			break next
 		}
 
@@ -761,17 +764,23 @@ next:
 			}
 
 			// Deletes a list of objects.
-			deletedObjects, errs := deleteObjects(ctx, args.BucketName, objects, opts)
-			for i, err := range errs {
-				if err != nil && !isErrObjectNotFound(err) {
-					deletedObjects[i].DeleteMarkerReplicationStatus = objects[i].DeleteMarkerReplicationStatus
-					deletedObjects[i].VersionPurgeStatus = objects[i].VersionPurgeStatus
-				}
-				if err != nil {
+			var (
+				deletedObjects []DeletedObject
+				deleteErrs []DeleteObjectsError
+			)
+			deletedObjects, deleteErrs, err = deleteObjects(ctx, args.BucketName, objects, opts)
+			if err != nil {
+				logger.LogIf(ctx, err)
+				break next
+			}
+
+			for _, deleteErr := range deleteErrs {
+				if !isErrObjectNotFound(deleteErr.Error) {
 					logger.LogIf(ctx, err)
 					break next
 				}
 			}
+
 			// Notify deleted event for objects.
 			for _, dobj := range deletedObjects {
 				objInfo := ObjectInfo{

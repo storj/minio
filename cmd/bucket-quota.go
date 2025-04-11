@@ -202,15 +202,19 @@ func enforceFIFOQuotaBucket(ctx context.Context, objectAPI ObjectLayer, bucket s
 		}
 
 		// Deletes a list of objects.
-		_, deleteErrs := objectAPI.DeleteObjects(ctx, bucket, objects, ObjectOptions{
+		deletedObjects, deleteErrs, err := objectAPI.DeleteObjects(ctx, bucket, objects, ObjectOptions{
 			Versioned: versioned,
 		})
-		for i := range deleteErrs {
-			if deleteErrs[i] != nil {
-				logger.LogIf(ctx, deleteErrs[i])
-				continue
-			}
+		if err != nil {
+			logger.LogIf(ctx, err)
+			continue
+		}
 
+		for _, deleteErr := range deleteErrs {
+			logger.LogIf(ctx, deleteErr.Error)
+		}
+
+		for _ = range deletedObjects {
 			// Notify object deleted event.
 			sendEvent(eventArgs{
 				EventName:  event.ObjectRemovedDelete,

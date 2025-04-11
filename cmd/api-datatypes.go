@@ -61,8 +61,6 @@ type ObjectToDelete struct {
 	DeleteMarkerReplicationStatus string `xml:"DeleteMarkerReplicationStatus"`
 	// Status of versioned delete (of object or DeleteMarker)
 	VersionPurgeStatus VersionPurgeStatusType `xml:"VersionPurgeStatus"`
-	// Version ID of delete marker
-	DeleteMarkerVersionID string `xml:"DeleteMarkerVersionId"`
 	// PurgeTransitioned is nonempty if object is in transition tier
 	PurgeTransitioned string `xml:"PurgeTransitioned"`
 }
@@ -80,4 +78,21 @@ type DeleteObjectsRequest struct {
 	Quiet bool
 	// List of objects to be deleted
 	Objects []ObjectToDelete `xml:"Object"`
+}
+
+// DeleteObjectsError represents an error that the DeleteObjects operation encountered
+// while attempting to delete an object.
+type DeleteObjectsError struct {
+	// ObjectName is the name of the object specified in the request.
+	ObjectName string
+	// VersionID is the version of the object specified in the request.
+	VersionID string
+	// Error is the error that occurred when attempting to delete the object.
+	Error error
+}
+
+// bucketObjectLocation uniquely identifies an object version in a bucket.
+type bucketObjectLocation struct {
+	Key       string
+	VersionID string
 }

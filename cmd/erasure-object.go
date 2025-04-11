@@ -899,9 +899,9 @@ func (er erasureObjects) deleteObject(ctx context.Context, bucket, object string
 // DeleteObjects deletes objects/versions in bulk, this function will still automatically split objects list
 // into smaller bulks if some object names are found to be duplicated in the delete list, splitting
 // into smaller bulks will avoid holding twice the write lock of the duplicated object names.
-func (er erasureObjects) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []error) {
-	errs := make([]error, len(objects))
-	dobjects := make([]DeletedObject, len(objects))
+func (er erasureObjects) DeleteObjects(ctx context.Context, bucket string, objects []ObjectToDelete, opts ObjectOptions) ([]DeletedObject, []DeleteObjectsError, error) {
+	errs := make([]DeleteObjectsError, 0, len(objects))
+	dobjects := make([]DeletedObject, 0, len(objects))
 	writeQuorums := make([]int, len(objects))
 
 	storageDisks := er.getDisks()
@@ -983,18 +983,26 @@ func (er erasureObjects) DeleteObjects(ctx context.Context, bucket string, objec
 			}
 		}
 		err := reduceWriteQuorumErrs(ctx, diskErrs, objectOpIgnoredErrs, writeQuorums[objIndex])
+		var objErr error
 		if objects[objIndex].VersionID != "" {
-			errs[objIndex] = toObjectErr(err, bucket, objects[objIndex].ObjectName, objects[objIndex].VersionID)
+			objErr = toObjectErr(err, bucket, objects[objIndex].ObjectName, objects[objIndex].VersionID)
 		} else {
-			errs[objIndex] = toObjectErr(err, bucket, objects[objIndex].ObjectName)
+			objErr = toObjectErr(err, bucket, objects[objIndex].ObjectName)
 		}
 
-		if errs[objIndex] == nil {
-			ObjectPathUpdated(pathJoin(bucket, objects[objIndex].ObjectName))
+		if objErr != nil {
+			errs = append(errs, DeleteObjectsError{
+				ObjectName: objects[objIndex].ObjectName,
+				VersionID: objects[objIndex].VersionID,
+				Error: objErr,
+			})
+			continue
 		}
+
+		ObjectPathUpdated(pathJoin(bucket, objects[objIndex].ObjectName))
 
 		if versions[objIndex].Deleted {
-			dobjects[objIndex] = DeletedObject{
+			dobjects = append(dobjects, DeletedObject{
 				DeleteMarker:                  versions[objIndex].Deleted,
 				DeleteMarkerVersionID:         versions[objIndex].VersionID,
 				DeleteMarkerMTime:             DeleteMarkerMTime{versions[objIndex].ModTime},
@@ -1002,15 +1010,15 @@ func (er erasureObjects) DeleteObjects(ctx context.Context, bucket string, objec
 				ObjectName:                    versions[objIndex].Name,
 				VersionPurgeStatus:            versions[objIndex].VersionPurgeStatus,
 				PurgeTransitioned:             objects[objIndex].PurgeTransitioned,
-			}
+			})
 		} else {
-			dobjects[objIndex] = DeletedObject{
+			dobjects = append(dobjects, DeletedObject{
 				ObjectName:                    versions[objIndex].Name,
 				VersionID:                     versions[objIndex].VersionID,
 				VersionPurgeStatus:            versions[objIndex].VersionPurgeStatus,
 				DeleteMarkerReplicationStatus: versions[objIndex].DeleteMarkerReplicationStatus,
 				PurgeTransitioned:             objects[objIndex].PurgeTransitioned,
-			}
+			})
 		}
 	}
 
@@ -1030,7 +1038,7 @@ func (er erasureObjects) DeleteObjects(ctx context.Context, bucket string, objec
 		}
 	}
 
-	return dobjects, errs
+	return dobjects, errs, nil
 }
 
 // DeleteObject - deletes an object, this call doesn't necessary reply

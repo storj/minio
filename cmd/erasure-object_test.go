@@ -183,12 +183,16 @@ func TestErasureDeleteObjectsErasureSet(t *testing.T) {
 	}
 
 	objectNames := toObjectNames(testCases)
-	_, delErrs := erasureSets.DeleteObjects(ctx, bucketName, objectNames, ObjectOptions{})
+	_, delErrs, err := erasureSets.DeleteObjects(ctx, bucketName, objectNames, ObjectOptions{})
+	if err != nil {
+		t.Errorf("Failed to remove objects with the error: `%v`", err)
+	}
 
-	for i := range delErrs {
-		if delErrs[i] != nil {
-			t.Errorf("Failed to remove object `%v` with the error: `%v`", objectNames[i], delErrs[i])
-		}
+	for _, delErr := range delErrs {
+		t.Logf("Failed to remove object `%v` with the error: `%v`", delErr.ObjectName, delErr.Error)
+	}
+	if len(delErrs) > 0 {
+		t.FailNow()
 	}
 
 	for _, test := range testCases {
