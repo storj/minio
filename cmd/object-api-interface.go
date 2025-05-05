@@ -52,6 +52,8 @@ type ObjectOptions struct {
 	BypassGovernanceRetention bool                        // Is only useful for DeleteObject(s)
 	LegalHold                 *objectlock.LegalHoldStatus // Optional legal hold status for the object
 
+	IfNoneMatch []string // Optional for conditional operations
+
 	DeleteMarker                  bool                                                  // Is only set in DELETE operations for delete marker replication
 	UserDefined                   map[string]string                                     // only set in case of POST/PUT operations
 	PartNumber                    int                                                   // only useful in case of GetObject/HeadObject

@@ -1279,6 +1279,8 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	srcInfo.UserDefined = objectlock.FilterObjectLockMetadata(srcInfo.UserDefined, true, true)
 	retPerms := isPutActionAllowed(ctx, getRequestAuthType(r), dstBucket, dstObject, r, iampolicy.PutObjectRetentionAction)
 
+	dstOpts.IfNoneMatch = r.Header.Values(xhttp.IfNoneMatch)
+
 	// apply default bucket configuration/governance headers for dest side.
 	retentionMode, retentionDate, legalHold, s3Err := parseObjectLockHeaders(ctx, r, dstBucket, dstObject, retPerms)
 	if s3Err == ErrNone {
@@ -1597,6 +1599,8 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 
 	retPerms := isPutActionAllowed(ctx, getRequestAuthType(r), bucket, object, r, iampolicy.PutObjectRetentionAction)
 
+	opts.IfNoneMatch = r.Header.Values(xhttp.IfNoneMatch)
+
 	retentionMode, retentionDate, legalHold, s3Err := parseObjectLockHeaders(ctx, r, bucket, object, retPerms)
 	if s3Err == ErrNone {
 		if retentionMode.Valid() {
@@ -1901,6 +1905,8 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 			return
 		}
 		opts.MTime = info.ModTime()
+
+		opts.IfNoneMatch = r.Header.Values(xhttp.IfNoneMatch)
 
 		retentionMode, retentionDate, legalHold, s3Err := parseObjectLockHeaders(ctx, r, bucket, object, retPerms)
 		if s3Err == ErrNone {
@@ -2851,6 +2857,10 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 		completeParts = append(completeParts, part)
 	}
 
+	opts := ObjectOptions{
+		IfNoneMatch: r.Header.Values(xhttp.IfNoneMatch),
+	}
+
 	completeMultiPartUpload := objectAPI.CompleteMultipartUpload
 
 	// This code is specifically to handle the requirements for slow
@@ -2877,7 +2887,7 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 
 	w = &whiteSpaceWriter{ResponseWriter: w, Flusher: w.(http.Flusher)}
 	completeDoneCh := sendWhiteSpace(w)
-	objInfo, err := completeMultiPartUpload(ctx, bucket, object, uploadID, completeParts, ObjectOptions{})
+	objInfo, err := completeMultiPartUpload(ctx, bucket, object, uploadID, completeParts, opts)
 	// Stop writing white spaces to the client. Note that close(doneCh) style is not used as it
 	// can cause white space to be written after we send XML response in a race condition.
 	headerWritten := <-completeDoneCh
