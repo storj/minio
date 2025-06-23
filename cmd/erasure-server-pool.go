@@ -1267,6 +1267,14 @@ func (z *erasureServerPools) GetBucketInfo(ctx context.Context, bucket string) (
 	}
 }
 
+func (z *erasureServerPools) GetBucketTagging(ctx context.Context, bucket string) (*tags.Tags, error) {
+	return nil, NotImplemented{}
+}
+
+func (z *erasureServerPools) SetBucketTagging(ctx context.Context, bucket string, tags *tags.Tags) error {
+	return NotImplemented{}
+}
+
 func (z *erasureServerPools) GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error) {
 	return nil, NotImplemented{}
 }

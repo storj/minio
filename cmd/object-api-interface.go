@@ -122,6 +122,9 @@ type ObjectLayer interface {
 	SetBucketVersioning(ctx context.Context, bucket string, versioning *versioning.Versioning) (err error)
 	GetBucketVersioning(ctx context.Context, bucket string) (*versioning.Versioning, error)
 
+	GetBucketTagging(ctx context.Context, bucket string) (*tags.Tags, error)
+	SetBucketTagging(ctx context.Context, bucket string, tags *tags.Tags) error
+
 	GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error)
 	SetObjectLockConfig(ctx context.Context, bucket string, config *objectlock.Config) error
 

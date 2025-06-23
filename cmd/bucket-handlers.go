@@ -1152,11 +1152,6 @@ func (api ObjectAPIHandlers) PutBucketTaggingHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketTaggingAction, bucket, ""); s3Error != ErrNone {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
 	tags, err := tags.ParseBucketXML(io.LimitReader(r.Body, r.ContentLength))
 	if err != nil {
 		apiErr := errorCodes.ToAPIErr(ErrMalformedXML)
@@ -1165,13 +1160,7 @@ func (api ObjectAPIHandlers) PutBucketTaggingHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	configData, err := xml.Marshal(tags)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	if err = globalBucketMetadataSys.Update(bucket, bucketTaggingConfig, configData); err != nil {
+	if err = objectAPI.SetBucketTagging(ctx, bucket, tags); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -1196,26 +1185,20 @@ func (api ObjectAPIHandlers) GetBucketTaggingHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	// check if user has permissions to perform this operation
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketTaggingAction, bucket, ""); s3Error != ErrNone {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	config, err := globalBucketMetadataSys.GetTaggingConfig(bucket)
+	tags, err := objectAPI.GetBucketTagging(ctx, bucket)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	configData, err := xml.Marshal(config)
+	responseBytes, err := xml.Marshal(tags)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	// Write success response.
-	WriteSuccessResponseXML(w, configData)
+	WriteSuccessResponseXML(w, responseBytes)
 }
 
 // DeleteBucketTaggingHandler - DELETE Bucket tagging.
@@ -1234,12 +1217,7 @@ func (api ObjectAPIHandlers) DeleteBucketTaggingHandler(w http.ResponseWriter, r
 		return
 	}
 
-	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketTaggingAction, bucket, ""); s3Error != ErrNone {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	if err := globalBucketMetadataSys.Update(bucket, bucketTaggingConfig, nil); err != nil {
+	if err := objectAPI.SetBucketTagging(ctx, bucket, nil); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}

@@ -496,6 +496,14 @@ func (fs *FSObjects) GetBucketInfo(ctx context.Context, bucket string) (bi Bucke
 	}, nil
 }
 
+func (fs *FSObjects) GetBucketTagging(ctx context.Context, bucket string) (*tags.Tags, error) {
+	return nil, NotImplemented{}
+}
+
+func (fs *FSObjects) SetBucketTagging(ctx context.Context, bucket string, tags *tags.Tags) error {
+	return NotImplemented{}
+}
+
 func (fs *FSObjects) GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error) {
 	return nil, NotImplemented{}
 }
