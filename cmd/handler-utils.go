@@ -107,6 +107,7 @@ func isDirectiveReplace(value string) bool {
 var userMetadataKeyPrefixes = []string{
 	"x-amz-meta-",
 	"x-minio-meta-",
+	"x-storj-stall-",
 }
 
 // extractMetadata extracts metadata from HTTP header and HTTP queryString.
