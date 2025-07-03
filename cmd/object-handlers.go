@@ -49,7 +49,6 @@ import (
 	"storj.io/minio/pkg/bucket/replication"
 	"storj.io/minio/pkg/etag"
 	"storj.io/minio/pkg/event"
-	"storj.io/minio/pkg/fips"
 	"storj.io/minio/pkg/handlers"
 	"storj.io/minio/pkg/hash"
 	iampolicy "storj.io/minio/pkg/iam/policy"
@@ -2145,18 +2144,58 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
-	if objectAPI == nil {
-		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
+	if _, ok := r.Header[http.CanonicalHeaderKey(xhttp.AmzCopySourceIfModifiedSince)]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 		return
 	}
-
-	if crypto.S3KMS.IsRequested(r.Header) { // SSE-KMS is not supported
+	if _, ok := r.Header[http.CanonicalHeaderKey(xhttp.AmzCopySourceIfUnmodifiedSince)]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	if _, ok := r.Header[http.CanonicalHeaderKey(xhttp.AmzCopySourceIfNoneMatch)]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	if _, ok := r.Header[http.CanonicalHeaderKey(xhttp.AmzCopySourceIfMatch)]; ok {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	if _, ok := crypto.IsRequested(r.Header); !objectAPI.IsEncryptionSupported() && ok {
+	if _, ok := r.Header[xhttp.AmzServerSideEncryptionCustomerAlgorithm]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	if _, ok := r.Header[xhttp.AmzServerSideEncryptionCustomerKey]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	if _, ok := r.Header[xhttp.AmzServerSideEncryptionCustomerKeyMD5]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	if _, ok := r.Header[xhttp.AmzServerSideEncryptionCopyCustomerAlgorithm]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	if _, ok := r.Header[xhttp.AmzServerSideEncryptionCopyCustomerKey]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	if _, ok := r.Header[xhttp.AmzServerSideEncryptionCopyCustomerKeyMD5]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
+	if _, ok := r.Header[http.CanonicalHeaderKey("x-amz-request-payer")]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
+	if _, ok := r.Header[http.CanonicalHeaderKey("x-amz-expected-bucket-owner")]; ok {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	if _, ok := r.Header[http.CanonicalHeaderKey("x-amz-source-expected-bucket-owner")]; ok {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -2190,18 +2229,6 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if vid != "" && vid != nullVersionID {
-		_, err := uuid.Parse(vid)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, VersionNotFound{
-				Bucket:    srcBucket,
-				Object:    srcObject,
-				VersionID: vid,
-			}), r.URL, guessIsBrowserReq(r))
-			return
-		}
-	}
-
 	if s3Error := checkRequestAuthType(ctx, r, policy.GetObjectAction, srcBucket, srcObject); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
@@ -2222,102 +2249,17 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	var srcOpts, dstOpts ObjectOptions
-	srcOpts, err = copySrcOpts(ctx, r, srcBucket, srcObject)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-	srcOpts.VersionID = vid
-
-	// convert copy src and dst encryption options for GET/PUT calls
-	var getOpts = ObjectOptions{VersionID: srcOpts.VersionID}
-	if srcOpts.ServerSideEncryption != nil {
-		getOpts.ServerSideEncryption = encrypt.SSE(srcOpts.ServerSideEncryption)
-	}
-
-	dstOpts, err = copyDstOpts(ctx, r, dstBucket, dstObject, nil)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	getObjectNInfo := objectAPI.GetObjectNInfo
-	if api.CacheAPI() != nil {
-		getObjectNInfo = api.CacheAPI().GetObjectNInfo
-	}
+	startOffset, length := int64(0), int64(-1)
 
 	// Get request range.
-	var rs *HTTPRangeSpec
-	var parseRangeErr error
 	if rangeHeader := r.Header.Get(xhttp.AmzCopySourceRange); rangeHeader != "" {
-		rs, parseRangeErr = parseCopyPartRangeSpec(rangeHeader)
-	}
-
-	checkCopyPartPrecondFn := func(o ObjectInfo) bool {
-		if objectAPI.IsEncryptionSupported() {
-			if _, err := DecryptObjectInfo(&o, r); err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return true
-			}
-		}
-		if checkCopyObjectPartPreconditions(ctx, w, r, o) {
-			return true
-		}
-		if parseRangeErr != nil {
-			logger.LogIf(ctx, parseRangeErr)
-			writeCopyPartErr(ctx, w, parseRangeErr, r.URL, guessIsBrowserReq(r))
-			// Range header mismatch is pre-condition like failure
-			// so return true to indicate Range precondition failed.
-			return true
-		}
-		return false
-	}
-	getOpts.CheckPrecondFn = checkCopyPartPrecondFn
-	gr, err := getObjectNInfo(ctx, srcBucket, srcObject, rs, r.Header, readLock, getOpts)
-	if err != nil {
-		if isErrPreconditionFailed(err) {
+		if rs, err := parseCopyPartRangeSpec(rangeHeader); err != nil {
+			logger.LogIf(ctx, err)
+			writeCopyPartErr(ctx, w, err, r.URL, guessIsBrowserReq(r))
 			return
+		} else if rs != nil {
+			startOffset, length = rs.Start, rs.End-rs.Start+1
 		}
-		if globalBucketVersioningSys.Enabled(srcBucket) && gr != nil {
-			// Versioning enabled quite possibly object is deleted might be delete-marker
-			// if present set the headers, no idea why AWS S3 sets these headers.
-			if gr.ObjInfo.VersionID != "" && gr.ObjInfo.DeleteMarker {
-				w.Header()[xhttp.AmzVersionID] = []string{gr.ObjInfo.VersionID}
-				w.Header()[xhttp.AmzDeleteMarker] = []string{strconv.FormatBool(gr.ObjInfo.DeleteMarker)}
-			}
-		}
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-	defer gr.Close()
-	srcInfo := gr.ObjInfo
-
-	actualPartSize := srcInfo.Size
-	if _, ok := crypto.IsEncrypted(srcInfo.UserDefined); ok {
-		actualPartSize, err = srcInfo.GetActualSize()
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-	}
-
-	if err := enforceBucketQuota(ctx, dstBucket, actualPartSize); err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	// Special care for CopyObjectPart
-	if partRangeErr := checkCopyPartRangeWithSize(rs, actualPartSize); partRangeErr != nil {
-		writeCopyPartErr(ctx, w, partRangeErr, r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	// Get the object offset & length
-	startOffset, length, err := rs.GetOffsetLength(actualPartSize)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
 	}
 
 	/// maximum copy size for multipart objects in a single operation
@@ -2326,108 +2268,25 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	actualPartSize = length
-	var reader io.Reader = etag.NewReader(gr, nil)
-
-	mi, err := objectAPI.GetMultipartInfo(ctx, dstBucket, dstObject, uploadID, dstOpts)
+	partInfo, err := api.ObjectAPI().CopyObjectPart(
+		ctx,
+		srcBucket, srcObject, dstBucket, dstObject, uploadID,
+		partID,
+		startOffset, length,
+		ObjectInfo{},
+		ObjectOptions{VersionID: vid}, ObjectOptions{},
+	)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
-	}
-
-	// Read compression metadata preserved in the init multipart for the decision.
-	_, isCompressed := mi.UserDefined[ReservedMetadataPrefix+"compression"]
-	// Compress only if the compression is enabled during initial multipart.
-	if isCompressed {
-		s2c := newS2CompressReader(reader, actualPartSize)
-		defer s2c.Close()
-		reader = etag.Wrap(s2c, reader)
-		length = -1
-	}
-
-	srcInfo.Reader, err = hash.NewReader(reader, length, "", "", actualPartSize)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	dstOpts, err = copyDstOpts(ctx, r, dstBucket, dstObject, mi.UserDefined)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	rawReader := srcInfo.Reader
-	pReader := NewPutObjReader(rawReader)
-
-	_, isEncrypted := crypto.IsEncrypted(mi.UserDefined)
-	var objectEncryptionKey crypto.ObjectKey
-	if objectAPI.IsEncryptionSupported() && isEncrypted {
-		if !crypto.SSEC.IsRequested(r.Header) && crypto.SSEC.IsEncrypted(mi.UserDefined) {
-			WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrSSEMultipartEncrypted), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		if crypto.S3.IsEncrypted(mi.UserDefined) && crypto.SSEC.IsRequested(r.Header) {
-			WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrSSEMultipartEncrypted), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		var key []byte
-		if crypto.SSEC.IsRequested(r.Header) {
-			key, err = ParseSSECustomerRequest(r)
-			if err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return
-			}
-		}
-		key, err = decryptObjectInfo(key, dstBucket, dstObject, mi.UserDefined)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		copy(objectEncryptionKey[:], key)
-
-		partEncryptionKey := objectEncryptionKey.DerivePartKey(uint32(partID))
-		encReader, err := sio.EncryptReader(reader, sio.Config{Key: partEncryptionKey[:], CipherSuites: fips.CipherSuitesDARE()})
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		reader = etag.Wrap(encReader, reader)
-
-		wantSize := int64(-1)
-		if length >= 0 {
-			info := ObjectInfo{Size: length}
-			wantSize = info.EncryptedSize()
-		}
-
-		srcInfo.Reader, err = hash.NewReader(reader, wantSize, "", "", actualPartSize)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-		pReader, err = pReader.WithEncryption(srcInfo.Reader, &objectEncryptionKey)
-		if err != nil {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
-	}
-
-	srcInfo.PutObjReader = pReader
-	// Copy source object to destination, if source and destination
-	// object is same then only metadata is updated.
-	partInfo, err := objectAPI.CopyObjectPart(ctx, srcBucket, srcObject, dstBucket, dstObject, uploadID, partID,
-		startOffset, length, srcInfo, srcOpts, dstOpts)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	if isEncrypted {
-		partInfo.ETag = tryDecryptETag(objectEncryptionKey[:], partInfo.ETag, crypto.SSEC.IsRequested(r.Header))
 	}
 
 	response := generateCopyObjectPartResponse(partInfo.ETag, partInfo.LastModified)
 	encodedSuccessResponse := EncodeResponse(response)
+
+	if vid != "" {
+		w.Header().Set(xhttp.AmzCopySourceVersionID, vid)
+	}
 
 	// Write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
