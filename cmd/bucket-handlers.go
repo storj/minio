@@ -448,7 +448,7 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 		if isErrObjectNotFound(dObjectsErr.Error) || isErrVersionNotFound(dObjectsErr.Error) {
 			deletedObject := DeletedObject{
 				ObjectName: dObjectsErr.ObjectName,
-				VersionID: dObjectsErr.VersionID,
+				VersionID:  dObjectsErr.VersionID,
 			}
 			if replicateDeletes {
 				loc := bucketObjectLocation{
@@ -1169,9 +1169,7 @@ func (api ObjectAPIHandlers) PutBucketTaggingHandler(w http.ResponseWriter, r *h
 
 	tags, err := tags.ParseBucketXML(io.LimitReader(r.Body, r.ContentLength))
 	if err != nil {
-		apiErr := errorCodes.ToAPIErr(ErrMalformedXML)
-		apiErr.Description = err.Error()
-		WriteErrorResponse(ctx, w, apiErr, r.URL, guessIsBrowserReq(r))
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
