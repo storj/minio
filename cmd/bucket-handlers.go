@@ -1246,7 +1246,7 @@ func (api ObjectAPIHandlers) DeleteBucketTaggingHandler(w http.ResponseWriter, r
 	}
 
 	// Write success response.
-	writeSuccessResponseHeadersOnly(w)
+	writeSuccessNoContent(w)
 }
 
 // PutBucketReplicationConfigHandler - PUT Bucket replication configuration.
