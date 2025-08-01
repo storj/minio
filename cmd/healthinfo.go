@@ -25,9 +25,9 @@ import (
 	"sync"
 	"syscall"
 
-	cpuhw "github.com/shirou/gopsutil/v3/cpu"
-	memhw "github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/process"
+	cpuhw "github.com/shirou/gopsutil/v4/cpu"
+	memhw "github.com/shirou/gopsutil/v4/mem"
+	"github.com/shirou/gopsutil/v4/process"
 
 	"storj.io/minio/pkg/disk"
 	"storj.io/minio/pkg/madmin"

@@ -25,11 +25,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	diskhw "github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/shirou/gopsutil/v4/cpu"
+	diskhw "github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/host"
+	"github.com/shirou/gopsutil/v4/mem"
+	"github.com/shirou/gopsutil/v4/process"
+	"github.com/shirou/gopsutil/v4/sensors"
 
 	"storj.io/minio/pkg/disk"
 	"storj.io/minio/pkg/net"
@@ -73,7 +74,7 @@ type SysProcess struct {
 	CreateTime      int64                       `json:"createtime,omitempty"`
 	Cwd             string                      `json:"cwd,omitempty"`
 	Exe             string                      `json:"exe,omitempty"`
-	Gids            []int32                     `json:"gids,omitempty"`
+	Gids            []uint32                    `json:"gids,omitempty"`
 	IOCounters      *process.IOCountersStat     `json:"iocounters,omitempty"`
 	IsRunning       bool                        `json:"isrunning,omitempty"`
 	MemInfo         *process.MemoryInfoStat     `json:"meminfo,omitempty"`
@@ -90,7 +91,7 @@ type SysProcess struct {
 	Status          string                      `json:"status,omitempty"`
 	Tgid            int32                       `json:"tgid,omitempty"`
 	Times           *cpu.TimesStat              `json:"cputimes,omitempty"`
-	Uids            []int32                     `json:"uids,omitempty"`
+	Uids            []uint32                    `json:"uids,omitempty"`
 	Username        string                      `json:"username,omitempty"`
 }
 
@@ -104,11 +105,11 @@ type ServerMemInfo struct {
 
 // ServerOsInfo - Includes host os information
 type ServerOsInfo struct {
-	Addr    string                 `json:"addr"`
-	Info    *host.InfoStat         `json:"info,omitempty"`
-	Sensors []host.TemperatureStat `json:"sensors,omitempty"`
-	Users   []host.UserStat        `json:"users,omitempty"`
-	Error   string                 `json:"error,omitempty"`
+	Addr    string                    `json:"addr"`
+	Info    *host.InfoStat            `json:"info,omitempty"`
+	Sensors []sensors.TemperatureStat `json:"sensors,omitempty"`
+	Users   []host.UserStat           `json:"users,omitempty"`
+	Error   string                    `json:"error,omitempty"`
 }
 
 // ServerCPUInfo - Includes cpu and timer stats of each node of the MinIO cluster

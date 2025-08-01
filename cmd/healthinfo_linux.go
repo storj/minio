@@ -26,8 +26,9 @@ import (
 	"net/http"
 	"strings"
 
-	diskhw "github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
+	diskhw "github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/host"
+	"github.com/shirou/gopsutil/v4/sensors"
 
 	"storj.io/minio/pkg/madmin"
 	"storj.io/minio/pkg/smart"
@@ -50,10 +51,10 @@ func getLocalOsInfo(ctx context.Context, r *http.Request) madmin.ServerOsInfo {
 		}
 	}
 
-	srvrOsInfo.Sensors, err = host.SensorsTemperaturesWithContext(ctx)
+	srvrOsInfo.Sensors, err = sensors.TemperaturesWithContext(ctx)
 	if err != nil {
 		// Set error only when it's not of WARNINGS type
-		if _, isWarning := err.(*host.Warnings); !isWarning {
+		if _, isWarning := err.(*sensors.Warnings); !isWarning {
 			srvrOsInfo.Error = fmt.Sprintf("sensors-temp: %v", err)
 		}
 	}
