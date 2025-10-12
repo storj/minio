@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -63,10 +65,45 @@ func SetObjectLayer(o ObjectLayer) {
 	globalObjLayerMutex.Unlock()
 }
 
-// ObjectAPIHandler implements and provides http handlers for S3 API.
+// ObjectAPIHandlers implements and provides http handlers for S3 API.
 type ObjectAPIHandlers struct {
-	ObjectAPI func() ObjectLayer
-	CacheAPI  func() CacheObjectLayer
+	objectAPI func() ObjectLayer
+	cacheAPI  func() (api CacheObjectLayer, exists bool)
+}
+
+// NewObjectAPIHandlers returns a new ObjectAPIHandlers.
+func NewObjectAPIHandlers(objectAPI func() ObjectLayer, opts ...ObjectAPIHandlersOption) (*ObjectAPIHandlers, error) {
+	if objectAPI == nil {
+		return nil, errors.New("function for providing the object layer must not be nil")
+	}
+	api := &ObjectAPIHandlers{
+		objectAPI: objectAPI,
+		cacheAPI: func() (api CacheObjectLayer, exists bool) {
+			return cacheObjectLayerUnsupported{}, false
+		},
+	}
+	for _, opt := range opts {
+		if err := opt(api); err != nil {
+			return nil, fmt.Errorf("error applying option: %w", err)
+		}
+	}
+	return api, nil
+}
+
+// ObjectAPIHandlersOption is an option for constructing an ObjectAPIHandlers during construction.
+type ObjectAPIHandlersOption func(*ObjectAPIHandlers) error
+
+// WithCacheObjectLayer returns an option for constructing an ObjectAPIHandlers with a cache object API layer.
+func WithCacheObjectLayer(cacheAPI func() CacheObjectLayer) ObjectAPIHandlersOption {
+	return func(api *ObjectAPIHandlers) error {
+		if cacheAPI == nil {
+			return errors.New("function for providing the cache object layer must not be nil")
+		}
+		api.cacheAPI = func() (api CacheObjectLayer, exists bool) {
+			return cacheAPI(), true
+		}
+		return nil
+	}
 }
 
 // getHost tries its best to return the request host.
@@ -177,11 +214,11 @@ func rejectUnsupportedAPIs(router *mux.Router) {
 }
 
 // registerAPIRouter - registers S3 compatible APIs.
-func registerAPIRouter(router *mux.Router) {
+func registerAPIRouter(router *mux.Router) error {
 	// Initialize API.
-	api := ObjectAPIHandlers{
-		ObjectAPI: newObjectLayerFn,
-		CacheAPI:  newCachedObjectLayerFn,
+	api, err := NewObjectAPIHandlers(newObjectLayerFn, WithCacheObjectLayer(newCachedObjectLayerFn))
+	if err != nil {
+		return fmt.Errorf("error initializing API handlers: %w", err)
 	}
 
 	// API Router
@@ -456,6 +493,7 @@ func registerAPIRouter(router *mux.Router) {
 	apiRouter.NotFoundHandler = CollectAPIStats("notfound", HTTPTraceAll(ErrorResponseHandler))
 	apiRouter.MethodNotAllowedHandler = CollectAPIStats("methodnotallowed", HTTPTraceAll(MethodNotAllowedHandler("S3")))
 
+	return nil
 }
 
 // corsHandler handler for CORS (Cross Origin Resource Sharing)

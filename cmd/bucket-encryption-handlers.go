@@ -40,7 +40,7 @@ func (api ObjectAPIHandlers) PutBucketEncryptionHandler(w http.ResponseWriter, r
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -105,7 +105,7 @@ func (api ObjectAPIHandlers) GetBucketEncryptionHandler(w http.ResponseWriter, r
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -148,7 +148,7 @@ func (api ObjectAPIHandlers) DeleteBucketEncryptionHandler(w http.ResponseWriter
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return

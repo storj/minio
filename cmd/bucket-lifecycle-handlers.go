@@ -41,7 +41,7 @@ func (api ObjectAPIHandlers) PutBucketLifecycleHandler(w http.ResponseWriter, r 
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -106,7 +106,7 @@ func (api ObjectAPIHandlers) GetBucketLifecycleHandler(w http.ResponseWriter, r 
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -148,7 +148,7 @@ func (api ObjectAPIHandlers) DeleteBucketLifecycleHandler(w http.ResponseWriter,
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return

@@ -80,7 +80,7 @@ func (api ObjectAPIHandlers) ListObjectVersionsHandler(w http.ResponseWriter, r 
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -141,7 +141,7 @@ func (api ObjectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *htt
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -208,7 +208,7 @@ func (api ObjectAPIHandlers) ListObjectsV2Handler(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -308,7 +308,7 @@ func (api ObjectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return

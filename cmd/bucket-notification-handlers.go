@@ -45,7 +45,7 @@ func (api ObjectAPIHandlers) GetBucketNotificationHandler(w http.ResponseWriter,
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -114,7 +114,7 @@ func (api ObjectAPIHandlers) PutBucketNotificationHandler(w http.ResponseWriter,
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return

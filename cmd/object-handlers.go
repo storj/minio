@@ -97,7 +97,7 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
 	// Fetch object stat info.
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -129,8 +129,8 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 	}
 
 	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		getObjectInfo = cacheAPI.GetObjectInfo
 	}
 
 	// Check for auth type to return S3 compatible error.
@@ -179,8 +179,8 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 	}
 
 	getObjectNInfo := objectAPI.GetObjectNInfo
-	if api.CacheAPI() != nil {
-		getObjectNInfo = api.CacheAPI().GetObjectNInfo
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		getObjectNInfo = cacheAPI.GetObjectNInfo
 	}
 
 	getObject := func(offset, length int64) (rc io.ReadCloser, err error) {
@@ -307,7 +307,7 @@ func (api ObjectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -359,8 +359,8 @@ func (api ObjectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 				IsOwner:         false,
 			}) {
 				getObjectInfo := objectAPI.GetObjectInfo
-				if api.CacheAPI() != nil {
-					getObjectInfo = api.CacheAPI().GetObjectInfo
+				if cacheAPI, exists := api.cacheAPI(); exists {
+					getObjectInfo = cacheAPI.GetObjectInfo
 				}
 
 				_, err = getObjectInfo(ctx, bucket, object, opts)
@@ -374,8 +374,8 @@ func (api ObjectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	getObjectNInfo := objectAPI.GetObjectNInfo
-	if api.CacheAPI() != nil {
-		getObjectNInfo = api.CacheAPI().GetObjectNInfo
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		getObjectNInfo = cacheAPI.GetObjectNInfo
 	}
 
 	// Get request range.
@@ -544,7 +544,7 @@ func (api ObjectAPIHandlers) GetObjectAttributesHandler(w http.ResponseWriter, r
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		writeErrorResponseHeadersOnly(w, errorCodes.ToAPIErr(ErrServerNotInitialized))
 		return
@@ -628,7 +628,7 @@ func (api ObjectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Re
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		writeErrorResponseHeadersOnly(w, errorCodes.ToAPIErr(ErrServerNotInitialized))
 		return
@@ -650,8 +650,8 @@ func (api ObjectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		getObjectInfo = cacheAPI.GetObjectInfo
 	}
 
 	opts, err := getOpts(ctx, r, bucket, object)
@@ -895,7 +895,7 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1017,8 +1017,8 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	cpSrcDstSame := isStringEqual(pathJoin(srcBucket, srcObject), pathJoin(dstBucket, dstObject))
 
 	getObjectNInfo := objectAPI.GetObjectNInfo
-	if api.CacheAPI() != nil {
-		getObjectNInfo = api.CacheAPI().GetObjectNInfo
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		getObjectNInfo = cacheAPI.GetObjectNInfo
 	}
 
 	checkCopyPrecondFn := func(o ObjectInfo) bool {
@@ -1338,8 +1338,8 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	copyObjectFn := objectAPI.CopyObject
-	if api.CacheAPI() != nil {
-		copyObjectFn = api.CacheAPI().CopyObject
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		copyObjectFn = cacheAPI.CopyObject
 	}
 
 	// Copy source object to destination, if source and destination
@@ -1391,7 +1391,7 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 	ctx := NewContext(r, w, "PutObject")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1592,8 +1592,8 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if api.CacheAPI() != nil {
-		putObject = api.CacheAPI().PutObject
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		putObject = cacheAPI.PutObject
 	}
 
 	retPerms := isPutActionAllowed(ctx, getRequestAuthType(r), bucket, object, r, iampolicy.PutObjectRetentionAction)
@@ -1718,7 +1718,7 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 	ctx := NewContext(r, w, "PutObjectExtract")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1859,8 +1859,8 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 
 	retPerms := isPutActionAllowed(ctx, getRequestAuthType(r), bucket, object, r, iampolicy.PutObjectRetentionAction)
 
-	if api.CacheAPI() != nil {
-		putObject = api.CacheAPI().PutObject
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		putObject = cacheAPI.PutObject
 	}
 
 	putObjectTar := func(reader io.Reader, info os.FileInfo, object string) {
@@ -2007,7 +2007,7 @@ func (api ObjectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r 
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -2268,7 +2268,7 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	partInfo, err := api.ObjectAPI().CopyObjectPart(
+	partInfo, err := api.objectAPI().CopyObjectPart(
 		ctx,
 		srcBucket, srcObject, dstBucket, dstObject, uploadID,
 		partID,
@@ -2298,7 +2298,7 @@ func (api ObjectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -2480,7 +2480,7 @@ func (api ObjectAPIHandlers) AbortMultipartUploadHandler(w http.ResponseWriter, 
 		return
 	}
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -2520,7 +2520,7 @@ func (api ObjectAPIHandlers) ListObjectPartsHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -2659,7 +2659,7 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 		return
 	}
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -2810,7 +2810,7 @@ func (api ObjectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -2822,8 +2822,8 @@ func (api ObjectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.
 	}
 
 	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		getObjectInfo = cacheAPI.GetObjectInfo
 	}
 
 	opts, err := delOpts(ctx, r, bucket, object)
@@ -2892,8 +2892,8 @@ func (api ObjectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.
 	}
 
 	deleteObject := objectAPI.DeleteObject
-	if api.CacheAPI() != nil {
-		deleteObject = api.CacheAPI().DeleteObject
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		deleteObject = cacheAPI.DeleteObject
 	}
 
 	// http://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectDELETE.html
@@ -2978,7 +2978,7 @@ func (api ObjectAPIHandlers) PutObjectLegalHoldHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -3029,7 +3029,7 @@ func (api ObjectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -3073,7 +3073,7 @@ func (api ObjectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -3133,7 +3133,7 @@ func (api ObjectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -3176,7 +3176,7 @@ func (api ObjectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -3226,7 +3226,7 @@ func (api ObjectAPIHandlers) PutObjectTaggingHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -3296,7 +3296,7 @@ func (api ObjectAPIHandlers) DeleteObjectTaggingHandler(w http.ResponseWriter, r
 	ctx := NewContext(r, w, "DeleteObjectTagging")
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -3377,15 +3377,15 @@ func (api ObjectAPIHandlers) PostRestoreObjectHandler(w http.ResponseWriter, r *
 	}
 
 	// Fetch object stat info.
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	getObjectInfo := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfo = api.CacheAPI().GetObjectInfo
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		getObjectInfo = cacheAPI.GetObjectInfo
 	}
 
 	// Check for auth type to return S3 compatible error.

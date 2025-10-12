@@ -38,7 +38,7 @@ func (api ObjectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *h
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -70,7 +70,7 @@ func (api ObjectAPIHandlers) GetBucketAccelerateHandler(w http.ResponseWriter, r
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -103,7 +103,7 @@ func (api ObjectAPIHandlers) GetBucketRequestPaymentHandler(w http.ResponseWrite
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -137,7 +137,7 @@ func (api ObjectAPIHandlers) GetBucketLoggingHandler(w http.ResponseWriter, r *h
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -176,7 +176,7 @@ func (api ObjectAPIHandlers) GetBucketCorsHandler(w http.ResponseWriter, r *http
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objAPI := api.ObjectAPI()
+	objAPI := api.objectAPI()
 	if objAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return

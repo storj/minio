@@ -129,7 +129,10 @@ func testPostPolicyBucketHandler(obj ObjectLayer, instanceType string, t TestErr
 
 	var opts ObjectOptions
 	// Register the API end points with Erasure/FS object layer.
-	apiRouter := initTestAPIEndPoints(obj, []string{"PostPolicy"})
+	apiRouter, err := initTestAPIEndPoints(obj, []string{"PostPolicy"})
+	if err != nil {
+		t.Fatalf("Failed to initialize test API endpoints:  %v", err)
+	}
 
 	credentials := globalActiveCred
 
@@ -140,7 +143,7 @@ func testPostPolicyBucketHandler(obj ObjectLayer, instanceType string, t TestErr
 	// objectNames[0].
 	// uploadIds [0].
 	// Create bucket before initiating NewMultipartUpload.
-	err := obj.MakeBucketWithLocation(context.Background(), bucketName, BucketOptions{})
+	err = obj.MakeBucketWithLocation(context.Background(), bucketName, BucketOptions{})
 	if err != nil {
 		// Failed to create newbucket, abort.
 		t.Fatalf("%s : %s", instanceType, err.Error())
@@ -443,7 +446,10 @@ func testPostPolicyBucketHandlerRedirect(obj ObjectLayer, instanceType string, t
 	}
 
 	// Register the API end points with Erasure/FS object layer.
-	apiRouter := initTestAPIEndPoints(obj, []string{"PostPolicy"})
+	apiRouter, err := initTestAPIEndPoints(obj, []string{"PostPolicy"})
+	if err != nil {
+		t.Fatalf("%s: Failed to initialize test API endpoints:  %v", instanceType, err)
+	}
 
 	credentials := globalActiveCred
 

@@ -46,7 +46,7 @@ func (api ObjectAPIHandlers) PutBucketVersioningHandler(w http.ResponseWriter, r
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -87,7 +87,7 @@ func (api ObjectAPIHandlers) GetBucketVersioningHandler(w http.ResponseWriter, r
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return

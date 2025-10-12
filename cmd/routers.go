@@ -108,7 +108,9 @@ func configureServerHandler(endpointServerPools EndpointServerPools) (http.Handl
 	registerSTSRouter(router)
 
 	// Add API router
-	registerAPIRouter(router)
+	if err := registerAPIRouter(router); err != nil {
+		return nil, err
+	}
 
 	router.Use(GlobalHandlers...)
 

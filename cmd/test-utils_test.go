@@ -1625,7 +1625,10 @@ func initAPIHandlerTest(obj ObjectLayer, endpoints []string) (string, http.Handl
 	}
 	// Register the API end points with Erasure object layer.
 	// Registering only the GetObject handler.
-	apiRouter := initTestAPIEndPoints(obj, endpoints)
+	apiRouter, err := initTestAPIEndPoints(obj, endpoints)
+	if err != nil {
+		return "", nil, err
+	}
 	f := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.RequestURI = r.URL.RequestURI()
 		apiRouter.ServeHTTP(w, r)
@@ -2008,7 +2011,7 @@ func ExecObjectLayerStaleFilesTest(t *testing.T, objTest objTestStaleFilesType) 
 	defer removeRoots(erasureDisks)
 }
 
-func registerBucketLevelFunc(bucket *mux.Router, api ObjectAPIHandlers, apiFunctions ...string) {
+func registerBucketLevelFunc(bucket *mux.Router, api *ObjectAPIHandlers, apiFunctions ...string) {
 	for _, apiFunction := range apiFunctions {
 		switch apiFunction {
 		case "PostPolicy":
@@ -2088,11 +2091,10 @@ func registerBucketLevelFunc(bucket *mux.Router, api ObjectAPIHandlers, apiFunct
 }
 
 // registerAPIFunctions helper function to add API functions identified by name to the routers.
-func registerAPIFunctions(muxRouter *mux.Router, objLayer ObjectLayer, apiFunctions ...string) {
+func registerAPIFunctions(muxRouter *mux.Router, objLayer ObjectLayer, apiFunctions ...string) error {
 	if len(apiFunctions) == 0 {
 		// Register all api endpoints by default.
-		registerAPIRouter(muxRouter)
-		return
+		return registerAPIRouter(muxRouter)
 	}
 	// API Router.
 	apiRouter := muxRouter.PathPrefix(SlashSeparator).Subrouter()
@@ -2108,35 +2110,41 @@ func registerAPIFunctions(muxRouter *mux.Router, objLayer ObjectLayer, apiFuncti
 	// When cache is enabled, Put and Get operations are passed
 	// to underlying cache layer to manage object layer operation and disk caching
 	// operation
-	api := ObjectAPIHandlers{
-		ObjectAPI: func() ObjectLayer {
-			return globalObjectAPI
-		},
-		CacheAPI: func() CacheObjectLayer {
-			return globalCacheObjectAPI
-		},
+	api, err := NewObjectAPIHandlers(func() ObjectLayer {
+		return globalObjectAPI
+	}, WithCacheObjectLayer(func() CacheObjectLayer {
+		return globalCacheObjectAPI
+	}))
+	if err != nil {
+		return fmt.Errorf("error initializing API handlers: %w", err)
 	}
 
 	// Register ListBuckets	handler.
 	apiRouter.Methods(http.MethodGet).HandlerFunc(api.ListBucketsHandler)
 	// Register all bucket level handlers.
 	registerBucketLevelFunc(bucketRouter, api, apiFunctions...)
+
+	return nil
 }
 
 // Takes in Erasure object layer, and the list of API end points to be tested/required, registers the API end points and returns the HTTP handler.
 // Need isolated registration of API end points while writing unit tests for end points.
 // All the API end points are registered only for the default case.
-func initTestAPIEndPoints(objLayer ObjectLayer, apiFunctions []string) http.Handler {
+func initTestAPIEndPoints(objLayer ObjectLayer, apiFunctions []string) (http.Handler, error) {
 	// initialize a new mux router.
 	// goriilla/mux is the library used to register all the routes and handle them.
 	muxRouter := mux.NewRouter().SkipClean(true)
 	if len(apiFunctions) > 0 {
 		// Iterate the list of API functions requested for and register them in mux HTTP handler.
-		registerAPIFunctions(muxRouter, objLayer, apiFunctions...)
-		return muxRouter
+		if err := registerAPIFunctions(muxRouter, objLayer, apiFunctions...); err != nil {
+			return nil, err
+		}
+		return muxRouter, nil
 	}
-	registerAPIRouter(muxRouter)
-	return muxRouter
+	if err := registerAPIRouter(muxRouter); err != nil {
+		return nil, err
+	}
+	return muxRouter, nil
 }
 
 // Initialize Web RPC Handlers for testing

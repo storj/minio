@@ -65,7 +65,7 @@ func (api ObjectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -112,7 +112,7 @@ func (api ObjectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, 
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -164,7 +164,7 @@ func (api ObjectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.R
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -238,7 +238,7 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -286,8 +286,8 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 	}
 
 	deleteObjectsFn := objectAPI.DeleteObjects
-	if api.CacheAPI() != nil {
-		deleteObjectsFn = api.CacheAPI().DeleteObjects
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		deleteObjectsFn = cacheAPI.DeleteObjects
 	}
 
 	// Return Malformed XML as S3 spec if the list of objects is empty
@@ -298,8 +298,8 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 
 	deleteObjectsIndex := make(map[bucketObjectLocation]int, len(deleteObjects.Objects))
 	getObjectInfoFn := objectAPI.GetObjectInfo
-	if api.CacheAPI() != nil {
-		getObjectInfoFn = api.CacheAPI().GetObjectInfo
+	if cacheAPI, exists := api.cacheAPI(); exists {
+		getObjectInfoFn = cacheAPI.GetObjectInfo
 	}
 	var (
 		hasLockEnabled, hasLifecycleConfig, replicateSync bool
@@ -548,7 +548,7 @@ func (api ObjectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -627,7 +627,7 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -908,7 +908,7 @@ func (api ObjectAPIHandlers) GetBucketPolicyStatusHandler(w http.ResponseWriter,
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		writeErrorResponseHeadersOnly(w, errorCodes.ToAPIErr(ErrServerNotInitialized))
 		return
@@ -970,7 +970,7 @@ func (api ObjectAPIHandlers) HeadBucketHandler(w http.ResponseWriter, r *http.Re
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		writeErrorResponseHeadersOnly(w, errorCodes.ToAPIErr(ErrServerNotInitialized))
 		return
@@ -1000,7 +1000,7 @@ func (api ObjectAPIHandlers) DeleteBucketHandler(w http.ResponseWriter, r *http.
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1080,7 +1080,7 @@ func (api ObjectAPIHandlers) PutBucketObjectLockConfigHandler(w http.ResponseWri
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1119,7 +1119,7 @@ func (api ObjectAPIHandlers) GetBucketObjectLockConfigHandler(w http.ResponseWri
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1156,7 +1156,7 @@ func (api ObjectAPIHandlers) PutBucketTaggingHandler(w http.ResponseWriter, r *h
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1192,7 +1192,7 @@ func (api ObjectAPIHandlers) GetBucketTaggingHandler(w http.ResponseWriter, r *h
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1229,7 +1229,7 @@ func (api ObjectAPIHandlers) DeleteBucketTaggingHandler(w http.ResponseWriter, r
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1258,7 +1258,7 @@ func (api ObjectAPIHandlers) PutBucketReplicationConfigHandler(w http.ResponseWr
 
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1323,7 +1323,7 @@ func (api ObjectAPIHandlers) GetBucketReplicationConfigHandler(w http.ResponseWr
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1363,7 +1363,7 @@ func (api ObjectAPIHandlers) DeleteBucketReplicationConfigHandler(w http.Respons
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
@@ -1398,7 +1398,7 @@ func (api ObjectAPIHandlers) GetBucketReplicationMetricsHandler(w http.ResponseW
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	objectAPI := api.ObjectAPI()
+	objectAPI := api.objectAPI()
 	if objectAPI == nil {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return

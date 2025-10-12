@@ -1021,7 +1021,10 @@ func testWebPresignedGetHandler(obj ObjectLayer, instanceType string, t TestErrH
 	}
 
 	// Register the API end points with Erasure/FS object layer.
-	apiRouter = initTestAPIEndPoints(obj, []string{"GetObject"})
+	apiRouter, err = initTestAPIEndPoints(obj, []string{"GetObject"})
+	if err != nil {
+		t.Fatalf("Failed to initialize test API endpoints:  %v", err)
+	}
 
 	// Initialize a new api recorder.
 	arec := httptest.NewRecorder()
