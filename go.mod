@@ -1,12 +1,13 @@
 module storj.io/minio
 
-go 1.25.1
+go 1.25.3
 
 require (
 	git.apache.org/thrift.git v0.13.0
 	github.com/Shopify/sarama v1.27.2
 	github.com/VividCortex/ewma v1.1.1
 	github.com/alecthomas/participle v0.2.1
+	github.com/amwolff/awsig v0.0.0-20251110183709-8dd598659b72
 	github.com/bcicen/jstream v1.0.1
 	github.com/beevik/ntp v0.3.0
 	github.com/cespare/xxhash/v2 v2.1.1

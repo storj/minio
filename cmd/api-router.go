@@ -17,11 +17,13 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 
+	"github.com/amwolff/awsig"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 
@@ -69,6 +71,18 @@ func SetObjectLayer(o ObjectLayer) {
 type ObjectAPIHandlers struct {
 	objectAPI func() ObjectLayer
 	cacheAPI  func() (api CacheObjectLayer, exists bool)
+	awsig     awsigSettings
+}
+
+type awsigSettings struct {
+	verifier        *awsig.V2V4[AwsigAuthData]
+	mode            AwsigVerificationMode
+	onUncaughtError func(context.Context, APIError)
+}
+
+// AwsigAuthData represents supplementary auth data provided by awsig.CredentialsProvider.
+type AwsigAuthData struct {
+	AccessKeyID string
 }
 
 // NewObjectAPIHandlers returns a new ObjectAPIHandlers.
@@ -106,6 +120,49 @@ func WithCacheObjectLayer(cacheAPI func() CacheObjectLayer) ObjectAPIHandlersOpt
 		return nil
 	}
 }
+
+// WithAwsigVerifier returns an option for constructing an ObjectAPIHandlers with experimental support
+// for verifying requests using the github.com/amwolff/awsig module.
+// If mode is AwsigVerificationWithDefaultFallback, onUncaughtError will be called if the default signature
+// verification logic fails after awsig verification succeeds.
+func WithAwsigVerifier(credsProvider awsig.CredentialsProvider[AwsigAuthData], mode AwsigVerificationMode, onUncaughtError func(context.Context, APIError)) ObjectAPIHandlersOption {
+	return func(api *ObjectAPIHandlers) error {
+		if credsProvider == nil {
+			return errors.New("credentials provider must not be nil")
+		}
+
+		switch mode {
+		case AwsigVerificationReplace, AwsigVerificationWithDefaultFallback:
+		default:
+			return fmt.Errorf("invalid awsig verification mode %d", mode)
+		}
+
+		api.awsig = awsigSettings{
+			verifier: awsig.NewV2V4(credsProvider, awsig.V4Config{
+				Service:                string(serviceS3),
+				SkipRegionVerification: true,
+			}),
+			mode:            mode,
+			onUncaughtError: onUncaughtError,
+		}
+
+		return nil
+	}
+}
+
+// AwsigVerificationMode controls how awsig influences the verification of requests.
+type AwsigVerificationMode int
+
+const (
+	awsigVerificationOff AwsigVerificationMode = iota
+	// AwsigVerificationReplace indicates that awsig verification should be performed instead of
+	// the default MinIO request verification.
+	AwsigVerificationReplace
+	// AwsigVerificationWithDefaultFallback indicates that awsig verification should be performed in addition to
+	// the default MinIO request verification. Awsig verification is always performed first. If it
+	// succeeds, the request is then verified using the default logic.
+	AwsigVerificationWithDefaultFallback
+)
 
 // getHost tries its best to return the request host.
 // According to section 14.23 of RFC 2616 the Host header
