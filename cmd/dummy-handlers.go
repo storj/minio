@@ -46,7 +46,7 @@ func (api ObjectAPIHandlers) GetBucketWebsiteHandler(w http.ResponseWriter, r *h
 
 	// Allow getBucketCors if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -78,7 +78,7 @@ func (api ObjectAPIHandlers) GetBucketAccelerateHandler(w http.ResponseWriter, r
 
 	// Allow getBucketCors if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -111,7 +111,7 @@ func (api ObjectAPIHandlers) GetBucketRequestPaymentHandler(w http.ResponseWrite
 
 	// Allow getBucketCors if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -145,7 +145,7 @@ func (api ObjectAPIHandlers) GetBucketLoggingHandler(w http.ResponseWriter, r *h
 
 	// Allow getBucketCors if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -184,7 +184,7 @@ func (api ObjectAPIHandlers) GetBucketCorsHandler(w http.ResponseWriter, r *http
 
 	// Allow getBucketCors if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}

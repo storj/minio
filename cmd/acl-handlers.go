@@ -74,7 +74,7 @@ func (api ObjectAPIHandlers) PutBucketACLHandler(w http.ResponseWriter, r *http.
 
 	// Allow putBucketACL if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.PutBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -138,7 +138,7 @@ func (api ObjectAPIHandlers) GetBucketACLHandler(w http.ResponseWriter, r *http.
 
 	// Allow getBucketACL if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -194,7 +194,7 @@ func (api ObjectAPIHandlers) PutObjectACLHandler(w http.ResponseWriter, r *http.
 
 	// Allow putObjectACL if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.PutBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -258,7 +258,7 @@ func (api ObjectAPIHandlers) GetObjectACLHandler(w http.ResponseWriter, r *http.
 
 	// Allow getObjectACL if policy action is set, since this is a dummy call
 	// we are simply re-purposing the bucketPolicyAction.
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketPolicyAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}

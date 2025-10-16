@@ -56,7 +56,7 @@ func (api ObjectAPIHandlers) GetBucketNotificationHandler(w http.ResponseWriter,
 		return
 	}
 
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketNotificationAction, bucketName, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketNotificationAction, bucketName, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -128,7 +128,7 @@ func (api ObjectAPIHandlers) PutBucketNotificationHandler(w http.ResponseWriter,
 	vars := mux.Vars(r)
 	bucketName := vars["bucket"]
 
-	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketNotificationAction, bucketName, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.PutBucketNotificationAction, bucketName, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}

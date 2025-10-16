@@ -54,7 +54,7 @@ func (api ObjectAPIHandlers) PutBucketEncryptionHandler(w http.ResponseWriter, r
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketEncryptionAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.PutBucketEncryptionAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -114,7 +114,7 @@ func (api ObjectAPIHandlers) GetBucketEncryptionHandler(w http.ResponseWriter, r
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	if s3Error := checkRequestAuthType(ctx, r, policy.GetBucketEncryptionAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.GetBucketEncryptionAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -157,7 +157,7 @@ func (api ObjectAPIHandlers) DeleteBucketEncryptionHandler(w http.ResponseWriter
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 
-	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketEncryptionAction, bucket, ""); s3Error != ErrNone {
+	if s3Error := api.checkRequestAuthType(ctx, r, policy.PutBucketEncryptionAction, bucket, ""); s3Error != ErrNone {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}

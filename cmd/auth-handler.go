@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -31,6 +32,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/amwolff/awsig"
 	xhttp "storj.io/minio/cmd/http"
 	xjwt "storj.io/minio/cmd/jwt"
 	"storj.io/minio/cmd/logger"
@@ -265,48 +267,22 @@ func checkClaimsFromToken(r *http.Request, cred auth.Credentials) (map[string]in
 	return claims, ErrNone
 }
 
-// Check request auth type verifies the incoming http request
-// - validates the request signature
-// - validates the policy action if anonymous tests bucket policies if any,
-//   for authenticated requests validates IAM policies.
-// returns APIErrorCode if any to be replied to the client.
-func checkRequestAuthType(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (s3Err APIErrorCode) {
-	_, _, s3Err = CheckRequestAuthTypeCredential(ctx, r, action, bucketName, objectName)
+// checkRequestAuthType verifies the incoming HTTP request by validating its signature and ensuring
+// that the client is allowed to perform the requested action against the specified resource
+// according to IAM (for authorized clients) and bucket (for anonymous clients) policies.
+// It returns the error, if applicable, that should be returned to the client.
+func (api ObjectAPIHandlers) checkRequestAuthType(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (s3Err APIErrorCode) {
+	_, _, s3Err = api.CheckRequestAuthTypeCredential(ctx, r, action, bucketName, objectName)
 	return s3Err
 }
 
-// Check request auth type verifies the incoming http request
-// - validates the request signature
-// - validates the policy action if anonymous tests bucket policies if any,
-//   for authenticated requests validates IAM policies.
-// returns APIErrorCode if any to be replied to the client.
-// Additionally returns the accessKey used in the request, and if this request is by an admin.
-func CheckRequestAuthTypeCredential(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (cred auth.Credentials, owner bool, s3Err APIErrorCode) {
-	switch getRequestAuthType(r) {
-	case authTypeUnknown, authTypeStreamingSigned:
-		return cred, owner, ErrSignatureVersionNotSupported
-	case authTypePresignedV2, authTypeSignedV2:
-		if s3Err = isReqAuthenticatedV2(r); s3Err != ErrNone {
-			return cred, owner, s3Err
-		}
-		cred, owner, s3Err = getReqAccessKeyV2(r)
-	case authTypeSigned, authTypePresigned:
-		region := globalServerRegion
-		switch action {
-		case policy.GetBucketLocationAction, policy.ListAllMyBucketsAction:
-			region = ""
-		}
-		if s3Err = isReqAuthenticated(ctx, r, region, serviceS3); s3Err != ErrNone {
-			return cred, owner, s3Err
-		}
-		cred, owner, s3Err = getReqAccessKeyV4(r, region, serviceS3)
-	}
-	if s3Err != ErrNone {
-		return cred, owner, s3Err
-	}
-
-	var claims map[string]interface{}
-	claims, s3Err = checkClaimsFromToken(r, cred)
+// CheckRequestAuthTypeCredential verifies the incoming HTTP request by validating its signature
+// and ensuring that the client is allowed to perform the requested action against the specified
+// resource according to IAM (for authorized clients) and bucket (for anonymous clients) policies.
+// Additionally, it returns the access key used in the request, whether the request was sent by
+// an admin, and the error, if applicable, that should be returned to the client.
+func (api ObjectAPIHandlers) CheckRequestAuthTypeCredential(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (cred auth.Credentials, owner bool, s3Err APIErrorCode) {
+	cred, owner, claims, s3Err := api.validateSignature(ctx, r, action)
 	if s3Err != ErrNone {
 		return cred, owner, s3Err
 	}
@@ -434,9 +410,20 @@ func isReqAuthenticated(ctx context.Context, r *http.Request, region string, sty
 		return errCode
 	}
 
+	// Verify 'Content-Md5' and/or 'X-Amz-Content-Sha256' if present.
+	// The verification happens implicit during reading.
+	reader, s3Error := newChecksumReader(ctx, r)
+	if s3Error != ErrNone {
+		return s3Error
+	}
+	r.Body = reader
+	return ErrNone
+}
+
+func newChecksumReader(ctx context.Context, r *http.Request) (reader *hash.Reader, s3Error APIErrorCode) {
 	clientETag, err := etag.FromContentMD5(r.Header)
 	if err != nil {
-		return ErrInvalidDigest
+		return nil, ErrInvalidDigest
 	}
 
 	// Extract either 'X-Amz-Content-Sha256' header or 'X-Amz-Content-Sha256' query parameter (if V4 presigned)
@@ -446,24 +433,22 @@ func isReqAuthenticated(ctx context.Context, r *http.Request, region string, sty
 		if sha256Sum, ok := r.URL.Query()[xhttp.AmzContentSha256]; ok && len(sha256Sum) > 0 {
 			contentSHA256, err = hex.DecodeString(sha256Sum[0])
 			if err != nil {
-				return ErrContentSHA256Mismatch
+				return nil, ErrContentSHA256Mismatch
 			}
 		}
 	} else if _, ok := r.Header[xhttp.AmzContentSha256]; !skipSHA256 && ok {
 		contentSHA256, err = hex.DecodeString(r.Header.Get(xhttp.AmzContentSha256))
 		if err != nil || len(contentSHA256) == 0 {
-			return ErrContentSHA256Mismatch
+			return nil, ErrContentSHA256Mismatch
 		}
 	}
 
-	// Verify 'Content-Md5' and/or 'X-Amz-Content-Sha256' if present.
-	// The verification happens implicit during reading.
-	reader, err := hash.NewReader(r.Body, -1, clientETag.String(), hex.EncodeToString(contentSHA256), -1)
+	reader, err = hash.NewReader(r.Body, -1, clientETag.String(), hex.EncodeToString(contentSHA256), -1)
 	if err != nil {
-		return toAPIErrorCode(ctx, err)
+		return nil, toAPIErrorCode(ctx, err)
 	}
-	r.Body = reader
-	return ErrNone
+
+	return reader, ErrNone
 }
 
 // List of all support S3 auth types.
@@ -515,32 +500,75 @@ func setAuthHandler(h http.Handler) http.Handler {
 	})
 }
 
-func validateSignature(atype authType, r *http.Request) (auth.Credentials, bool, map[string]interface{}, APIErrorCode) {
-	var cred auth.Credentials
-	var owner bool
-	var s3Err APIErrorCode
-	switch atype {
-	case authTypeUnknown, authTypeStreamingSigned:
+func (api ObjectAPIHandlers) validateSignature(ctx context.Context, r *http.Request, action policy.Action) (cred auth.Credentials, owner bool, claims map[string]interface{}, s3Error APIErrorCode) {
+	rAuthType := getRequestAuthType(r)
+	switch rAuthType {
+	case authTypeStreamingSigned:
 		return cred, owner, nil, ErrSignatureVersionNotSupported
-	case authTypeSignedV2, authTypePresignedV2:
-		if s3Err = isReqAuthenticatedV2(r); s3Err != ErrNone {
-			return cred, owner, nil, s3Err
+	case authTypeSigned, authTypePresigned:
+		sha256hex := getContentSha256Cksum(r, serviceS3)
+		if strings.HasPrefix(sha256hex, streamingPrefix) {
+			return cred, owner, nil, ErrSignatureVersionNotSupported
 		}
-		cred, owner, s3Err = getReqAccessKeyV2(r)
-	case authTypePresigned, authTypeSigned:
-		region := globalServerRegion
-		if s3Err = isReqAuthenticated(GlobalContext, r, region, serviceS3); s3Err != ErrNone {
-			return cred, owner, nil, s3Err
-		}
-		cred, owner, s3Err = getReqAccessKeyV4(r, region, serviceS3)
-	}
-	if s3Err != ErrNone {
-		return cred, owner, nil, s3Err
 	}
 
-	claims, s3Err := checkClaimsFromToken(r, cred)
-	if s3Err != ErrNone {
-		return cred, owner, nil, s3Err
+	useAwsigOnly := api.awsig.mode == AwsigVerificationReplace
+
+	if api.awsig.mode != awsigVerificationOff {
+		vr, s3Error := awsigVerifyRequest(ctx, r, api.awsig.verifier)
+		if s3Error != ErrNone {
+			return cred, owner, nil, s3Error
+		}
+
+		cred, owner, s3Error = checkKeyValid(r.Context(), vr.AuthData().AccessKeyID)
+		if s3Error != ErrNone {
+			return cred, owner, nil, s3Error
+		}
+
+		if useAwsigOnly {
+			if rAuthType == authTypePresigned || rAuthType == authTypeSigned {
+				reader, s3Error := newChecksumReader(ctx, r)
+				if s3Error != ErrNone {
+					return cred, owner, nil, s3Error
+				}
+				r.Body = reader
+			}
+			return cred, owner, nil, s3Error
+		}
+	}
+
+	if !useAwsigOnly {
+		var s3Error APIErrorCode
+		switch rAuthType {
+		case authTypeUnknown, authTypeStreamingSigned:
+			s3Error = ErrSignatureVersionNotSupported
+		case authTypeSignedV2, authTypePresignedV2:
+			s3Error = isReqAuthenticatedV2(r)
+			if s3Error == ErrNone {
+				cred, owner, s3Error = getReqAccessKeyV2(r)
+			}
+		case authTypePresigned, authTypeSigned:
+			region := globalServerRegion
+			switch action {
+			case policy.GetBucketLocationAction, policy.ListAllMyBucketsAction:
+				region = ""
+			}
+			s3Error = isReqAuthenticated(ctx, r, region, serviceS3)
+			if s3Error == ErrNone {
+				cred, owner, s3Error = getReqAccessKeyV4(r, region, serviceS3)
+			}
+		}
+		if s3Error != ErrNone {
+			if api.awsig.onUncaughtError != nil {
+				api.awsig.onUncaughtError(ctx, errorCodes.ToAPIErr(s3Error))
+			}
+			return cred, owner, nil, s3Error
+		}
+	}
+
+	claims, s3Error = checkClaimsFromToken(r, cred)
+	if s3Error != ErrNone {
+		return cred, owner, nil, s3Error
 	}
 
 	return cred, owner, claims, ErrNone
@@ -687,4 +715,23 @@ func isPutActionAllowed(ctx context.Context, atype authType, bucketName, objectN
 		return ErrNone
 	}
 	return ErrAccessDenied
+}
+
+func awsigVerifyRequest(ctx context.Context, r *http.Request, verifier *awsig.V2V4[AwsigAuthData]) (vr awsig.VerifiedRequest[AwsigAuthData], s3Error APIErrorCode) {
+	vHostBucket, err := getVirtualHostBucket(r.Host, globalDomainNames)
+	if err != nil {
+		return nil, ErrInvalidRequest
+	}
+
+	vr, err = verifier.Verify(r, vHostBucket)
+	if err != nil {
+		s3Err, ok := awsigToAPIErrorCode(err)
+		if !ok {
+			logger.LogIf(ctx, fmt.Errorf("Unknown awsig error when verifying request: %w", err))
+			s3Err = ErrInternalError
+		}
+		return nil, s3Err
+	}
+
+	return vr, ErrNone
 }

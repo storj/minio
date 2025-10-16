@@ -85,7 +85,7 @@ func enforceRetentionForDeletion(ctx context.Context, objInfo ObjectInfo) (locke
 // For objects in "Governance" mode, overwrite is allowed if a) object retention date is past OR
 // governance bypass headers are set and user has governance bypass permissions.
 // Objects in "Compliance" mode can be overwritten only if retention date is past.
-func enforceRetentionBypassForDelete(ctx context.Context, r *http.Request, bucket string, object ObjectToDelete, oi ObjectInfo, gerr error) APIErrorCode {
+func (api ObjectAPIHandlers) enforceRetentionBypassForDelete(ctx context.Context, r *http.Request, bucket string, object ObjectToDelete, oi ObjectInfo, gerr error) APIErrorCode {
 	opts, err := getOpts(ctx, r, bucket, object.ObjectName)
 	if err != nil {
 		return toAPIErrorCode(ctx, err)
@@ -161,8 +161,8 @@ func enforceRetentionBypassForDelete(ctx context.Context, r *http.Request, bucke
 			// https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock-overview.html#object-lock-retention-modes
 			// If you try to delete objects protected by governance mode and have s3:BypassGovernanceRetention
 			// or s3:GetBucketObjectLockConfiguration permissions, the operation will succeed.
-			govBypassPerms1 := checkRequestAuthType(ctx, r, policy.BypassGovernanceRetentionAction, bucket, object.ObjectName)
-			govBypassPerms2 := checkRequestAuthType(ctx, r, policy.GetBucketObjectLockConfigurationAction, bucket, object.ObjectName)
+			govBypassPerms1 := api.checkRequestAuthType(ctx, r, policy.BypassGovernanceRetentionAction, bucket, object.ObjectName)
+			govBypassPerms2 := api.checkRequestAuthType(ctx, r, policy.GetBucketObjectLockConfigurationAction, bucket, object.ObjectName)
 			if govBypassPerms1 != ErrNone && govBypassPerms2 != ErrNone {
 				return ErrAccessDenied
 			}

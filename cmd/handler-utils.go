@@ -445,34 +445,46 @@ func CollectAPIStats(api string, f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Returns "/bucketName/objectName" for path-style or virtual-host-style requests.
+// getResource returns "/bucketName/objectName" for path-style or virtual-hosted-style requests.
 func getResource(path string, host string, domains []string) (string, error) {
-	if len(domains) == 0 {
-		return path, nil
+    bucket, err := getVirtualHostBucket(host, domains)
+	if err != nil {
+		return "", err
 	}
-	// If virtual-host-style is enabled construct the "resource" properly.
-	if strings.Contains(host, ":") {
-		// In bucket.mydomain.com:9000, strip out :9000
-		var err error
-		if host, _, err = net.SplitHostPort(host); err != nil {
+    if bucket == "" {
+        return path, nil
+    }
+    return SlashSeparator + pathJoin(bucket, path), nil
+}
+
+// getVirtualHostBucket extracts the bucket name from the host and returns it if the host is virtual-hosted-style.
+// Otherwise, it returns an empty string.
+func getVirtualHostBucket(host string, domains []string) (string, error) {
+    if len(domains) == 0 {
+        return "", nil
+    }
+
+    if strings.Contains(host, ":") {
+        var err error
+        if host, _, err = net.SplitHostPort(host); err != nil {
 			reqInfo := (&logger.ReqInfo{}).AppendTags("host", host)
-			reqInfo.AppendTags("path", path)
 			ctx := logger.SetReqInfo(GlobalContext, reqInfo)
 			logger.LogIf(ctx, err)
 			return "", err
 		}
-	}
-	for _, domain := range domains {
-		if host == minioReservedBucket+"."+domain {
-			continue
-		}
-		if !strings.HasSuffix(host, "."+domain) {
-			continue
-		}
-		bucket := strings.TrimSuffix(host, "."+domain)
-		return SlashSeparator + pathJoin(bucket, path), nil
-	}
-	return path, nil
+    }
+
+    for _, domain := range domains {
+        if host == minioReservedBucket+"."+domain {
+            continue
+        }
+        if !strings.HasSuffix(host, "."+domain) {
+            continue
+        }
+        return strings.TrimSuffix(host, "."+domain), nil
+    }
+
+    return "", nil
 }
 
 var regexVersion = regexp.MustCompile(`^/minio.*/(v\d+)/.*`)
