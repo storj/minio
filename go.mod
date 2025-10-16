@@ -1,6 +1,6 @@
 module storj.io/minio
 
-go 1.18
+go 1.25.1
 
 require (
 	git.apache.org/thrift.git v0.13.0

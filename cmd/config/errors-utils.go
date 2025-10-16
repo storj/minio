@@ -57,16 +57,23 @@ func (u Err) Error() string {
 }
 
 // Msg - Replace the current error's message
-func (u Err) Msg(m string, args ...interface{}) Err {
+func (u Err) Msg(m string) Err {
+	e := u.Clone()
+	e.msg = m
+	return e
+}
+
+// Msgf - Replace the current error's message
+func (u Err) Msgf(m string, args ...any) Err {
 	e := u.Clone()
 	e.msg = fmt.Sprintf(m, args...)
 	return e
 }
 
 // Hint - Replace the current error's message
-func (u Err) Hint(m string, args ...interface{}) Err {
+func (u Err) Hint(m string) Err {
 	e := u.Clone()
-	e.hint = fmt.Sprintf(m, args...)
+	e.hint = m
 	return e
 }
 

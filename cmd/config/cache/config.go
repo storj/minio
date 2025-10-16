@@ -110,7 +110,7 @@ func parseCacheDrives(drives string) ([]string, error) {
 
 	for _, d := range endpoints {
 		if !filepath.IsAbs(d) {
-			return nil, config.ErrInvalidCacheDrivesValue(nil).Msg("cache dir should be absolute path: %s", d)
+			return nil, config.ErrInvalidCacheDrivesValue(nil).Msgf("cache dir should be absolute path: %s", d)
 		}
 	}
 	return endpoints, nil
@@ -144,10 +144,10 @@ func parseCacheExcludes(excludes string) ([]string, error) {
 
 	for _, e := range excludesSlice {
 		if len(e) == 0 {
-			return nil, config.ErrInvalidCacheExcludesValue(nil).Msg("cache exclude path (%s) cannot be empty", e)
+			return nil, config.ErrInvalidCacheExcludesValue(nil).Msgf("cache exclude path (%s) cannot be empty", e)
 		}
 		if strings.HasPrefix(e, "/") {
-			return nil, config.ErrInvalidCacheExcludesValue(nil).Msg("cache exclude pattern (%s) cannot start with / as prefix", e)
+			return nil, config.ErrInvalidCacheExcludesValue(nil).Msgf("cache exclude pattern (%s) cannot start with / as prefix", e)
 		}
 	}
 

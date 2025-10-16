@@ -50,7 +50,7 @@ func ParsePublicCertFile(certFile string) (x509Certs []*x509.Certificate, err er
 	for len(current) > 0 {
 		var pemBlock *pem.Block
 		if pemBlock, current = pem.Decode(current); pemBlock == nil {
-			return nil, ErrSSLUnexpectedData(nil).Msg("Could not read PEM block from file %s", certFile)
+			return nil, ErrSSLUnexpectedData(nil).Msgf("Could not read PEM block from file %s", certFile)
 		}
 
 		var x509Cert *x509.Certificate
@@ -62,7 +62,7 @@ func ParsePublicCertFile(certFile string) (x509Certs []*x509.Certificate, err er
 	}
 
 	if len(x509Certs) == 0 {
-		return nil, ErrSSLUnexpectedData(nil).Msg("Empty public certificate file %s", certFile)
+		return nil, ErrSSLUnexpectedData(nil).Msgf("Empty public certificate file %s", certFile)
 	}
 
 	return x509Certs, nil
@@ -108,7 +108,7 @@ func LoadX509KeyPair(certFile, keyFile string) (tls.Certificate, error) {
 				fallthrough
 			case "P-521":
 				// unfortunately there is no cleaner way to check
-				return tls.Certificate{}, ErrSSLUnexpectedData(nil).Msg("tls: the ECDSA curve '%s' is not supported", pub.Params().Name)
+				return tls.Certificate{}, ErrSSLUnexpectedData(nil).Msgf("tls: the ECDSA curve '%s' is not supported", pub.Params().Name)
 			}
 		}
 	}

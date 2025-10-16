@@ -686,7 +686,7 @@ func CreateEndpoints(serverAddr string, foundLocal bool, args ...[]string) (Endp
 			if IPSet, ok := pathIPMap[endpoint.Path]; ok {
 				if !IPSet.Intersection(hostIPSet).IsEmpty() {
 					return endpoints, setupType,
-						config.ErrInvalidErasureEndpoints(nil).Msg(fmt.Sprintf("path '%s' can not be served by different port on same address", endpoint.Path))
+						config.ErrInvalidErasureEndpoints(nil).Msgf("path '%s' can not be served by different port on same address", endpoint.Path)
 				}
 				pathIPMap[endpoint.Path] = IPSet.Union(hostIPSet)
 			} else {
@@ -704,7 +704,7 @@ func CreateEndpoints(serverAddr string, foundLocal bool, args ...[]string) (Endp
 			}
 			if localPathSet.Contains(endpoint.Path) {
 				return endpoints, setupType,
-					config.ErrInvalidErasureEndpoints(nil).Msg(fmt.Sprintf("path '%s' cannot be served by different address on same server", endpoint.Path))
+					config.ErrInvalidErasureEndpoints(nil).Msgf("path '%s' cannot be served by different address on same server", endpoint.Path)
 			}
 			localPathSet.Add(endpoint.Path)
 		}

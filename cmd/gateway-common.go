@@ -355,7 +355,7 @@ func parseGatewaySSE(s string) (gatewaySSE, error) {
 			gwSlice = append(gwSlice, v)
 			continue
 		default:
-			return nil, config.ErrInvalidGWSSEValue(nil).Msg("gateway SSE cannot be (%s) ", v)
+			return nil, config.ErrInvalidGWSSEValue(nil).Msgf("gateway SSE cannot be (%s) ", v)
 		}
 	}
 	return gwSlice, nil

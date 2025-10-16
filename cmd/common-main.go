@@ -255,7 +255,7 @@ func HandleCommonEnvVars() {
 	if len(domains) != 0 {
 		for _, domainName := range strings.Split(domains, config.ValueSeparator) {
 			if _, ok := dns2.IsDomainName(domainName); !ok {
-				logger.Fatal(config.ErrInvalidDomainValue(nil).Msg("Unknown value `%s`", domainName),
+				logger.Fatal(config.ErrInvalidDomainValue(nil).Msgf("Unknown value `%s`", domainName),
 					"Invalid MINIO_DOMAIN value in environment variable")
 			}
 			globalDomainNames = append(globalDomainNames, domainName)
@@ -264,7 +264,7 @@ func HandleCommonEnvVars() {
 		lcpSuf := lcpSuffix(globalDomainNames)
 		for _, domainName := range globalDomainNames {
 			if domainName == lcpSuf && len(globalDomainNames) > 1 {
-				logger.Fatal(config.ErrOverlappingDomainValue(nil).Msg("Overlapping domains `%s` not allowed", globalDomainNames),
+				logger.Fatal(config.ErrOverlappingDomainValue(nil).Msgf("Overlapping domains `%s` not allowed", globalDomainNames),
 					"Invalid MINIO_DOMAIN value in environment variable")
 			}
 		}
@@ -322,13 +322,13 @@ func HandleCommonEnvVars() {
 	}
 
 	if env.IsSet(config.EnvKMSSecretKey) && env.IsSet(config.EnvKESEndpoint) {
-		logger.Fatal(errors.New("ambigious KMS configuration"), fmt.Sprintf("The environment contains %q as well as %q", config.EnvKMSSecretKey, config.EnvKESEndpoint))
+		logger.Fatal(errors.New("ambigious KMS configuration"), "The environment contains %q as well as %q", config.EnvKMSSecretKey, config.EnvKESEndpoint)
 	}
 	switch {
 	case env.IsSet(config.EnvKMSSecretKey) && env.IsSet(config.EnvKESEndpoint):
-		logger.Fatal(errors.New("ambigious KMS configuration"), fmt.Sprintf("The environment contains %q as well as %q", config.EnvKMSSecretKey, config.EnvKESEndpoint))
+		logger.Fatal(errors.New("ambigious KMS configuration"), "The environment contains %q as well as %q", config.EnvKMSSecretKey, config.EnvKESEndpoint)
 	case env.IsSet(config.EnvKMSMasterKey) && env.IsSet(config.EnvKESEndpoint):
-		logger.Fatal(errors.New("ambigious KMS configuration"), fmt.Sprintf("The environment contains %q as well as %q", config.EnvKMSMasterKey, config.EnvKESEndpoint))
+		logger.Fatal(errors.New("ambigious KMS configuration"), "The environment contains %q as well as %q", config.EnvKMSMasterKey, config.EnvKESEndpoint)
 	}
 	if env.IsSet(config.EnvKMSSecretKey) {
 		KMS, err := kms.Parse(env.Get(config.EnvKMSSecretKey, ""))
