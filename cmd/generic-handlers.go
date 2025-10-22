@@ -336,7 +336,7 @@ func parseAmzDateHeader(req *http.Request) (time.Time, APIErrorCode) {
 func setTimeValidityHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		aType := getRequestAuthType(r)
-		if aType == authTypeSigned || aType == authTypeSignedV2 || aType == authTypeStreamingSigned {
+		if aType == authTypeSigned || aType == authTypeSignedV2 || aType == authTypeStreamingHMACSHA256Payload {
 			// Verify if date headers are set, if not reject the request
 			amzDate, errCode := parseAmzDateHeader(r)
 			if errCode != ErrNone {

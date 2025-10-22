@@ -54,7 +54,7 @@ func TestGetRequestAuthType(t *testing.T) {
 				},
 				Method: http.MethodPut,
 			},
-			authT: authTypeStreamingSigned,
+			authT: authTypeStreamingHMACSHA256Payload,
 		},
 		// Test case - 2
 		// Check for JWT header.
@@ -156,7 +156,7 @@ func TestS3SupportedAuthType(t *testing.T) {
 		},
 		// Test 5 - supported s3 type with streaming signed.
 		{
-			authT: authTypeStreamingSigned,
+			authT: authTypeStreamingHMACSHA256Payload,
 			pass:  true,
 		},
 		// Test 6 - supported s3 type with signature v2.

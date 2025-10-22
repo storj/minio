@@ -89,7 +89,7 @@ func getConditionValues(r *http.Request, lc string, username string, claims map[
 	switch authType {
 	case authTypeSignedV2, authTypePresignedV2:
 		signatureVersion = signV2Algorithm
-	case authTypeSigned, authTypePresigned, authTypeStreamingSigned, authTypePostPolicy:
+	case authTypeSigned, authTypePresigned, authTypeStreamingHMACSHA256Payload, authTypePostPolicy:
 		signatureVersion = signV4Algorithm
 	}
 
@@ -97,7 +97,7 @@ func getConditionValues(r *http.Request, lc string, username string, claims map[
 	switch authType {
 	case authTypePresignedV2, authTypePresigned:
 		authtype = "REST-QUERY-STRING"
-	case authTypeSignedV2, authTypeSigned, authTypeStreamingSigned:
+	case authTypeSignedV2, authTypeSigned, authTypeStreamingHMACSHA256Payload:
 		authtype = "REST-HEADER"
 	case authTypePostPolicy:
 		authtype = "POST"

@@ -78,8 +78,9 @@ func isRequestPostPolicySignatureV4(r *http.Request) bool {
 		r.Method == http.MethodPost
 }
 
-// Verify if the request has AWS Streaming Signature Version '4'. This is only valid for 'PUT' operation.
-func isRequestSignStreamingV4(r *http.Request) bool {
+// Returns whether the request indicates that it is a streaming PUT request with no trailer
+// and whose chunks are signed with AWS4-HMAC-SHA256.
+func isStreamingHMACSHA256PayloadPut(r *http.Request) bool {
 	return r.Header.Get(xhttp.AmzContentSha256) == streamingContentSHA256 &&
 		r.Method == http.MethodPut
 }
@@ -94,7 +95,7 @@ const (
 	authTypePresigned
 	authTypePresignedV2
 	authTypePostPolicy
-	authTypeStreamingSigned
+	authTypeStreamingHMACSHA256Payload
 	authTypeSigned
 	authTypeSignedV2
 	authTypeJWT
@@ -107,8 +108,8 @@ func getRequestAuthType(r *http.Request) authType {
 		return authTypeSignedV2
 	} else if isRequestPresignedSignatureV2(r) {
 		return authTypePresignedV2
-	} else if isRequestSignStreamingV4(r) {
-		return authTypeStreamingSigned
+	} else if isStreamingHMACSHA256PayloadPut(r) {
+		return authTypeStreamingHMACSHA256Payload
 	} else if isRequestSignatureV4(r) {
 		return authTypeSigned
 	} else if isRequestPresignedSignatureV4(r) {
@@ -453,13 +454,13 @@ func newChecksumReader(ctx context.Context, r *http.Request) (reader *hash.Reade
 
 // List of all support S3 auth types.
 var supportedS3AuthTypes = map[authType]struct{}{
-	authTypeAnonymous:       {},
-	authTypePresigned:       {},
-	authTypePresignedV2:     {},
-	authTypeSigned:          {},
-	authTypeSignedV2:        {},
-	authTypePostPolicy:      {},
-	authTypeStreamingSigned: {},
+	authTypeAnonymous:                  {},
+	authTypePresigned:                  {},
+	authTypePresignedV2:                {},
+	authTypeSigned:                     {},
+	authTypeSignedV2:                   {},
+	authTypePostPolicy:                 {},
+	authTypeStreamingHMACSHA256Payload: {},
 }
 
 // Validate if the authType is valid and supported.
@@ -503,7 +504,7 @@ func setAuthHandler(h http.Handler) http.Handler {
 func (api ObjectAPIHandlers) validateSignature(ctx context.Context, r *http.Request, action policy.Action) (cred auth.Credentials, owner bool, claims map[string]interface{}, s3Error APIErrorCode) {
 	rAuthType := getRequestAuthType(r)
 	switch rAuthType {
-	case authTypeStreamingSigned:
+	case authTypeStreamingHMACSHA256Payload:
 		return cred, owner, nil, ErrSignatureVersionNotSupported
 	case authTypeSigned, authTypePresigned:
 		sha256hex := getContentSha256Cksum(r, serviceS3)
@@ -540,7 +541,7 @@ func (api ObjectAPIHandlers) validateSignature(ctx context.Context, r *http.Requ
 	if !useAwsigOnly {
 		var s3Error APIErrorCode
 		switch rAuthType {
-		case authTypeUnknown, authTypeStreamingSigned:
+		case authTypeUnknown, authTypeStreamingHMACSHA256Payload:
 			s3Error = ErrSignatureVersionNotSupported
 		case authTypeSignedV2, authTypePresignedV2:
 			s3Error = isReqAuthenticatedV2(r)
@@ -658,7 +659,7 @@ func isPutActionAllowed(ctx context.Context, atype authType, bucketName, objectN
 		return ErrSignatureVersionNotSupported
 	case authTypeSignedV2, authTypePresignedV2:
 		cred, owner, s3Err = getReqAccessKeyV2(r)
-	case authTypeStreamingSigned, authTypePresigned, authTypeSigned:
+	case authTypeStreamingHMACSHA256Payload, authTypePresigned, authTypeSigned:
 		region := globalServerRegion
 		cred, owner, s3Err = getReqAccessKeyV4(r, region, serviceS3)
 	}
@@ -715,6 +716,49 @@ func isPutActionAllowed(ctx context.Context, atype authType, bucketName, objectN
 		return ErrNone
 	}
 	return ErrAccessDenied
+}
+
+func (api ObjectAPIHandlers) verifyPutObjectRequest(ctx context.Context, r *http.Request, rAuthType authType) (reader io.Reader, s3Err APIErrorCode) {
+	// awsig contains support for more streaming types than we want to support
+	// right now, so disallow them before we verify the request with awsig.
+	// Note that rAuthType will be authTypeStreamingHMACSHA256Payload if the
+	// streaming type is "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" (which we want
+	// to support), so it won't be affected.
+	if rAuthType == authTypePresigned || rAuthType == authTypeSigned {
+		sha256hex := getContentSha256Cksum(r, serviceS3)
+		if strings.HasPrefix(sha256hex, streamingPrefix) {
+			return nil, ErrSignatureVersionNotSupported
+		}
+	}
+
+	if api.awsig.mode != awsigVerificationOff {
+		_, s3Err := awsigVerifyRequest(ctx, r, api.awsig.verifier)
+		if s3Err != ErrNone {
+			return nil, s3Err
+		}
+	}
+
+	reader = r.Body
+
+	switch rAuthType {
+	case authTypeStreamingHMACSHA256Payload:
+		// Initialize stream signature verifier.
+		reader, s3Err = newSignV4ChunkedReader(r)
+	case authTypeSignedV2, authTypePresignedV2:
+		s3Err = isReqAuthenticatedV2(r)
+	case authTypePresigned, authTypeSigned:
+		s3Err = reqSignatureV4Verify(r, globalServerRegion, serviceS3)
+	}
+	if s3Err != ErrNone && api.awsig.mode == AwsigVerificationWithDefaultFallback {
+		if api.awsig.onUncaughtError != nil {
+			api.awsig.onUncaughtError(ctx, errorCodes.ToAPIErr(s3Err))
+		}
+	}
+
+	if s3Err != ErrNone {
+		return nil, s3Err
+	}
+	return reader, ErrNone
 }
 
 func awsigVerifyRequest(ctx context.Context, r *http.Request, verifier *awsig.V2V4[AwsigAuthData]) (vr awsig.VerifiedRequest[AwsigAuthData], s3Error APIErrorCode) {
