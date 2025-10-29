@@ -100,7 +100,8 @@ func WithCacheObjectLayer(cacheAPI func() CacheObjectLayer) ObjectAPIHandlersOpt
 			return errors.New("function for providing the cache object layer must not be nil")
 		}
 		api.cacheAPI = func() (api CacheObjectLayer, exists bool) {
-			return cacheAPI(), true
+			api = cacheAPI()
+			return api, api != nil
 		}
 		return nil
 	}
