@@ -47,8 +47,8 @@ func TestTargetDToARN(t *testing.T) {
 		region      string
 		expectedARN ARN
 	}{
-		{tid, "", ARN{TargetID: tid, region: ""}},
-		{tid, "us-east-1", ARN{TargetID: tid, region: "us-east-1"}},
+		{tid, "", ARN{TargetID: tid, Region: ""}},
+		{tid, "us-east-1", ARN{TargetID: tid, Region: "us-east-1"}},
 	}
 
 	for i, testCase := range testCases {

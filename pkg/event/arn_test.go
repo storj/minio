@@ -28,8 +28,11 @@ func TestARNString(t *testing.T) {
 		expectedResult string
 	}{
 		{ARN{}, ""},
-		{ARN{TargetID{"1", "webhook"}, ""}, "arn:minio:sqs::1:webhook"},
-		{ARN{TargetID{"1", "webhook"}, "us-east-1"}, "arn:minio:sqs:us-east-1:1:webhook"},
+		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: ""}, "arn:minio:sqs::1:webhook"},
+		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: ""}, "arn:minio:sqs:us-east-1:1:webhook"},
+		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}, "arn:minio:sqs::1:webhook"},
+		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sns"}, "arn:minio:sns::1:webhook"},
+		{ARN{TargetID: TargetID{"1", "topic"}, Region: "us-west-2", ServiceType: "sns"}, "arn:minio:sns:us-west-2:1:topic"},
 	}
 
 	for i, testCase := range testCases {
@@ -48,8 +51,10 @@ func TestARNMarshalXML(t *testing.T) {
 		expectErr    bool
 	}{
 		{ARN{}, []byte("<ARN></ARN>"), false},
-		{ARN{TargetID{"1", "webhook"}, ""}, []byte("<ARN>arn:minio:sqs::1:webhook</ARN>"), false},
-		{ARN{TargetID{"1", "webhook"}, "us-east-1"}, []byte("<ARN>arn:minio:sqs:us-east-1:1:webhook</ARN>"), false},
+		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: ""}, []byte("<ARN>arn:minio:sqs::1:webhook</ARN>"), false},
+		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: ""}, []byte("<ARN>arn:minio:sqs:us-east-1:1:webhook</ARN>"), false},
+		{ARN{TargetID: TargetID{"1", "topic"}, Region: "", ServiceType: "sns"}, []byte("<ARN>arn:minio:sns::1:topic</ARN>"), false},
+		{ARN{TargetID: TargetID{"1", "topic"}, Region: "us-west-2", ServiceType: "sns"}, []byte("<ARN>arn:minio:sns:us-west-2:1:topic</ARN>"), false},
 	}
 
 	for i, testCase := range testCases {
@@ -76,8 +81,10 @@ func TestARNUnmarshalXML(t *testing.T) {
 	}{
 		{[]byte("<ARN></ARN>"), nil, true},
 		{[]byte("<ARN>arn:minio:sqs:::</ARN>"), nil, true},
-		{[]byte("<ARN>arn:minio:sqs::1:webhook</ARN>"), &ARN{TargetID{"1", "webhook"}, ""}, false},
-		{[]byte("<ARN>arn:minio:sqs:us-east-1:1:webhook</ARN>"), &ARN{TargetID{"1", "webhook"}, "us-east-1"}, false},
+		{[]byte("<ARN>arn:minio:sqs::1:webhook</ARN>"), &ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}, false},
+		{[]byte("<ARN>arn:minio:sqs:us-east-1:1:webhook</ARN>"), &ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}, false},
+		{[]byte("<ARN>arn:minio:sns::1:topic</ARN>"), &ARN{TargetID: TargetID{"1", "topic"}, Region: "", ServiceType: "sns"}, false},
+		{[]byte("<ARN>arn:minio:sns:us-west-2:1:topic</ARN>"), &ARN{TargetID: TargetID{"1", "topic"}, Region: "us-west-2", ServiceType: "sns"}, false},
 	}
 
 	for i, testCase := range testCases {
@@ -107,9 +114,11 @@ func TestParseARN(t *testing.T) {
 		{"arn:minio:sqs:::", nil, true},
 		{"arn:minio:sqs::1:webhook:remote", nil, true},
 		{"arn:aws:sqs::1:webhook", nil, true},
-		{"arn:minio:sns::1:webhook", nil, true},
-		{"arn:minio:sqs::1:webhook", &ARN{TargetID{"1", "webhook"}, ""}, false},
-		{"arn:minio:sqs:us-east-1:1:webhook", &ARN{TargetID{"1", "webhook"}, "us-east-1"}, false},
+		{"arn:minio:lambda::1:function", nil, true}, // lambda not supported
+		{"arn:minio:sqs::1:webhook", &ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}, false},
+		{"arn:minio:sqs:us-east-1:1:webhook", &ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}, false},
+		{"arn:minio:sns::1:topic", &ARN{TargetID: TargetID{"1", "topic"}, Region: "", ServiceType: "sns"}, false},
+		{"arn:minio:sns:us-west-2:1:topic", &ARN{TargetID: TargetID{"1", "topic"}, Region: "us-west-2", ServiceType: "sns"}, false},
 	}
 
 	for i, testCase := range testCases {

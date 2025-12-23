@@ -322,10 +322,10 @@ func TestQueueSetRegion(t *testing.T) {
 		region         string
 		expectedResult ARN
 	}{
-		{queue1, "eu-west-1", ARN{TargetID{"1", "webhook"}, "eu-west-1"}},
-		{queue1, "", ARN{TargetID{"1", "webhook"}, ""}},
-		{queue2, "us-east-1", ARN{TargetID{"1", "webhook"}, "us-east-1"}},
-		{queue2, "", ARN{TargetID{"1", "webhook"}, ""}},
+		{queue1, "eu-west-1", ARN{TargetID: TargetID{"1", "webhook"}, Region: "eu-west-1", ServiceType: "sqs"}},
+		{queue1, "", ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}},
+		{queue2, "us-east-1", ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}},
+		{queue2, "", ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}},
 	}
 
 	for i, testCase := range testCases {
@@ -494,6 +494,96 @@ func TestConfigUnmarshalXML(t *testing.T) {
 
 	dataCase5 := []byte(`<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/" ></NotificationConfiguration>`)
 
+	// Test case with only TopicConfiguration (should pass)
+	dataCase6 := []byte(`
+	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+	   <TopicConfiguration>
+	      <Id>1</Id>
+	      <Filter></Filter>
+	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
+	      <Event>s3:ObjectCreated:*</Event>
+	   </TopicConfiguration>
+	</NotificationConfiguration>
+	`)
+
+	// Test case with both QueueConfiguration and TopicConfiguration (should pass)
+	dataCase7 := []byte(`
+	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+	   <QueueConfiguration>
+	      <Id>1</Id>
+	      <Filter></Filter>
+	      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+	      <Event>s3:ObjectCreated:*</Event>
+	   </QueueConfiguration>
+	   <TopicConfiguration>
+	      <Id>2</Id>
+	      <Filter></Filter>
+	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
+	      <Event>s3:ObjectRemoved:*</Event>
+	   </TopicConfiguration>
+	</NotificationConfiguration>
+	`)
+
+	// Test case with duplicate TopicConfiguration (should fail)
+	dataCase8 := []byte(`
+	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+	   <TopicConfiguration>
+	      <Id>1</Id>
+	      <Filter></Filter>
+	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
+	      <Event>s3:ObjectCreated:*</Event>
+	   </TopicConfiguration>
+	   <TopicConfiguration>
+	      <Id>1</Id>
+	      <Filter></Filter>
+	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
+	      <Event>s3:ObjectCreated:*</Event>
+	   </TopicConfiguration>
+	</NotificationConfiguration>
+	`)
+
+	// Test case with duplicate TopicConfiguration with events in different order (should fail)
+	dataCase9 := []byte(`
+	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+	   <TopicConfiguration>
+	      <Id>1</Id>
+	      <Filter>
+	           <S3Key>
+	               <FilterRule>
+	                   <Name>prefix</Name>
+	                   <Value>images/</Value>
+	               </FilterRule>
+	               <FilterRule>
+	                   <Name>suffix</Name>
+	                   <Value>jpg</Value>
+	               </FilterRule>
+	           </S3Key>
+		  </Filter>
+	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
+	      <Event>s3:ObjectCreated:*</Event>
+	      <Event>s3:ObjectRemoved:*</Event>
+	   </TopicConfiguration>
+	   <TopicConfiguration>
+	      <Id>1</Id>
+	      <Filter>
+	           <S3Key>
+	               <FilterRule>
+	                   <Name>suffix</Name>
+	                   <Value>jpg</Value>
+	               </FilterRule>
+	               <FilterRule>
+	                   <Name>prefix</Name>
+	                   <Value>images/</Value>
+	               </FilterRule>
+	           </S3Key>
+		  </Filter>
+	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
+	      <Event>s3:ObjectRemoved:*</Event>
+	      <Event>s3:ObjectCreated:*</Event>
+	   </TopicConfiguration>
+	</NotificationConfiguration>
+	`)
+
 	testCases := []struct {
 		data      []byte
 		expectErr bool
@@ -501,9 +591,13 @@ func TestConfigUnmarshalXML(t *testing.T) {
 		{dataCase1, false},
 		{dataCase2, false},
 		{dataCase3, false},
-		{dataCase4, true},
+		{dataCase4, true}, // Still fails due to CloudFunctionConfiguration
 		// make sure we don't fail when queue is empty.
 		{dataCase5, false},
+		{dataCase6, false}, // TopicConfiguration should now be accepted
+		{dataCase7, false}, // Both Queue and Topic should be accepted
+		{dataCase8, true},  // Duplicate TopicConfiguration should fail
+		{dataCase9, true},  // Duplicate TopicConfiguration with filters and events in different order should fail
 	}
 
 	for i, testCase := range testCases {
@@ -701,17 +795,34 @@ func TestConfigSetRegion(t *testing.T) {
 		panic(err)
 	}
 
+	data = []byte(`
+<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
+      <Id>1</Id>
+      <Filter></Filter>
+      <Topic>arn:minio:sns::1:topic</Topic>
+      <Event>s3:ObjectCreated:*</Event>
+   </TopicConfiguration>
+</NotificationConfiguration>
+`)
+	config4 := &Config{}
+	if err := xml.Unmarshal(data, config4); err != nil {
+		panic(err)
+	}
+
 	testCases := []struct {
 		config         *Config
 		region         string
 		expectedResult []ARN
 	}{
-		{config1, "eu-west-1", []ARN{{TargetID{"1", "webhook"}, "eu-west-1"}}},
-		{config1, "", []ARN{{TargetID{"1", "webhook"}, ""}}},
-		{config2, "us-east-1", []ARN{{TargetID{"1", "webhook"}, "us-east-1"}}},
-		{config2, "", []ARN{{TargetID{"1", "webhook"}, ""}}},
-		{config3, "us-east-1", []ARN{{TargetID{"1", "webhook"}, "us-east-1"}, {TargetID{"2", "amqp"}, "us-east-1"}}},
-		{config3, "", []ARN{{TargetID{"1", "webhook"}, ""}, {TargetID{"2", "amqp"}, ""}}},
+		{config1, "eu-west-1", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "eu-west-1", ServiceType: "sqs"}}},
+		{config1, "", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}}},
+		{config2, "us-east-1", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}}},
+		{config2, "", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}}},
+		{config3, "us-east-1", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}, {TargetID: TargetID{"2", "amqp"}, Region: "us-east-1", ServiceType: "sqs"}}},
+		{config3, "", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}, {TargetID: TargetID{"2", "amqp"}, Region: "", ServiceType: "sqs"}}},
+		{config4, "eu-west-1", []ARN{{TargetID: TargetID{"1", "topic"}, Region: "eu-west-1", ServiceType: "sns"}}},
+		{config4, "", []ARN{{TargetID: TargetID{"1", "topic"}, Region: "", ServiceType: "sns"}}},
 	}
 
 	for i, testCase := range testCases {
@@ -719,6 +830,9 @@ func TestConfigSetRegion(t *testing.T) {
 		result := []ARN{}
 		for _, queue := range testCase.config.QueueList {
 			result = append(result, queue.ARN)
+		}
+		for _, topic := range testCase.config.TopicList {
+			result = append(result, topic.ARN)
 		}
 
 		if !reflect.DeepEqual(result, testCase.expectedResult) {

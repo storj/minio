@@ -35,7 +35,7 @@ func (tid TargetID) String() string {
 
 // ToARN - converts to ARN.
 func (tid TargetID) ToARN(region string) ARN {
-	return ARN{TargetID: tid, region: region}
+	return ARN{TargetID: tid, Region: region}
 }
 
 // MarshalJSON - encodes to JSON data.

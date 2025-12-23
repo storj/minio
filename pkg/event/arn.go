@@ -21,19 +21,26 @@ import (
 	"strings"
 )
 
-// ARN - SQS resource name representation.
+// ARN - SQS/SNS resource name representation.
 type ARN struct {
 	TargetID
-	region string
+	Region      string
+	ServiceType string // "sqs" or "sns"
 }
 
 // String - returns string representation.
 func (arn ARN) String() string {
-	if arn.TargetID.ID == "" && arn.TargetID.Name == "" && arn.region == "" {
+	if arn.TargetID.ID == "" && arn.TargetID.Name == "" && arn.Region == "" {
 		return ""
 	}
 
-	return "arn:minio:sqs:" + arn.region + ":" + arn.TargetID.String()
+	// Default to "sqs" for backward compatibility
+	serviceType := arn.ServiceType
+	if serviceType == "" {
+		serviceType = "sqs"
+	}
+
+	return "arn:minio:" + serviceType + ":" + arn.Region + ":" + arn.TargetID.String()
 }
 
 // MarshalXML - encodes to XML data.
@@ -59,8 +66,8 @@ func (arn *ARN) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 
 // parseARN - parses string to ARN.
 func parseARN(s string) (*ARN, error) {
-	// ARN must be in the format of arn:minio:sqs:<REGION>:<ID>:<TYPE>
-	if !strings.HasPrefix(s, "arn:minio:sqs:") {
+	// ARN must be in the format of arn:minio:<sqs|sns>:<REGION>:<ID>:<TYPE>
+	if !strings.HasPrefix(s, "arn:minio:") {
 		return nil, &ErrInvalidARN{s}
 	}
 
@@ -69,12 +76,19 @@ func parseARN(s string) (*ARN, error) {
 		return nil, &ErrInvalidARN{s}
 	}
 
+	// tokens[2] should be either "sqs" or "sns"
+	serviceType := tokens[2]
+	if serviceType != "sqs" && serviceType != "sns" {
+		return nil, &ErrInvalidARN{s}
+	}
+
 	if tokens[4] == "" || tokens[5] == "" {
 		return nil, &ErrInvalidARN{s}
 	}
 
 	return &ARN{
-		region: tokens[3],
+		Region:      tokens[3],
+		ServiceType: serviceType,
 		TargetID: TargetID{
 			ID:   tokens[4],
 			Name: tokens[5],

@@ -38,6 +38,8 @@ func IsEventError(err error) bool {
 		return true
 	case ErrDuplicateQueueConfiguration, *ErrDuplicateQueueConfiguration:
 		return true
+	case ErrDuplicateTopicConfiguration, *ErrDuplicateTopicConfiguration:
+		return true
 	case ErrUnknownRegion, *ErrUnknownRegion:
 		return true
 	case ErrARNNotFound, *ErrARNNotFound:
@@ -113,6 +115,22 @@ func (err ErrDuplicateQueueConfiguration) Error() string {
 	}
 
 	return fmt.Sprintf("duplicate queue configuration %v", message)
+}
+
+// ErrDuplicateTopicConfiguration - duplicate topic configuration error.
+type ErrDuplicateTopicConfiguration struct {
+	Topic Topic
+}
+
+func (err ErrDuplicateTopicConfiguration) Error() string {
+	var message string
+	if data, xerr := xml.Marshal(err.Topic); xerr != nil {
+		message = fmt.Sprintf("%+v", err.Topic)
+	} else {
+		message = string(data)
+	}
+
+	return fmt.Sprintf("duplicate topic configuration %v", message)
 }
 
 // ErrUnknownRegion - unknown region error.

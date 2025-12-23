@@ -20,7 +20,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
-	"reflect"
 	"strings"
 	"unicode/utf8"
 
@@ -193,15 +192,15 @@ func (q *Queue) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 
 // Validate - checks whether queue has valid values or not.
 func (q Queue) Validate(region string, targetList *TargetList) error {
-	if q.ARN.region == "" {
+	if q.ARN.Region == "" {
 		if !targetList.Exists(q.ARN.TargetID) {
 			return &ErrARNNotFound{q.ARN}
 		}
 		return nil
 	}
 
-	if region != "" && q.ARN.region != region {
-		return &ErrUnknownRegion{q.ARN.region}
+	if region != "" && q.ARN.Region != region {
+		return &ErrUnknownRegion{q.ARN.Region}
 	}
 
 	if !targetList.Exists(q.ARN.TargetID) {
@@ -213,7 +212,7 @@ func (q Queue) Validate(region string, targetList *TargetList) error {
 
 // SetRegion - sets region value to queue's ARN.
 func (q *Queue) SetRegion(region string) {
-	q.ARN.region = region
+	q.ARN.Region = region
 }
 
 // ToRulesMap - converts Queue to RulesMap
@@ -227,9 +226,104 @@ type lambda struct {
 	ARN string `xml:"CloudFunction"`
 }
 
-// Unused. Available for completion.
-type topic struct {
-	ARN string `xml:"Topic" json:"Topic"`
+// Topic - represents elements inside <TopicConfiguration>
+// Exported for use with Google Pub/Sub and similar topic-based notification systems.
+type Topic struct {
+	common
+	ARN ARN `xml:"Topic" json:"Topic"`
+}
+
+// Validate - checks whether Topic fields are valid or not.
+func (t Topic) Validate(region string, targetList *TargetList) error {
+	if t.ARN.Region == "" {
+		if !targetList.Exists(t.ARN.TargetID) {
+			return &ErrARNNotFound{t.ARN}
+		}
+		return nil
+	}
+
+	if region != "" && t.ARN.Region != region {
+		return &ErrUnknownRegion{t.ARN.Region}
+	}
+
+	if !targetList.Exists(t.ARN.TargetID) {
+		return &ErrARNNotFound{t.ARN}
+	}
+
+	return nil
+}
+
+// SetRegion - sets region value to topic's ARN.
+func (t *Topic) SetRegion(region string) {
+	t.ARN.Region = region
+}
+
+// ToRulesMap - converts Topic to RulesMap
+func (t Topic) ToRulesMap() RulesMap {
+	pattern := t.Filter.RuleList.Pattern()
+	return NewRulesMap(t.Events, pattern, t.ARN.TargetID)
+}
+
+// slicesEqualAsSet checks if two slices contain the same unique elements (order and duplicates ignored).
+func slicesEqualAsSet[T comparable](s1, s2 []T) bool {
+	// Create sets from both slices
+	set1 := make(map[T]struct{}, len(s1))
+	for _, e := range s1 {
+		set1[e] = struct{}{}
+	}
+
+	set2 := make(map[T]struct{}, len(s2))
+	for _, e := range s2 {
+		set2[e] = struct{}{}
+	}
+
+	// Check if sets have the same size
+	if len(set1) != len(set2) {
+		return false
+	}
+
+	// Check if all elements in set1 exist in set2
+	for e := range set1 {
+		if _, exists := set2[e]; !exists {
+			return false
+		}
+	}
+
+	return true
+}
+
+// queuesEqual checks if two queues are equal, considering events and filter rules as sets (order doesn't matter).
+func queuesEqual(q1, q2 Queue) bool {
+	// Compare ID and ARN
+	if q1.ID != q2.ID {
+		return false
+	}
+	if q1.ARN != q2.ARN {
+		return false
+	}
+	// Compare filters (order-independent for filter rules)
+	if !slicesEqualAsSet(q1.Filter.RuleList.Rules, q2.Filter.RuleList.Rules) {
+		return false
+	}
+	// Compare events as sets (order doesn't matter)
+	return slicesEqualAsSet(q1.Events, q2.Events)
+}
+
+// topicsEqual checks if two topics are equal, considering events and filter rules as sets (order doesn't matter).
+func topicsEqual(t1, t2 Topic) bool {
+	// Compare ID and ARN
+	if t1.ID != t2.ID {
+		return false
+	}
+	if t1.ARN != t2.ARN {
+		return false
+	}
+	// Compare filters (order-independent for filter rules)
+	if !slicesEqualAsSet(t1.Filter.RuleList.Rules, t2.Filter.RuleList.Rules) {
+		return false
+	}
+	// Compare events as sets (order doesn't matter)
+	return slicesEqualAsSet(t1.Events, t2.Events)
 }
 
 // Config - notification configuration described in
@@ -239,7 +333,7 @@ type Config struct {
 	XMLName    xml.Name `xml:"NotificationConfiguration"`
 	QueueList  []Queue  `xml:"QueueConfiguration,omitempty"`
 	LambdaList []lambda `xml:"CloudFunctionConfiguration,omitempty"`
-	TopicList  []topic  `xml:"TopicConfiguration,omitempty"`
+	TopicList  []Topic  `xml:"TopicConfiguration,omitempty"`
 }
 
 // UnmarshalXML - decodes XML data.
@@ -256,17 +350,33 @@ func (conf *Config) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 		for i, q1 := range parsedConfig.QueueList[:len(parsedConfig.QueueList)-1] {
 			for _, q2 := range parsedConfig.QueueList[i+1:] {
 				// Removes the region from ARN if server region is not set
-				if q2.ARN.region != "" && q1.ARN.region == "" {
-					q2.ARN.region = ""
+				if q2.ARN.Region != "" && q1.ARN.Region == "" {
+					q2.ARN.Region = ""
 				}
-				if reflect.DeepEqual(q1, q2) {
+				if queuesEqual(q1, q2) {
 					return &ErrDuplicateQueueConfiguration{q1}
 				}
 			}
 		}
 	}
 
-	if len(parsedConfig.LambdaList) > 0 || len(parsedConfig.TopicList) > 0 {
+	// Check for duplicate topic configurations
+	if len(parsedConfig.TopicList) > 0 {
+		for i, t1 := range parsedConfig.TopicList[:len(parsedConfig.TopicList)-1] {
+			for _, t2 := range parsedConfig.TopicList[i+1:] {
+				// Removes the region from ARN if server region is not set
+				if t2.ARN.Region != "" && t1.ARN.Region == "" {
+					t2.ARN.Region = ""
+				}
+				if topicsEqual(t1, t2) {
+					return &ErrDuplicateTopicConfiguration{t1}
+				}
+			}
+		}
+	}
+
+	// Lambda functions are not supported
+	if len(parsedConfig.LambdaList) > 0 {
 		return &ErrUnsupportedConfiguration{}
 	}
 
@@ -283,22 +393,36 @@ func (conf Config) Validate(region string, targetList *TargetList) error {
 		}
 	}
 
+	for _, topic := range conf.TopicList {
+		if err := topic.Validate(region, targetList); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-// SetRegion - sets region to all queue configuration.
+// SetRegion - sets region to all queue and topic configurations.
 func (conf *Config) SetRegion(region string) {
 	for i := range conf.QueueList {
 		conf.QueueList[i].SetRegion(region)
 	}
+
+	for i := range conf.TopicList {
+		conf.TopicList[i].SetRegion(region)
+	}
 }
 
-// ToRulesMap - converts all queue configuration to RulesMap.
+// ToRulesMap - converts all queue and topic configurations to RulesMap.
 func (conf *Config) ToRulesMap() RulesMap {
 	rulesMap := make(RulesMap)
 
 	for _, queue := range conf.QueueList {
 		rulesMap.Add(queue.ToRulesMap())
+	}
+
+	for _, topic := range conf.TopicList {
+		rulesMap.Add(topic.ToRulesMap())
 	}
 
 	return rulesMap
