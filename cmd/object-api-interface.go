@@ -28,6 +28,7 @@ import (
 	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/bucket/versioning"
+	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/madmin"
 )
 
@@ -127,6 +128,9 @@ type ObjectLayer interface {
 
 	GetObjectLockConfig(ctx context.Context, bucket string) (*objectlock.Config, error)
 	SetObjectLockConfig(ctx context.Context, bucket string, config *objectlock.Config) error
+
+	GetBucketNotificationConfig(ctx context.Context, bucket string) (*event.Config, error)
+	SetBucketNotificationConfig(ctx context.Context, bucket string, config *event.Config) error
 
 	// Object operations.
 

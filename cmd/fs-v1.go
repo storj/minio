@@ -42,6 +42,7 @@ import (
 	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/color"
+	"storj.io/minio/pkg/event"
 	xioutil "storj.io/minio/pkg/ioutil"
 	"storj.io/minio/pkg/lock"
 	"storj.io/minio/pkg/madmin"
@@ -509,6 +510,14 @@ func (fs *FSObjects) GetObjectLockConfig(ctx context.Context, bucket string) (*o
 }
 
 func (fs *FSObjects) SetObjectLockConfig(ctx context.Context, bucket string, config *objectlock.Config) error {
+	return NotImplemented{}
+}
+
+func (fs *FSObjects) GetBucketNotificationConfig(ctx context.Context, bucket string) (*event.Config, error) {
+	return nil, NotImplemented{}
+}
+
+func (fs *FSObjects) SetBucketNotificationConfig(ctx context.Context, bucket string, config *event.Config) error {
 	return NotImplemented{}
 }
 

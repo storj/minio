@@ -35,6 +35,7 @@ import (
 	"storj.io/minio/cmd/config/storageclass"
 	"storj.io/minio/cmd/logger"
 	objectlock "storj.io/minio/pkg/bucket/object/lock"
+	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/madmin"
 	"storj.io/minio/pkg/sync/errgroup"
 	"storj.io/minio/pkg/wildcard"
@@ -1280,6 +1281,14 @@ func (z *erasureServerPools) GetObjectLockConfig(ctx context.Context, bucket str
 }
 
 func (z *erasureServerPools) SetObjectLockConfig(ctx context.Context, bucket string, config *objectlock.Config) error {
+	return NotImplemented{}
+}
+
+func (z *erasureServerPools) GetBucketNotificationConfig(ctx context.Context, bucket string) (*event.Config, error) {
+	return nil, NotImplemented{}
+}
+
+func (z *erasureServerPools) SetBucketNotificationConfig(ctx context.Context, bucket string, config *event.Config) error {
 	return NotImplemented{}
 }
 

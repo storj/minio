@@ -28,6 +28,7 @@ import (
 	"storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/bucket/versioning"
+	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/madmin"
 )
 
@@ -270,6 +271,18 @@ func (a GatewayUnsupported) GetObjectTags(ctx context.Context, bucket, object st
 func (a GatewayUnsupported) DeleteObjectTags(ctx context.Context, bucket, object string, opts ObjectOptions) (ObjectInfo, error) {
 	logger.LogIf(ctx, NotImplemented{})
 	return ObjectInfo{}, NotImplemented{}
+}
+
+// GetBucketNotificationConfig - not implemented.
+func (a GatewayUnsupported) GetBucketNotificationConfig(ctx context.Context, bucket string) (*event.Config, error) {
+	logger.LogIf(ctx, NotImplemented{})
+	return nil, NotImplemented{}
+}
+
+// SetBucketNotificationConfig - not implemented.
+func (a GatewayUnsupported) SetBucketNotificationConfig(ctx context.Context, bucket string, config *event.Config) error {
+	logger.LogIf(ctx, NotImplemented{})
+	return NotImplemented{}
 }
 
 // IsNotificationSupported returns whether bucket notification is applicable for this layer.
