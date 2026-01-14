@@ -20,7 +20,6 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
-	"reflect"
 
 	"github.com/gorilla/mux"
 
@@ -61,41 +60,10 @@ func (api ObjectAPIHandlers) GetBucketNotificationHandler(w http.ResponseWriter,
 		return
 	}
 
-	_, err := objAPI.GetBucketInfo(ctx, bucketName)
+	config, err := objAPI.GetBucketNotificationConfig(ctx, bucketName)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
-	}
-
-	config, err := globalBucketMetadataSys.GetNotificationConfig(bucketName)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-	config.SetRegion(globalServerRegion)
-	if err = config.Validate(globalServerRegion, GlobalNotificationSys.targetList); err != nil {
-		arnErr, ok := err.(*event.ErrARNNotFound)
-		if ok {
-			for i, queue := range config.QueueList {
-				// Remove ARN not found queues, because we previously allowed
-				// adding unexpected entries into the config.
-				//
-				// With newer config disallowing changing / turning off
-				// notification targets without removing ARN in notification
-				// configuration we won't see this problem anymore.
-				if reflect.DeepEqual(queue.ARN, arnErr.ARN) && i < len(config.QueueList) {
-					config.QueueList = append(config.QueueList[:i],
-						config.QueueList[i+1:]...)
-				}
-				// This is a one time activity we shall do this
-				// here and allow stale ARN to be removed. We shall
-				// never reach a stage where we will have stale
-				// notification configs.
-			}
-		} else {
-			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
-		}
 	}
 
 	configData, err := xml.Marshal(config)
@@ -133,12 +101,6 @@ func (api ObjectAPIHandlers) PutBucketNotificationHandler(w http.ResponseWriter,
 		return
 	}
 
-	_, err := objectAPI.GetBucketInfo(ctx, bucketName)
-	if err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
 	// PutBucketNotification always needs a Content-Length.
 	if r.ContentLength <= 0 {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentLength), r.URL, guessIsBrowserReq(r))
@@ -155,19 +117,10 @@ func (api ObjectAPIHandlers) PutBucketNotificationHandler(w http.ResponseWriter,
 		return
 	}
 
-	configData, err := xml.Marshal(config)
-	if err != nil {
+	if err = objectAPI.SetBucketNotificationConfig(ctx, bucketName, config); err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
-
-	if err = globalBucketMetadataSys.Update(bucketName, bucketNotificationConfig, configData); err != nil {
-		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-		return
-	}
-
-	rulesMap := config.ToRulesMap()
-	GlobalNotificationSys.AddRulesMap(bucketName, rulesMap)
 
 	writeSuccessResponseHeadersOnly(w)
 }
