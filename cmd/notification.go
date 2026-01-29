@@ -739,13 +739,6 @@ func (sys *NotificationSys) load(buckets []BucketInfo) {
 			logger.LogIf(ctx, err)
 			continue
 		}
-		config.SetRegion(globalServerRegion)
-		if err = config.Validate(globalServerRegion, GlobalNotificationSys.targetList); err != nil {
-			if _, ok := err.(*event.ErrARNNotFound); !ok {
-				logger.LogIf(ctx, err)
-			}
-			continue
-		}
 		sys.AddRulesMap(bucket.Name, config.ToRulesMap())
 	}
 }

@@ -28,11 +28,9 @@ func TestARNString(t *testing.T) {
 		expectedResult string
 	}{
 		{ARN{}, ""},
-		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: ""}, "arn:minio:sqs::1:webhook"},
-		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: ""}, "arn:minio:sqs:us-east-1:1:webhook"},
-		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}, "arn:minio:sqs::1:webhook"},
-		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sns"}, "arn:minio:sns::1:webhook"},
-		{ARN{TargetID: TargetID{"1", "topic"}, Region: "us-west-2", ServiceType: "sns"}, "arn:minio:sns:us-west-2:1:topic"},
+		{ARN{AccountID: "my-project", ResourceID: "my-topic"}, "arn:gcp:pubsub::my-project:my-topic"},
+		{ARN{Partition: "gcp", Service: "pubsub", AccountID: "my-project", ResourceID: "my-topic"}, "arn:gcp:pubsub::my-project:my-topic"},
+		{ARN{Partition: "my-provider", Service: "my-service", AccountID: "my-account", ResourceID: "my-resource"}, "arn:my-provider:my-service::my-account:my-resource"},
 	}
 
 	for i, testCase := range testCases {
@@ -48,27 +46,22 @@ func TestARNMarshalXML(t *testing.T) {
 	testCases := []struct {
 		arn          ARN
 		expectedData []byte
-		expectErr    bool
 	}{
-		{ARN{}, []byte("<ARN></ARN>"), false},
-		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: ""}, []byte("<ARN>arn:minio:sqs::1:webhook</ARN>"), false},
-		{ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: ""}, []byte("<ARN>arn:minio:sqs:us-east-1:1:webhook</ARN>"), false},
-		{ARN{TargetID: TargetID{"1", "topic"}, Region: "", ServiceType: "sns"}, []byte("<ARN>arn:minio:sns::1:topic</ARN>"), false},
-		{ARN{TargetID: TargetID{"1", "topic"}, Region: "us-west-2", ServiceType: "sns"}, []byte("<ARN>arn:minio:sns:us-west-2:1:topic</ARN>"), false},
+		{ARN{}, []byte("<ARN></ARN>")},
+		{ARN{AccountID: "my-project", ResourceID: "my-topic"}, []byte("<ARN>arn:gcp:pubsub::my-project:my-topic</ARN>")},
+		{ARN{Partition: "gcp", Service: "pubsub", AccountID: "my-project", ResourceID: "my-topic"}, []byte("<ARN>arn:gcp:pubsub::my-project:my-topic</ARN>")},
+		{ARN{Partition: "my-provider", Service: "my-service", AccountID: "my-account", ResourceID: "my-resource"}, []byte("<ARN>arn:my-provider:my-service::my-account:my-resource</ARN>")},
 	}
 
 	for i, testCase := range testCases {
 		data, err := xml.Marshal(testCase.arn)
-		expectErr := (err != nil)
 
-		if expectErr != testCase.expectErr {
-			t.Fatalf("test %v: error: expected: %v, got: %v", i+1, testCase.expectErr, expectErr)
+		if err != nil {
+			t.Fatalf("test %v: error: %v", i+1, err)
 		}
 
-		if !testCase.expectErr {
-			if !reflect.DeepEqual(data, testCase.expectedData) {
-				t.Fatalf("test %v: data: expected: %v, got: %v", i+1, string(testCase.expectedData), string(data))
-			}
+		if !reflect.DeepEqual(data, testCase.expectedData) {
+			t.Fatalf("test %v: data: expected: %v, got: %v", i+1, string(testCase.expectedData), string(data))
 		}
 	}
 }
@@ -80,11 +73,12 @@ func TestARNUnmarshalXML(t *testing.T) {
 		expectErr   bool
 	}{
 		{[]byte("<ARN></ARN>"), nil, true},
-		{[]byte("<ARN>arn:minio:sqs:::</ARN>"), nil, true},
-		{[]byte("<ARN>arn:minio:sqs::1:webhook</ARN>"), &ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}, false},
-		{[]byte("<ARN>arn:minio:sqs:us-east-1:1:webhook</ARN>"), &ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}, false},
-		{[]byte("<ARN>arn:minio:sns::1:topic</ARN>"), &ARN{TargetID: TargetID{"1", "topic"}, Region: "", ServiceType: "sns"}, false},
-		{[]byte("<ARN>arn:minio:sns:us-west-2:1:topic</ARN>"), &ARN{TargetID: TargetID{"1", "topic"}, Region: "us-west-2", ServiceType: "sns"}, false},
+		{[]byte("<ARN>arn:gcp:pubsub:::</ARN>"), nil, true},
+		{[]byte("<ARN>arn:minio:sqs::1:webhook</ARN>"), nil, true},                    // Old format rejected
+		{[]byte("<ARN>arn:aws:sqs::my-project:my-topic</ARN>"), nil, true},            // aws partition not supported
+		{[]byte("<ARN>arn:gcp:sqs::my-project:my-topic</ARN>"), nil, true},            // sqs service not supported
+		{[]byte("<ARN>arn:gcp:pubsub:us-east1:my-project:my-topic</ARN>"), nil, true}, // region must be empty
+		{[]byte("<ARN>arn:gcp:pubsub::my-project:my-topic</ARN>"), &ARN{Partition: "gcp", Service: "pubsub", Region: "", AccountID: "my-project", ResourceID: "my-topic"}, false},
 	}
 
 	for i, testCase := range testCases {
@@ -111,14 +105,13 @@ func TestParseARN(t *testing.T) {
 		expectErr   bool
 	}{
 		{"", nil, true},
-		{"arn:minio:sqs:::", nil, true},
-		{"arn:minio:sqs::1:webhook:remote", nil, true},
-		{"arn:aws:sqs::1:webhook", nil, true},
-		{"arn:minio:lambda::1:function", nil, true}, // lambda not supported
-		{"arn:minio:sqs::1:webhook", &ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}, false},
-		{"arn:minio:sqs:us-east-1:1:webhook", &ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}, false},
-		{"arn:minio:sns::1:topic", &ARN{TargetID: TargetID{"1", "topic"}, Region: "", ServiceType: "sns"}, false},
-		{"arn:minio:sns:us-west-2:1:topic", &ARN{TargetID: TargetID{"1", "topic"}, Region: "us-west-2", ServiceType: "sns"}, false},
+		{"arn:gcp:pubsub:::", nil, true},
+		{"arn:gcp:pubsub::my-project:my-topic:extra", nil, true},
+		{"arn:minio:sqs::1:webhook", nil, true},                    // Old format rejected
+		{"arn:aws:sqs::my-project:my-topic", nil, true},            // aws partition not supported
+		{"arn:gcp:sqs::my-project:my-topic", nil, true},            // sqs service not supported
+		{"arn:gcp:pubsub:us-east1:my-project:my-topic", nil, true}, // region must be empty
+		{"arn:gcp:pubsub::my-project:my-topic", &ARN{Partition: "gcp", Service: "pubsub", Region: "", AccountID: "my-project", ResourceID: "my-topic"}, false},
 	}
 
 	for i, testCase := range testCases {
@@ -134,5 +127,23 @@ func TestParseARN(t *testing.T) {
 				t.Fatalf("test %v: data: expected: %v, got: %v", i+1, testCase.expectedARN, arn)
 			}
 		}
+	}
+}
+
+func TestARNToTargetID(t *testing.T) {
+	arn := ARN{
+		Partition:  "gcp",
+		Service:    "pubsub",
+		AccountID:  "my-project",
+		ResourceID: "my-topic",
+	}
+
+	targetID := arn.ToTargetID()
+
+	if targetID.ID != "my-project" {
+		t.Fatalf("expected ID 'my-project', got '%v'", targetID.ID)
+	}
+	if targetID.Name != "my-topic" {
+		t.Fatalf("expected Name 'my-topic', got '%v'", targetID.Name)
 	}
 }

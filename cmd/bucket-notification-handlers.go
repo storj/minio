@@ -107,7 +107,7 @@ func (api ObjectAPIHandlers) PutBucketNotificationHandler(w http.ResponseWriter,
 		return
 	}
 
-	config, err := event.ParseConfig(io.LimitReader(r.Body, r.ContentLength), globalServerRegion, GlobalNotificationSys.targetList)
+	config, err := event.ParseConfig(io.LimitReader(r.Body, r.ContentLength))
 	if err != nil {
 		apiErr := errorCodes.ToAPIErr(ErrMalformedXML)
 		if event.IsEventError(err) {

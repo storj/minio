@@ -129,19 +129,19 @@ func TestFilterRuleListPattern(t *testing.T) {
 	}
 }
 
-func TestQueueUnmarshalXML(t *testing.T) {
+func TestTopicUnmarshalXML(t *testing.T) {
 	dataCase1 := []byte(`
-<QueueConfiguration>
+<TopicConfiguration>
    <Id>1</Id>
    <Filter></Filter>
-   <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+   <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
    <Event>s3:ObjectAccessed:*</Event>
    <Event>s3:ObjectCreated:*</Event>
    <Event>s3:ObjectRemoved:*</Event>
-</QueueConfiguration>`)
+</TopicConfiguration>`)
 
 	dataCase2 := []byte(`
-<QueueConfiguration>
+<TopicConfiguration>
    <Id>1</Id>
     <Filter>
         <S3Key>
@@ -155,12 +155,12 @@ func TestQueueUnmarshalXML(t *testing.T) {
             </FilterRule>
         </S3Key>
    </Filter>
-   <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+   <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
    <Event>s3:ObjectCreated:Put</Event>
-</QueueConfiguration>`)
+</TopicConfiguration>`)
 
 	dataCase3 := []byte(`
-<QueueConfiguration>
+<TopicConfiguration>
    <Id>1</Id>
     <Filter>
         <S3Key>
@@ -174,10 +174,10 @@ func TestQueueUnmarshalXML(t *testing.T) {
             </FilterRule>
         </S3Key>
    </Filter>
-   <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+   <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
    <Event>s3:ObjectCreated:Put</Event>
    <Event>s3:ObjectCreated:Put</Event>
-</QueueConfiguration>`)
+</TopicConfiguration>`)
 
 	testCases := []struct {
 		data      []byte
@@ -185,11 +185,12 @@ func TestQueueUnmarshalXML(t *testing.T) {
 	}{
 		{dataCase1, false},
 		{dataCase2, false},
-		{dataCase3, true},
+		{dataCase3, true}, // Duplicate events
 	}
 
 	for i, testCase := range testCases {
-		err := xml.Unmarshal(testCase.data, &Queue{})
+		topic := &Topic{}
+		err := xml.Unmarshal(testCase.data, topic)
 		expectErr := (err != nil)
 
 		if expectErr != testCase.expectErr {
@@ -198,23 +199,23 @@ func TestQueueUnmarshalXML(t *testing.T) {
 	}
 }
 
-func TestQueueValidate(t *testing.T) {
+func TestTopicToRulesMap(t *testing.T) {
 	data := []byte(`
-<QueueConfiguration>
+<TopicConfiguration>
    <Id>1</Id>
    <Filter></Filter>
-   <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+   <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
    <Event>s3:ObjectAccessed:*</Event>
    <Event>s3:ObjectCreated:*</Event>
    <Event>s3:ObjectRemoved:*</Event>
-</QueueConfiguration>`)
-	queue1 := &Queue{}
-	if err := xml.Unmarshal(data, queue1); err != nil {
+</TopicConfiguration>`)
+	topicCase1 := &Topic{}
+	if err := xml.Unmarshal(data, topicCase1); err != nil {
 		panic(err)
 	}
 
 	data = []byte(`
-<QueueConfiguration>
+<TopicConfiguration>
    <Id>1</Id>
     <Filter>
         <S3Key>
@@ -228,167 +229,27 @@ func TestQueueValidate(t *testing.T) {
             </FilterRule>
         </S3Key>
    </Filter>
-   <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+   <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
    <Event>s3:ObjectCreated:Put</Event>
-</QueueConfiguration>`)
-	queue2 := &Queue{}
-	if err := xml.Unmarshal(data, queue2); err != nil {
+</TopicConfiguration>`)
+	topicCase2 := &Topic{}
+	if err := xml.Unmarshal(data, topicCase2); err != nil {
 		panic(err)
 	}
 
-	data = []byte(`
-<QueueConfiguration>
-   <Id>1</Id>
-   <Filter></Filter>
-   <Queue>arn:minio:sqs:eu-west-2:1:webhook</Queue>
-   <Event>s3:ObjectAccessed:*</Event>
-   <Event>s3:ObjectCreated:*</Event>
-   <Event>s3:ObjectRemoved:*</Event>
-</QueueConfiguration>`)
-	queue3 := &Queue{}
-	if err := xml.Unmarshal(data, queue3); err != nil {
-		panic(err)
-	}
-
-	targetList1 := NewTargetList()
-
-	targetList2 := NewTargetList()
-	if err := targetList2.Add(&ExampleTarget{TargetID{"1", "webhook"}, false, false}); err != nil {
-		panic(err)
-	}
+	rulesMapCase1 := NewRulesMap([]Name{ObjectAccessedAll, ObjectCreatedAll, ObjectRemovedAll}, "*", TargetID{"my-project", "my-topic"})
+	rulesMapCase2 := NewRulesMap([]Name{ObjectCreatedPut}, "images/*jpg", TargetID{"my-project", "my-topic"})
 
 	testCases := []struct {
-		queue      *Queue
-		region     string
-		targetList *TargetList
-		expectErr  bool
-	}{
-		{queue1, "eu-west-1", nil, true},
-		{queue2, "us-east-1", targetList1, true},
-		{queue3, "", targetList2, false},
-		{queue2, "us-east-1", targetList2, false},
-	}
-
-	for i, testCase := range testCases {
-		err := testCase.queue.Validate(testCase.region, testCase.targetList)
-		expectErr := (err != nil)
-
-		if expectErr != testCase.expectErr {
-			t.Fatalf("test %v: error: expected: %v, got: %v", i+1, testCase.expectErr, expectErr)
-		}
-	}
-}
-
-func TestQueueSetRegion(t *testing.T) {
-	data := []byte(`
-<QueueConfiguration>
-   <Id>1</Id>
-   <Filter></Filter>
-   <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-   <Event>s3:ObjectAccessed:*</Event>
-   <Event>s3:ObjectCreated:*</Event>
-   <Event>s3:ObjectRemoved:*</Event>
-</QueueConfiguration>`)
-	queue1 := &Queue{}
-	if err := xml.Unmarshal(data, queue1); err != nil {
-		panic(err)
-	}
-
-	data = []byte(`
-<QueueConfiguration>
-   <Id>1</Id>
-    <Filter>
-        <S3Key>
-            <FilterRule>
-                <Name>prefix</Name>
-                <Value>images/</Value>
-            </FilterRule>
-            <FilterRule>
-                <Name>suffix</Name>
-                <Value>jpg</Value>
-            </FilterRule>
-        </S3Key>
-   </Filter>
-   <Queue>arn:minio:sqs::1:webhook</Queue>
-   <Event>s3:ObjectCreated:Put</Event>
-</QueueConfiguration>`)
-	queue2 := &Queue{}
-	if err := xml.Unmarshal(data, queue2); err != nil {
-		panic(err)
-	}
-
-	testCases := []struct {
-		queue          *Queue
-		region         string
-		expectedResult ARN
-	}{
-		{queue1, "eu-west-1", ARN{TargetID: TargetID{"1", "webhook"}, Region: "eu-west-1", ServiceType: "sqs"}},
-		{queue1, "", ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}},
-		{queue2, "us-east-1", ARN{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}},
-		{queue2, "", ARN{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}},
-	}
-
-	for i, testCase := range testCases {
-		testCase.queue.SetRegion(testCase.region)
-		result := testCase.queue.ARN
-
-		if !reflect.DeepEqual(result, testCase.expectedResult) {
-			t.Fatalf("test %v: data: expected: %v, got: %v", i+1, testCase.expectedResult, result)
-		}
-	}
-}
-
-func TestQueueToRulesMap(t *testing.T) {
-	data := []byte(`
-<QueueConfiguration>
-   <Id>1</Id>
-   <Filter></Filter>
-   <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-   <Event>s3:ObjectAccessed:*</Event>
-   <Event>s3:ObjectCreated:*</Event>
-   <Event>s3:ObjectRemoved:*</Event>
-</QueueConfiguration>`)
-	queueCase1 := &Queue{}
-	if err := xml.Unmarshal(data, queueCase1); err != nil {
-		panic(err)
-	}
-
-	data = []byte(`
-<QueueConfiguration>
-   <Id>1</Id>
-    <Filter>
-        <S3Key>
-            <FilterRule>
-                <Name>prefix</Name>
-                <Value>images/</Value>
-            </FilterRule>
-            <FilterRule>
-                <Name>suffix</Name>
-                <Value>jpg</Value>
-            </FilterRule>
-        </S3Key>
-   </Filter>
-   <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-   <Event>s3:ObjectCreated:Put</Event>
-</QueueConfiguration>`)
-	queueCase2 := &Queue{}
-	if err := xml.Unmarshal(data, queueCase2); err != nil {
-		panic(err)
-	}
-
-	rulesMapCase1 := NewRulesMap([]Name{ObjectAccessedAll, ObjectCreatedAll, ObjectRemovedAll}, "*", TargetID{"1", "webhook"})
-	rulesMapCase2 := NewRulesMap([]Name{ObjectCreatedPut}, "images/*jpg", TargetID{"1", "webhook"})
-
-	testCases := []struct {
-		queue          *Queue
+		topic          *Topic
 		expectedResult RulesMap
 	}{
-		{queueCase1, rulesMapCase1},
-		{queueCase2, rulesMapCase2},
+		{topicCase1, rulesMapCase1},
+		{topicCase2, rulesMapCase2},
 	}
 
 	for i, testCase := range testCases {
-		result := testCase.queue.ToRulesMap()
+		result := testCase.topic.ToRulesMap()
 
 		if !reflect.DeepEqual(result, testCase.expectedResult) {
 			t.Fatalf("test %v: data: expected: %v, got: %v", i+1, testCase.expectedResult, result)
@@ -398,191 +259,156 @@ func TestQueueToRulesMap(t *testing.T) {
 
 func TestConfigUnmarshalXML(t *testing.T) {
 	dataCase1 := []byte(`
-<NotificationConfiguration   xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
       <Id>1</Id>
       <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
       <Event>s3:ObjectAccessed:*</Event>
       <Event>s3:ObjectCreated:*</Event>
       <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
+   </TopicConfiguration>
 </NotificationConfiguration>
 `)
 
 	dataCase2 := []byte(`
-	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-	   <QueueConfiguration>
-	      <Id>1</Id>
-	       <Filter>
-	           <S3Key>
-	               <FilterRule>
-	                   <Name>prefix</Name>
-	                   <Value>images/</Value>
-	               </FilterRule>
-	               <FilterRule>
-	                   <Name>suffix</Name>
-	                   <Value>jpg</Value>
-	               </FilterRule>
-	           </S3Key>
-	      </Filter>
-	      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-	      <Event>s3:ObjectCreated:Put</Event>
-	   </QueueConfiguration>
-	</NotificationConfiguration>
-	`)
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
+      <Id>1</Id>
+       <Filter>
+           <S3Key>
+               <FilterRule>
+                   <Name>prefix</Name>
+                   <Value>images/</Value>
+               </FilterRule>
+               <FilterRule>
+                   <Name>suffix</Name>
+                   <Value>jpg</Value>
+               </FilterRule>
+           </S3Key>
+      </Filter>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
+      <Event>s3:ObjectCreated:Put</Event>
+   </TopicConfiguration>
+</NotificationConfiguration>
+`)
 
 	dataCase3 := []byte(`
-	<NotificationConfiguration>
-	   <QueueConfiguration>
-	      <Id>1</Id>
-	      <Filter></Filter>
-	      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-	      <Event>s3:ObjectAccessed:*</Event>
-	      <Event>s3:ObjectCreated:*</Event>
-	      <Event>s3:ObjectRemoved:*</Event>
-	   </QueueConfiguration>
-	   <QueueConfiguration>
-	      <Id>2</Id>
-	       <Filter>
-	           <S3Key>
-	               <FilterRule>
-	                   <Name>prefix</Name>
-	                   <Value>images/</Value>
-	               </FilterRule>
-	               <FilterRule>
-	                   <Name>suffix</Name>
-	                   <Value>jpg</Value>
-	               </FilterRule>
-	           </S3Key>
-	      </Filter>
-	      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-	      <Event>s3:ObjectCreated:Put</Event>
-	   </QueueConfiguration>
-	</NotificationConfiguration>
-	`)
+<NotificationConfiguration>
+   <TopicConfiguration>
+      <Id>1</Id>
+      <Filter></Filter>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
+      <Event>s3:ObjectAccessed:*</Event>
+      <Event>s3:ObjectCreated:*</Event>
+      <Event>s3:ObjectRemoved:*</Event>
+   </TopicConfiguration>
+   <TopicConfiguration>
+      <Id>2</Id>
+       <Filter>
+           <S3Key>
+               <FilterRule>
+                   <Name>prefix</Name>
+                   <Value>images/</Value>
+               </FilterRule>
+               <FilterRule>
+                   <Name>suffix</Name>
+                   <Value>jpg</Value>
+               </FilterRule>
+           </S3Key>
+      </Filter>
+      <Topic>arn:gcp:pubsub::my-project:another-topic</Topic>
+      <Event>s3:ObjectCreated:Put</Event>
+   </TopicConfiguration>
+</NotificationConfiguration>
+`)
 
+	// Test case with CloudFunctionConfiguration (should fail - not supported)
 	dataCase4 := []byte(`
-	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-	   <QueueConfiguration>
-	      <Id>1</Id>
-	      <Filter></Filter>
-	      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-	      <Event>s3:ObjectAccessed:*</Event>
-	      <Event>s3:ObjectCreated:*</Event>
-	      <Event>s3:ObjectRemoved:*</Event>
-	   </QueueConfiguration>
-	   <CloudFunctionConfiguration>
-	      <Id>1</Id>
-	      <Filter>
-	             <S3Key>
-	                 <FilterRule>
-	                     <Name>suffix</Name>
-	                     <Value>.jpg</Value>
-	                 </FilterRule>
-	             </S3Key>
-	      </Filter>
-	      <Cloudcode>arn:aws:lambda:us-west-2:444455556666:cloud-function-A</Cloudcode>
-	      <Event>s3:ObjectCreated:Put</Event>
-	   </CloudFunctionConfiguration>
-	   <TopicConfiguration>
-	      <Topic>arn:aws:sns:us-west-2:444455556666:sns-notification-one</Topic>
-	      <Event>s3:ObjectCreated:*</Event>
-	  </TopicConfiguration>
-	</NotificationConfiguration>
-	`)
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
+      <Id>1</Id>
+      <Filter></Filter>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
+      <Event>s3:ObjectAccessoryed:*</Event>
+   </TopicConfiguration>
+   <CloudFunctionConfiguration>
+      <Id>1</Id>
+      <Filter>
+             <S3Key>
+                 <FilterRule>
+                     <Name>suffix</Name>
+                     <Value>.jpg</Value>
+                 </FilterRule>
+             </S3Key>
+      </Filter>
+      <Cloudcode>arn:aws:lambda:us-west-2:444455556666:cloud-function-A</Cloudcode>
+      <Event>s3:ObjectCreated:Put</Event>
+   </CloudFunctionConfiguration>
+</NotificationConfiguration>
+`)
 
-	dataCase5 := []byte(`<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/" ></NotificationConfiguration>`)
-
-	// Test case with only TopicConfiguration (should pass)
-	dataCase6 := []byte(`
-	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-	   <TopicConfiguration>
-	      <Id>1</Id>
-	      <Filter></Filter>
-	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
-	      <Event>s3:ObjectCreated:*</Event>
-	   </TopicConfiguration>
-	</NotificationConfiguration>
-	`)
-
-	// Test case with both QueueConfiguration and TopicConfiguration (should pass)
-	dataCase7 := []byte(`
-	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-	   <QueueConfiguration>
-	      <Id>1</Id>
-	      <Filter></Filter>
-	      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-	      <Event>s3:ObjectCreated:*</Event>
-	   </QueueConfiguration>
-	   <TopicConfiguration>
-	      <Id>2</Id>
-	      <Filter></Filter>
-	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
-	      <Event>s3:ObjectRemoved:*</Event>
-	   </TopicConfiguration>
-	</NotificationConfiguration>
-	`)
+	dataCase5 := []byte(`<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"></NotificationConfiguration>`)
 
 	// Test case with duplicate TopicConfiguration (should fail)
-	dataCase8 := []byte(`
-	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-	   <TopicConfiguration>
-	      <Id>1</Id>
-	      <Filter></Filter>
-	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
-	      <Event>s3:ObjectCreated:*</Event>
-	   </TopicConfiguration>
-	   <TopicConfiguration>
-	      <Id>1</Id>
-	      <Filter></Filter>
-	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
-	      <Event>s3:ObjectCreated:*</Event>
-	   </TopicConfiguration>
-	</NotificationConfiguration>
-	`)
+	dataCase6 := []byte(`
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
+      <Id>1</Id>
+      <Filter></Filter>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
+      <Event>s3:ObjectCreated:*</Event>
+   </TopicConfiguration>
+   <TopicConfiguration>
+      <Id>1</Id>
+      <Filter></Filter>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
+      <Event>s3:ObjectCreated:*</Event>
+   </TopicConfiguration>
+</NotificationConfiguration>
+`)
 
 	// Test case with duplicate TopicConfiguration with events in different order (should fail)
-	dataCase9 := []byte(`
-	<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-	   <TopicConfiguration>
-	      <Id>1</Id>
-	      <Filter>
-	           <S3Key>
-	               <FilterRule>
-	                   <Name>prefix</Name>
-	                   <Value>images/</Value>
-	               </FilterRule>
-	               <FilterRule>
-	                   <Name>suffix</Name>
-	                   <Value>jpg</Value>
-	               </FilterRule>
-	           </S3Key>
-		  </Filter>
-	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
-	      <Event>s3:ObjectCreated:*</Event>
-	      <Event>s3:ObjectRemoved:*</Event>
-	   </TopicConfiguration>
-	   <TopicConfiguration>
-	      <Id>1</Id>
-	      <Filter>
-	           <S3Key>
-	               <FilterRule>
-	                   <Name>suffix</Name>
-	                   <Value>jpg</Value>
-	               </FilterRule>
-	               <FilterRule>
-	                   <Name>prefix</Name>
-	                   <Value>images/</Value>
-	               </FilterRule>
-	           </S3Key>
-		  </Filter>
-	      <Topic>arn:minio:sns:us-east-1:1:topic</Topic>
-	      <Event>s3:ObjectRemoved:*</Event>
-	      <Event>s3:ObjectCreated:*</Event>
-	   </TopicConfiguration>
-	</NotificationConfiguration>
-	`)
+	dataCase7 := []byte(`
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
+      <Id>1</Id>
+      <Filter>
+           <S3Key>
+               <FilterRule>
+                   <Name>prefix</Name>
+                   <Value>images/</Value>
+               </FilterRule>
+               <FilterRule>
+                   <Name>suffix</Name>
+                   <Value>jpg</Value>
+               </FilterRule>
+           </S3Key>
+      </Filter>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
+      <Event>s3:ObjectCreated:*</Event>
+      <Event>s3:ObjectRemoved:*</Event>
+   </TopicConfiguration>
+   <TopicConfiguration>
+      <Id>1</Id>
+      <Filter>
+           <S3Key>
+               <FilterRule>
+                   <Name>suffix</Name>
+                   <Value>jpg</Value>
+               </FilterRule>
+               <FilterRule>
+                   <Name>prefix</Name>
+                   <Value>images/</Value>
+               </FilterRule>
+           </S3Key>
+      </Filter>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
+      <Event>s3:ObjectRemoved:*</Event>
+      <Event>s3:ObjectCreated:*</Event>
+   </TopicConfiguration>
+</NotificationConfiguration>
+`)
 
 	testCases := []struct {
 		data      []byte
@@ -591,13 +417,10 @@ func TestConfigUnmarshalXML(t *testing.T) {
 		{dataCase1, false},
 		{dataCase2, false},
 		{dataCase3, false},
-		{dataCase4, true}, // Still fails due to CloudFunctionConfiguration
-		// make sure we don't fail when queue is empty.
-		{dataCase5, false},
-		{dataCase6, false}, // TopicConfiguration should now be accepted
-		{dataCase7, false}, // Both Queue and Topic should be accepted
-		{dataCase8, true},  // Duplicate TopicConfiguration should fail
-		{dataCase9, true},  // Duplicate TopicConfiguration with filters and events in different order should fail
+		{dataCase4, true}, // CloudFunctionConfiguration not supported
+		{dataCase5, false}, // Empty config is valid
+		{dataCase6, true},  // Duplicate TopicConfiguration should fail
+		{dataCase7, true},  // Duplicate TopicConfiguration with filters and events in different order should fail
 	}
 
 	for i, testCase := range testCases {
@@ -610,248 +433,17 @@ func TestConfigUnmarshalXML(t *testing.T) {
 	}
 }
 
-func TestConfigValidate(t *testing.T) {
+func TestConfigToRulesMap(t *testing.T) {
 	data := []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
-      <Id>1</Id>
-      <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-      <Event>s3:ObjectAccessed:*</Event>
-      <Event>s3:ObjectCreated:*</Event>
-      <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
-</NotificationConfiguration>
-`)
-	config1 := &Config{}
-	if err := xml.Unmarshal(data, config1); err != nil {
-		panic(err)
-	}
-
-	data = []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
-      <Id>1</Id>
-       <Filter>
-           <S3Key>
-               <FilterRule>
-                   <Name>prefix</Name>
-                   <Value>images/</Value>
-               </FilterRule>
-               <FilterRule>
-                   <Name>suffix</Name>
-                   <Value>jpg</Value>
-               </FilterRule>
-           </S3Key>
-      </Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-      <Event>s3:ObjectCreated:Put</Event>
-   </QueueConfiguration>
-</NotificationConfiguration>
-`)
-	config2 := &Config{}
-	if err := xml.Unmarshal(data, config2); err != nil {
-		panic(err)
-	}
-
-	data = []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
-      <Id>1</Id>
-      <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-      <Event>s3:ObjectAccessed:*</Event>
-      <Event>s3:ObjectCreated:*</Event>
-      <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
-   <QueueConfiguration>
-      <Id>2</Id>
-       <Filter>
-           <S3Key>
-               <FilterRule>
-                   <Name>prefix</Name>
-                   <Value>images/</Value>
-               </FilterRule>
-               <FilterRule>
-                   <Name>suffix</Name>
-                   <Value>jpg</Value>
-               </FilterRule>
-           </S3Key>
-      </Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-      <Event>s3:ObjectCreated:Put</Event>
-   </QueueConfiguration>
-</NotificationConfiguration>
-`)
-	config3 := &Config{}
-	if err := xml.Unmarshal(data, config3); err != nil {
-		panic(err)
-	}
-
-	targetList1 := NewTargetList()
-
-	targetList2 := NewTargetList()
-	if err := targetList2.Add(&ExampleTarget{TargetID{"1", "webhook"}, false, false}); err != nil {
-		panic(err)
-	}
-
-	testCases := []struct {
-		config     *Config
-		region     string
-		targetList *TargetList
-		expectErr  bool
-	}{
-		{config1, "eu-west-1", nil, true},
-		{config2, "us-east-1", targetList1, true},
-		{config3, "", targetList2, false},
-		{config2, "us-east-1", targetList2, false},
-	}
-
-	for i, testCase := range testCases {
-		err := testCase.config.Validate(testCase.region, testCase.targetList)
-		expectErr := (err != nil)
-
-		if expectErr != testCase.expectErr {
-			t.Fatalf("test %v: error: expected: %v, got: %v", i+1, testCase.expectErr, expectErr)
-		}
-	}
-}
-
-func TestConfigSetRegion(t *testing.T) {
-	data := []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
-      <Id>1</Id>
-      <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-      <Event>s3:ObjectAccessed:*</Event>
-      <Event>s3:ObjectCreated:*</Event>
-      <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
-</NotificationConfiguration>
-`)
-	config1 := &Config{}
-	if err := xml.Unmarshal(data, config1); err != nil {
-		panic(err)
-	}
-
-	data = []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
-      <Id>1</Id>
-       <Filter>
-           <S3Key>
-               <FilterRule>
-                   <Name>prefix</Name>
-                   <Value>images/</Value>
-               </FilterRule>
-               <FilterRule>
-                   <Name>suffix</Name>
-                   <Value>jpg</Value>
-               </FilterRule>
-           </S3Key>
-      </Filter>
-      <Queue>arn:minio:sqs::1:webhook</Queue>
-      <Event>s3:ObjectCreated:Put</Event>
-   </QueueConfiguration>
-</NotificationConfiguration>
-`)
-	config2 := &Config{}
-	if err := xml.Unmarshal(data, config2); err != nil {
-		panic(err)
-	}
-
-	data = []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
-      <Id>1</Id>
-      <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-      <Event>s3:ObjectAccessed:*</Event>
-      <Event>s3:ObjectCreated:*</Event>
-      <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
-   <QueueConfiguration>
-      <Id>2</Id>
-       <Filter>
-           <S3Key>
-               <FilterRule>
-                   <Name>prefix</Name>
-                   <Value>images/</Value>
-               </FilterRule>
-               <FilterRule>
-                   <Name>suffix</Name>
-                   <Value>jpg</Value>
-               </FilterRule>
-           </S3Key>
-      </Filter>
-      <Queue>arn:minio:sqs:us-east-1:2:amqp</Queue>
-      <Event>s3:ObjectCreated:Put</Event>
-   </QueueConfiguration>
-</NotificationConfiguration>
-`)
-	config3 := &Config{}
-	if err := xml.Unmarshal(data, config3); err != nil {
-		panic(err)
-	}
-
-	data = []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
    <TopicConfiguration>
       <Id>1</Id>
       <Filter></Filter>
-      <Topic>arn:minio:sns::1:topic</Topic>
-      <Event>s3:ObjectCreated:*</Event>
-   </TopicConfiguration>
-</NotificationConfiguration>
-`)
-	config4 := &Config{}
-	if err := xml.Unmarshal(data, config4); err != nil {
-		panic(err)
-	}
-
-	testCases := []struct {
-		config         *Config
-		region         string
-		expectedResult []ARN
-	}{
-		{config1, "eu-west-1", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "eu-west-1", ServiceType: "sqs"}}},
-		{config1, "", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}}},
-		{config2, "us-east-1", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}}},
-		{config2, "", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}}},
-		{config3, "us-east-1", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "us-east-1", ServiceType: "sqs"}, {TargetID: TargetID{"2", "amqp"}, Region: "us-east-1", ServiceType: "sqs"}}},
-		{config3, "", []ARN{{TargetID: TargetID{"1", "webhook"}, Region: "", ServiceType: "sqs"}, {TargetID: TargetID{"2", "amqp"}, Region: "", ServiceType: "sqs"}}},
-		{config4, "eu-west-1", []ARN{{TargetID: TargetID{"1", "topic"}, Region: "eu-west-1", ServiceType: "sns"}}},
-		{config4, "", []ARN{{TargetID: TargetID{"1", "topic"}, Region: "", ServiceType: "sns"}}},
-	}
-
-	for i, testCase := range testCases {
-		testCase.config.SetRegion(testCase.region)
-		result := []ARN{}
-		for _, queue := range testCase.config.QueueList {
-			result = append(result, queue.ARN)
-		}
-		for _, topic := range testCase.config.TopicList {
-			result = append(result, topic.ARN)
-		}
-
-		if !reflect.DeepEqual(result, testCase.expectedResult) {
-			t.Fatalf("test %v: data: expected: %v, got: %v", i+1, testCase.expectedResult, result)
-		}
-	}
-}
-
-func TestConfigToRulesMap(t *testing.T) {
-	data := []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
-      <Id>1</Id>
-      <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
       <Event>s3:ObjectAccessed:*</Event>
       <Event>s3:ObjectCreated:*</Event>
       <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
+   </TopicConfiguration>
 </NotificationConfiguration>
 `)
 	config1 := &Config{}
@@ -860,8 +452,8 @@ func TestConfigToRulesMap(t *testing.T) {
 	}
 
 	data = []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
       <Id>1</Id>
        <Filter>
            <S3Key>
@@ -875,9 +467,9 @@ func TestConfigToRulesMap(t *testing.T) {
                </FilterRule>
            </S3Key>
       </Filter>
-      <Queue>arn:minio:sqs::1:webhook</Queue>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
       <Event>s3:ObjectCreated:Put</Event>
-   </QueueConfiguration>
+   </TopicConfiguration>
 </NotificationConfiguration>
 `)
 	config2 := &Config{}
@@ -886,16 +478,16 @@ func TestConfigToRulesMap(t *testing.T) {
 	}
 
 	data = []byte(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
       <Id>1</Id>
       <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
       <Event>s3:ObjectAccessed:*</Event>
       <Event>s3:ObjectCreated:*</Event>
       <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
-   <QueueConfiguration>
+   </TopicConfiguration>
+   <TopicConfiguration>
       <Id>2</Id>
        <Filter>
            <S3Key>
@@ -909,9 +501,9 @@ func TestConfigToRulesMap(t *testing.T) {
                </FilterRule>
            </S3Key>
       </Filter>
-      <Queue>arn:minio:sqs:us-east-1:2:amqp</Queue>
+      <Topic>arn:gcp:pubsub::my-project:another-topic</Topic>
       <Event>s3:ObjectCreated:Put</Event>
-   </QueueConfiguration>
+   </TopicConfiguration>
 </NotificationConfiguration>
 `)
 	config3 := &Config{}
@@ -919,12 +511,12 @@ func TestConfigToRulesMap(t *testing.T) {
 		panic(err)
 	}
 
-	rulesMapCase1 := NewRulesMap([]Name{ObjectAccessedAll, ObjectCreatedAll, ObjectRemovedAll}, "*", TargetID{"1", "webhook"})
+	rulesMapCase1 := NewRulesMap([]Name{ObjectAccessedAll, ObjectCreatedAll, ObjectRemovedAll}, "*", TargetID{"my-project", "my-topic"})
 
-	rulesMapCase2 := NewRulesMap([]Name{ObjectCreatedPut}, "images/*jpg", TargetID{"1", "webhook"})
+	rulesMapCase2 := NewRulesMap([]Name{ObjectCreatedPut}, "images/*jpg", TargetID{"my-project", "my-topic"})
 
-	rulesMapCase3 := NewRulesMap([]Name{ObjectAccessedAll, ObjectCreatedAll, ObjectRemovedAll}, "*", TargetID{"1", "webhook"})
-	rulesMapCase3.add([]Name{ObjectCreatedPut}, "images/*jpg", TargetID{"2", "amqp"})
+	rulesMapCase3 := NewRulesMap([]Name{ObjectAccessedAll, ObjectCreatedAll, ObjectRemovedAll}, "*", TargetID{"my-project", "my-topic"})
+	rulesMapCase3.add([]Name{ObjectCreatedPut}, "images/*jpg", TargetID{"my-project", "another-topic"})
 
 	testCases := []struct {
 		config         *Config
@@ -945,22 +537,24 @@ func TestConfigToRulesMap(t *testing.T) {
 }
 
 func TestParseConfig(t *testing.T) {
+	// Valid single topic config
 	reader1 := strings.NewReader(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
       <Id>1</Id>
       <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
       <Event>s3:ObjectAccessed:*</Event>
       <Event>s3:ObjectCreated:*</Event>
       <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
+   </TopicConfiguration>
 </NotificationConfiguration>
 `)
 
+	// Valid topic config with filters
 	reader2 := strings.NewReader(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
       <Id>1</Id>
        <Filter>
            <S3Key>
@@ -974,23 +568,24 @@ func TestParseConfig(t *testing.T) {
                </FilterRule>
            </S3Key>
       </Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
       <Event>s3:ObjectCreated:Put</Event>
-   </QueueConfiguration>
+   </TopicConfiguration>
 </NotificationConfiguration>
 `)
 
+	// Valid multiple topic configs
 	reader3 := strings.NewReader(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
       <Id>1</Id>
       <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
       <Event>s3:ObjectAccessed:*</Event>
       <Event>s3:ObjectCreated:*</Event>
       <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
-   <QueueConfiguration>
+   </TopicConfiguration>
+   <TopicConfiguration>
       <Id>2</Id>
        <Filter>
            <S3Key>
@@ -1004,22 +599,21 @@ func TestParseConfig(t *testing.T) {
                </FilterRule>
            </S3Key>
       </Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
+      <Topic>arn:gcp:pubsub::my-project:another-topic</Topic>
       <Event>s3:ObjectCreated:Put</Event>
-   </QueueConfiguration>
+   </TopicConfiguration>
 </NotificationConfiguration>
 `)
 
+	// Config with CloudFunctionConfiguration (should fail)
 	reader4 := strings.NewReader(`
-<NotificationConfiguration  xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-   <QueueConfiguration>
+<NotificationConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+   <TopicConfiguration>
       <Id>1</Id>
       <Filter></Filter>
-      <Queue>arn:minio:sqs:us-east-1:1:webhook</Queue>
-      <Event>s3:ObjectAccessed:*</Event>
+      <Topic>arn:gcp:pubsub::my-project:my-topic</Topic>
       <Event>s3:ObjectCreated:*</Event>
-      <Event>s3:ObjectRemoved:*</Event>
-   </QueueConfiguration>
+   </TopicConfiguration>
    <CloudFunctionConfiguration>
       <Id>1</Id>
       <Filter>
@@ -1033,38 +627,24 @@ func TestParseConfig(t *testing.T) {
       <Cloudcode>arn:aws:lambda:us-west-2:444455556666:cloud-function-A</Cloudcode>
       <Event>s3:ObjectCreated:Put</Event>
    </CloudFunctionConfiguration>
-   <TopicConfiguration>
-      <Topic>arn:aws:sns:us-west-2:444455556666:sns-notification-one</Topic>
-      <Event>s3:ObjectCreated:*</Event>
-  </TopicConfiguration>
 </NotificationConfiguration>
 `)
 
-	targetList1 := NewTargetList()
-
-	targetList2 := NewTargetList()
-	if err := targetList2.Add(&ExampleTarget{TargetID{"1", "webhook"}, false, false}); err != nil {
-		panic(err)
-	}
-
 	testCases := []struct {
-		reader     *strings.Reader
-		region     string
-		targetList *TargetList
-		expectErr  bool
+		reader    *strings.Reader
+		expectErr bool
 	}{
-		{reader1, "eu-west-1", nil, true},
-		{reader2, "us-east-1", targetList1, true},
-		{reader4, "us-east-1", targetList1, true},
-		{reader3, "", targetList2, false},
-		{reader2, "us-east-1", targetList2, false},
+		{reader1, false},
+		{reader2, false},
+		{reader3, false},
+		{reader4, true}, // CloudFunctionConfiguration not supported
 	}
 
 	for i, testCase := range testCases {
 		if _, err := testCase.reader.Seek(0, 0); err != nil {
 			panic(err)
 		}
-		_, err := ParseConfig(testCase.reader, testCase.region, testCase.targetList)
+		_, err := ParseConfig(testCase.reader)
 		expectErr := (err != nil)
 
 		if expectErr != testCase.expectErr {

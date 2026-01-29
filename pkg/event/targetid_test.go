@@ -41,14 +41,13 @@ func TestTargetDString(t *testing.T) {
 }
 
 func TestTargetDToARN(t *testing.T) {
-	tid := TargetID{"1", "webhook"}
+	tid := TargetID{"my-project", "my-topic"}
 	testCases := []struct {
 		tid         TargetID
 		region      string
 		expectedARN ARN
 	}{
-		{tid, "", ARN{TargetID: tid, Region: ""}},
-		{tid, "us-east-1", ARN{TargetID: tid, Region: "us-east-1"}},
+		{tid, "", ARN{AccountID: "my-project", ResourceID: "my-topic", Region: ""}},
 	}
 
 	for i, testCase := range testCases {

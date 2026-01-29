@@ -190,35 +190,10 @@ func (q *Queue) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
-// Validate - checks whether queue has valid values or not.
-func (q Queue) Validate(region string, targetList *TargetList) error {
-	if q.ARN.Region == "" {
-		if !targetList.Exists(q.ARN.TargetID) {
-			return &ErrARNNotFound{q.ARN}
-		}
-		return nil
-	}
-
-	if region != "" && q.ARN.Region != region {
-		return &ErrUnknownRegion{q.ARN.Region}
-	}
-
-	if !targetList.Exists(q.ARN.TargetID) {
-		return &ErrARNNotFound{q.ARN}
-	}
-
-	return nil
-}
-
-// SetRegion - sets region value to queue's ARN.
-func (q *Queue) SetRegion(region string) {
-	q.ARN.Region = region
-}
-
 // ToRulesMap - converts Queue to RulesMap
 func (q Queue) ToRulesMap() RulesMap {
 	pattern := q.Filter.RuleList.Pattern()
-	return NewRulesMap(q.Events, pattern, q.ARN.TargetID)
+	return NewRulesMap(q.Events, pattern, q.ARN.ToTargetID())
 }
 
 // Unused.  Available for completion.
@@ -233,35 +208,37 @@ type Topic struct {
 	ARN ARN `xml:"Topic" json:"Topic"`
 }
 
-// Validate - checks whether Topic fields are valid or not.
-func (t Topic) Validate(region string, targetList *TargetList) error {
-	if t.ARN.Region == "" {
-		if !targetList.Exists(t.ARN.TargetID) {
-			return &ErrARNNotFound{t.ARN}
+// UnmarshalXML - decodes XML data.
+func (t *Topic) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	// Make subtype to avoid recursive UnmarshalXML().
+	type topic Topic
+	parsedTopic := topic{}
+	if err := d.DecodeElement(&parsedTopic, &start); err != nil {
+		return err
+	}
+
+	if len(parsedTopic.Events) == 0 {
+		return errors.New("missing event name(s)")
+	}
+
+	eventStringSet := set.NewStringSet()
+	for _, eventName := range parsedTopic.Events {
+		if eventStringSet.Contains(eventName.String()) {
+			return &ErrDuplicateEventName{eventName}
 		}
-		return nil
+
+		eventStringSet.Add(eventName.String())
 	}
 
-	if region != "" && t.ARN.Region != region {
-		return &ErrUnknownRegion{t.ARN.Region}
-	}
-
-	if !targetList.Exists(t.ARN.TargetID) {
-		return &ErrARNNotFound{t.ARN}
-	}
+	*t = Topic(parsedTopic)
 
 	return nil
-}
-
-// SetRegion - sets region value to topic's ARN.
-func (t *Topic) SetRegion(region string) {
-	t.ARN.Region = region
 }
 
 // ToRulesMap - converts Topic to RulesMap
 func (t Topic) ToRulesMap() RulesMap {
 	pattern := t.Filter.RuleList.Pattern()
-	return NewRulesMap(t.Events, pattern, t.ARN.TargetID)
+	return NewRulesMap(t.Events, pattern, t.ARN.ToTargetID())
 }
 
 // slicesEqualAsSet checks if two slices contain the same unique elements (order and duplicates ignored).
@@ -385,33 +362,6 @@ func (conf *Config) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
-// Validate - checks whether config has valid values or not.
-func (conf Config) Validate(region string, targetList *TargetList) error {
-	for _, queue := range conf.QueueList {
-		if err := queue.Validate(region, targetList); err != nil {
-			return err
-		}
-	}
-
-	for _, topic := range conf.TopicList {
-		if err := topic.Validate(region, targetList); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// SetRegion - sets region to all queue and topic configurations.
-func (conf *Config) SetRegion(region string) {
-	for i := range conf.QueueList {
-		conf.QueueList[i].SetRegion(region)
-	}
-
-	for i := range conf.TopicList {
-		conf.TopicList[i].SetRegion(region)
-	}
-}
 
 // ToRulesMap - converts all queue and topic configurations to RulesMap.
 func (conf *Config) ToRulesMap() RulesMap {
@@ -429,18 +379,13 @@ func (conf *Config) ToRulesMap() RulesMap {
 }
 
 // ParseConfig - parses data in reader to notification configuration.
-func ParseConfig(reader io.Reader, region string, targetList *TargetList) (*Config, error) {
+func ParseConfig(reader io.Reader) (*Config, error) {
 	var config Config
 
 	if err := xml.NewDecoder(reader).Decode(&config); err != nil {
 		return nil, err
 	}
 
-	if err := config.Validate(region, targetList); err != nil {
-		return nil, err
-	}
-
-	config.SetRegion(region)
 	//If xml namespace is empty, set a default value before returning.
 	if config.XMLNS == "" {
 		config.XMLNS = "http://s3.amazonaws.com/doc/2006-03-01/"
