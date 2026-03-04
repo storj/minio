@@ -48,6 +48,14 @@ type APIError struct {
 	HTTPStatusCode int
 }
 
+// APIErrorProvider provides an API error suitable for use in HTTP responses.
+//
+// ObjectLayer implementations may return errors implementing this interface to allow
+// handlers to convert them directly into API errors without additional logic.
+type APIErrorProvider interface {
+	ToAPIError() APIError
+}
+
 // APIErrorResponse - error response format
 type APIErrorResponse struct {
 	XMLName    xml.Name `xml:"Error" json:"-"`
@@ -2102,6 +2110,10 @@ var noError = APIError{}
 func ToAPIError(ctx context.Context, err error) APIError {
 	if err == nil {
 		return noError
+	}
+
+	if provider, ok := err.(APIErrorProvider); ok {
+		return provider.ToAPIError()
 	}
 
 	var apiErr = errorCodes.ToAPIErr(toAPIErrorCode(ctx, err))
