@@ -2223,6 +2223,7 @@ func ToAPIError(ctx context.Context, err error) APIError {
 
 // awsigAPIErrorCodes maps awsig errors to APIErrorCodes.
 var awsigAPIErrorCodes = map[error]APIErrorCode {
+	awsig.ErrAccessDenied:                      ErrAccessDenied,
 	awsig.ErrAuthorizationHeaderMalformed:      ErrAuthorizationHeaderMalformed,
 	awsig.ErrContentLengthWithTransferEncoding: ErrContentLengthWithTransferEncoding,
 	awsig.ErrInvalidAccessKeyID:                ErrInvalidAccessKeyID,
@@ -2232,9 +2233,8 @@ var awsigAPIErrorCodes = map[error]APIErrorCode {
 	awsig.ErrInvalidPresignedExpiration:        ErrMalformedExpires,
 	awsig.ErrInvalidSignature:                  ErrSignatureDoesNotMatch,
 	awsig.ErrInvalidXAmzContentSHA256:          ErrInvalidContentSHA256,
-	awsig.ErrInvalidXAmzDecodedContentSHA256:   ErrMissingContentLength,
+	awsig.ErrInvalidXAmzDecodedContentLength:   ErrMissingContentLength,
 	awsig.ErrMalformedPOSTRequest:              ErrMalformedPOSTRequest,
-	awsig.ErrMissingAuthenticationToken:        ErrAccessDenied,
 	awsig.ErrMissingContentLength: 	            ErrMissingContentLength,
 	awsig.ErrMissingPOSTPolicy:                 ErrMissingPOSTPolicy,
 	awsig.ErrMissingSecurityHeader:             ErrMissingSecurityHeader,
