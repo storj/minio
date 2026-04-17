@@ -104,3 +104,6 @@ var errLockedObject = errors.New("Object is WORM protected and cannot be overwri
 
 // error returned when upload id not found
 var errUploadIDNotFound = errors.New("Specified Upload ID is not found")
+
+// errMissingComputedMD5 is used when the MD5 computed over a request's body is missing.
+var errMissingComputedMD5 = errors.New("No MD5 was computed")

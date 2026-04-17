@@ -1068,11 +1068,10 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var pReader *PutObjReader
 	var reader io.Reader = r.Body
 	actualSize := size
 
-	hashReader, err := hash.NewReader(reader, size, "", "", actualSize)
+	hashReader, err := hash.NewDefaultReader(reader, size, "", "", actualSize)
 	if err != nil {
 		writeWebErrorResponse(w, err)
 		return
@@ -1083,7 +1082,7 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 		metadata[ReservedMetadataPrefix+"compression"] = compressionAlgorithmV2
 		metadata[ReservedMetadataPrefix+"actual-size"] = strconv.FormatInt(actualSize, 10)
 
-		actualReader, err := hash.NewReader(reader, actualSize, "", "", actualSize)
+		actualReader, err := hash.NewDefaultReader(reader, actualSize, "", "", actualSize)
 		if err != nil {
 			writeWebErrorResponse(w, err)
 			return
@@ -1094,7 +1093,7 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 		s2c := newS2CompressReader(actualReader, actualSize)
 		defer s2c.Close()
 		reader = etag.Wrap(s2c, actualReader)
-		hashReader, err = hash.NewReader(reader, size, "", "", actualSize)
+		hashReader, err = hash.NewDefaultReader(reader, size, "", "", actualSize)
 		if err != nil {
 			writeWebErrorResponse(w, err)
 			return
@@ -1105,7 +1104,7 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 	if mustReplicate {
 		metadata[xhttp.AmzBucketReplicationStatus] = string(replication.Pending)
 	}
-	pReader = NewPutObjReader(hashReader)
+
 	// get gateway encryption options
 	opts, err := putOpts(ctx, r, bucket, object, metadata)
 	if err != nil {
@@ -1113,6 +1112,7 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var pReader *PutObjReader
 	if objectAPI.IsEncryptionSupported() {
 		if _, ok := crypto.IsRequested(r.Header); ok && !HasSuffix(object, SlashSeparator) { // handle SSE requests
 			var (
@@ -1126,17 +1126,12 @@ func (web *webAPIHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 			}
 			info := ObjectInfo{Size: size}
 			// do not try to verify encrypted content
-			hashReader, err = hash.NewReader(etag.Wrap(encReader, hashReader), info.EncryptedSize(), "", "", size)
-			if err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return
-			}
-			pReader, err = pReader.WithEncryption(hashReader, &objectEncryptionKey)
-			if err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return
-			}
+			hashReader = hash.Wrap(encReader, hashReader, info.EncryptedSize(), size)
+			pReader = NewPutObjReaderWithEncryption(hashReader, objectEncryptionKey)
 		}
+	}
+	if pReader == nil {
+		pReader = NewPutObjReader(hashReader)
 	}
 
 	// Ensure that metadata does not contain sensitive information

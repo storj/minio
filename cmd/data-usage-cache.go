@@ -557,7 +557,7 @@ func (d *dataUsageCache) save(ctx context.Context, store objectIO, name string) 
 	}()
 	defer pr.Close()
 
-	r, err := hash.NewReader(pr, -1, "", "", -1)
+	r, err := hash.NewDefaultReader(pr, -1, "", "", -1)
 	if err != nil {
 		return err
 	}

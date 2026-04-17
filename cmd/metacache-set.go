@@ -663,7 +663,7 @@ func (er *erasureObjects) listPath(ctx context.Context, o listPathOptions) (entr
 					return nil
 				}
 				o.debugln(color.Green("listPath:")+" saving block", b.n, "to", o.objectPath(b.n))
-				r, err := hash.NewReader(bytes.NewReader(b.data), int64(len(b.data)), "", "", int64(len(b.data)))
+				r, err := hash.NewDefaultReader(bytes.NewReader(b.data), int64(len(b.data)), "", "", int64(len(b.data)))
 				logger.LogIf(ctx, err)
 				custom := b.headerKV()
 				_, err = er.putObject(ctx, minioMetaBucket, o.objectPath(b.n), NewPutObjReader(r), ObjectOptions{

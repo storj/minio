@@ -153,7 +153,7 @@ type ObjectInfo struct {
 
 	// Implements writer and reader used by CopyObject API
 	Writer       io.WriteCloser `json:"-"`
-	Reader       *hash.Reader   `json:"-"`
+	Reader       hash.Reader   `json:"-"`
 	PutObjReader *PutObjReader  `json:"-"`
 
 	metadataOnly bool

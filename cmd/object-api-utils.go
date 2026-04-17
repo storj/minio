@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -793,9 +792,8 @@ type SealMD5CurrFn func([]byte) []byte
 // PutObjReader is a type that wraps sio.EncryptReader and
 // underlying hash.Reader in a struct
 type PutObjReader struct {
-	*hash.Reader              // actual data stream
-	rawReader    *hash.Reader // original data stream
-	sealMD5Fn    SealMD5CurrFn
+	hash.Reader
+	sealMD5Fn SealMD5CurrFn
 }
 
 // Size returns the absolute number of bytes the Reader
@@ -805,65 +803,62 @@ func (p *PutObjReader) Size() int64 {
 	return p.Reader.Size()
 }
 
-// MD5CurrentHexString returns the current MD5Sum or encrypted MD5Sum
-// as a hex encoded string
-func (p *PutObjReader) MD5CurrentHexString() string {
-	md5sumCurr := p.rawReader.MD5Current()
+// MD5HexString returns the MD5 checksum (encrypted if encryption was requested) as a hex-encoded string.
+// It must not be called until all data has been read.
+func (p *PutObjReader) MD5HexString() (string, error) {
+	checksums, err := p.Reader.Checksums()
+	if err != nil {
+		return "", err
+	}
+
+	md5, ok := checksums[hash.AlgorithmMD5]
+	if !ok {
+		return "", errMissingComputedMD5
+	}
+
 	var appendHyphen bool
 	// md5sumcurr is not empty in two scenarios
 	// - server is running in strict compatibility mode
 	// - client set Content-Md5 during PUT operation
-	if len(md5sumCurr) == 0 {
+	if len(md5) == 0 {
 		// md5sumCurr is only empty when we are running
 		// in non-compatibility mode.
-		md5sumCurr = make([]byte, 16)
-		rand.Read(md5sumCurr)
+		md5 = make([]byte, 16)
+		rand.Read(md5)
 		appendHyphen = true
 	}
 	if p.sealMD5Fn != nil {
-		md5sumCurr = p.sealMD5Fn(md5sumCurr)
+		md5 = p.sealMD5Fn(md5)
 	}
 	if appendHyphen {
 		// Make sure to return etag string upto 32 length, for SSE
 		// requests ETag might be longer and the code decrypting the
 		// ETag ignores ETag in multipart ETag form i.e <hex>-N
-		return hex.EncodeToString(md5sumCurr)[:32] + "-1"
+		return hex.EncodeToString(md5)[:32] + "-1", nil
 	}
-	return hex.EncodeToString(md5sumCurr)
+	return hex.EncodeToString(md5), nil
 }
 
-// WithEncryption sets up encrypted reader and the sealing for content md5sum
-// using objEncKey. Unsealed md5sum is computed from the rawReader setup when
-// NewPutObjReader was called. It returns an error if called on an uninitialized
-// PutObjReader.
-func (p *PutObjReader) WithEncryption(encReader *hash.Reader, objEncKey *crypto.ObjectKey) (*PutObjReader, error) {
-	if p.Reader == nil {
-		return nil, errors.New("put-object reader uninitialized")
+// NewPutObjReaderWithEncryption returns a PutObjReader that encrypts MD5s
+// using objEncKey as the encryption key. The unencrypted MD5 is sourced from
+// the provided hash.Reader.
+func NewPutObjReaderWithEncryption(reader hash.Reader, objEncKey crypto.ObjectKey) *PutObjReader {
+	return &PutObjReader{
+		Reader: reader,
+		sealMD5Fn: func(md5CurrSum []byte) []byte {
+			var emptyKey [32]byte
+			if bytes.Equal(objEncKey[:], emptyKey[:]) {
+				return md5CurrSum
+			}
+			return objEncKey.SealETag(md5CurrSum)
+		},
 	}
-	p.Reader = encReader
-	p.sealMD5Fn = sealETagFn(*objEncKey)
-	return p, nil
 }
 
 // NewPutObjReader returns a new PutObjReader. It uses given hash.Reader's
 // MD5Current method to construct md5sum when requested downstream.
-func NewPutObjReader(rawReader *hash.Reader) *PutObjReader {
-	return &PutObjReader{Reader: rawReader, rawReader: rawReader}
-}
-
-func sealETag(encKey crypto.ObjectKey, md5CurrSum []byte) []byte {
-	var emptyKey [32]byte
-	if bytes.Equal(encKey[:], emptyKey[:]) {
-		return md5CurrSum
-	}
-	return encKey.SealETag(md5CurrSum)
-}
-
-func sealETagFn(key crypto.ObjectKey) SealMD5CurrFn {
-	fn := func(md5sumcurr []byte) []byte {
-		return sealETag(key, md5sumcurr)
-	}
-	return fn
+func NewPutObjReader(rawReader hash.Reader) *PutObjReader {
+	return &PutObjReader{Reader: rawReader}
 }
 
 // CleanMinioInternalMetadataKeys removes X-Amz-Meta- prefix from minio internal

@@ -701,7 +701,7 @@ func restoreTransitionedObject(ctx context.Context, bucket, object string, objAP
 		return err
 	}
 	defer gr.Close()
-	hashReader, err := hash.NewReader(gr, objInfo.Size, "", "", objInfo.Size)
+	hashReader, err := hash.NewDefaultReader(gr, objInfo.Size, "", "", objInfo.Size)
 	if err != nil {
 		return err
 	}

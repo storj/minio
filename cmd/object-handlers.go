@@ -1122,13 +1122,11 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 		reader = gr
 	}
 
-	srcInfo.Reader, err = hash.NewReader(reader, length, "", "", actualSize)
+	srcInfo.Reader, err = hash.NewDefaultReader(reader, length, "", "", actualSize)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
-
-	pReader := NewPutObjReader(srcInfo.Reader)
 
 	// Handle encryption
 	var encMetadata = make(map[string]string)
@@ -1233,23 +1231,20 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 			}
 
 			// do not try to verify encrypted content
-			srcInfo.Reader, err = hash.NewReader(reader, targetSize, "", "", actualSize)
+			srcInfo.Reader, err = hash.NewDefaultReader(reader, targetSize, "", "", actualSize)
 			if err != nil {
 				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return
 			}
 
 			if isTargetEncrypted {
-				pReader, err = pReader.WithEncryption(srcInfo.Reader, &objEncKey)
-				if err != nil {
-					WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-					return
-				}
+				srcInfo.PutObjReader = NewPutObjReaderWithEncryption(srcInfo.Reader, objEncKey)
 			}
 		}
 	}
-
-	srcInfo.PutObjReader = pReader
+	if srcInfo.PutObjReader == nil {
+		srcInfo.PutObjReader = NewPutObjReader(srcInfo.Reader)
+	}
 
 	srcInfo.UserDefined, err = getCpObjMetadataFromHeader(ctx, r, srcInfo.UserDefined)
 	if err != nil {
@@ -1546,7 +1541,7 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 		metadata[ReservedMetadataPrefix+"compression"] = compressionAlgorithmV2
 		metadata[ReservedMetadataPrefix+"actual-size"] = strconv.FormatInt(size, 10)
 
-		actualReader, err := hash.NewReader(reader, size, md5hex, sha256hex, actualSize)
+		actualReader, err := hash.NewDefaultReader(reader, size, md5hex, sha256hex, actualSize)
 		if err != nil {
 			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
@@ -1561,14 +1556,11 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 		sha256hex = ""
 	}
 
-	hashReader, err := hash.NewReader(reader, size, md5hex, sha256hex, actualSize)
+	hashReader, err := hash.NewDefaultReader(reader, size, md5hex, sha256hex, actualSize)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
-
-	rawReader := hashReader
-	pReader := NewPutObjReader(rawReader)
 
 	// get gateway encryption options
 	var opts ObjectOptions
@@ -1614,7 +1606,11 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 			return
 		}
 	}
-	var objectEncryptionKey crypto.ObjectKey
+
+	var (
+		objectEncryptionKey crypto.ObjectKey
+		pReader *PutObjReader
+	)
 	if objectAPI.IsEncryptionSupported() {
 		if _, ok := crypto.IsRequested(r.Header); ok && !HasSuffix(object, SlashSeparator) { // handle SSE requests
 			if crypto.SSECopy.IsRequested(r.Header) {
@@ -1622,7 +1618,8 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 				return
 			}
 
-			reader, objectEncryptionKey, err = EncryptRequest(hashReader, r, bucket, object, metadata)
+			var encReader io.Reader
+			encReader, objectEncryptionKey, err = EncryptRequest(hashReader, r, bucket, object, metadata)
 			if err != nil {
 				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return
@@ -1635,17 +1632,12 @@ func (api ObjectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 			}
 
 			// do not try to verify encrypted content
-			hashReader, err = hash.NewReader(etag.Wrap(reader, hashReader), wantSize, "", "", actualSize)
-			if err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return
-			}
-			pReader, err = pReader.WithEncryption(hashReader, &objectEncryptionKey)
-			if err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return
-			}
+			hashReader := hash.Wrap(encReader, hashReader, wantSize, actualSize)
+			pReader = NewPutObjReaderWithEncryption(hashReader, objectEncryptionKey)
 		}
+	}
+	if pReader == nil {
+		pReader = NewPutObjReader(hashReader)
 	}
 
 	// Ensure that metadata does not contain sensitive information
@@ -1811,7 +1803,7 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 		sha256hex = getContentSha256Cksum(r, serviceS3)
 	}
 
-	hreader, err := hash.NewReader(reader, size, md5hex, sha256hex, size)
+	hreader, err := hash.NewDefaultReader(reader, size, md5hex, sha256hex, size)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
@@ -1847,7 +1839,7 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 			metadata[ReservedMetadataPrefix+"compression"] = compressionAlgorithmV2
 			metadata[ReservedMetadataPrefix+"actual-size"] = strconv.FormatInt(size, 10)
 
-			actualReader, err := hash.NewReader(reader, size, "", "", actualSize)
+			actualReader, err := hash.NewDefaultReader(reader, size, "", "", actualSize)
 			if err != nil {
 				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return
@@ -1860,14 +1852,11 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 			size = -1 // Since compressed size is un-predictable.
 		}
 
-		hashReader, err := hash.NewReader(reader, size, "", "", actualSize)
+		hashReader, err := hash.NewDefaultReader(reader, size, "", "", actualSize)
 		if err != nil {
 			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 			return
 		}
-
-		rawReader := hashReader
-		pReader := NewPutObjReader(rawReader)
 
 		// get encryption options
 		opts, err := putOpts(ctx, r, bucket, object, metadata)
@@ -1909,7 +1898,7 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 			}
 		}
 
-		var objectEncryptionKey crypto.ObjectKey
+		var pReader *PutObjReader
 		if objectAPI.IsEncryptionSupported() {
 			if _, ok := crypto.IsRequested(r.Header); ok && !HasSuffix(object, SlashSeparator) { // handle SSE requests
 				if crypto.SSECopy.IsRequested(r.Header) {
@@ -1917,7 +1906,7 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 					return
 				}
 
-				reader, objectEncryptionKey, err = EncryptRequest(hashReader, r, bucket, object, metadata)
+				encReader, objectEncryptionKey, err := EncryptRequest(hashReader, r, bucket, object, metadata)
 				if err != nil {
 					WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 					return
@@ -1930,18 +1919,12 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 				}
 
 				// do not try to verify encrypted content
-				hashReader, err = hash.NewReader(etag.Wrap(reader, hashReader), wantSize, "", "", actualSize)
-				if err != nil {
-					WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-					return
-				}
-
-				pReader, err = pReader.WithEncryption(hashReader, &objectEncryptionKey)
-				if err != nil {
-					WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-					return
-				}
+				hashReader := hash.Wrap(encReader, hashReader, wantSize, actualSize)
+				pReader = NewPutObjReaderWithEncryption(hashReader, objectEncryptionKey)
 			}
+		}
+		if pReader == nil {
+			pReader = NewPutObjReader(hashReader)
 		}
 
 		// Ensure that metadata does not contain sensitive information
@@ -1957,12 +1940,23 @@ func (api ObjectAPIHandlers) PutObjectExtractHandler(w http.ResponseWriter, r *h
 		if replicate, sync := mustReplicate(ctx, r, bucket, object, metadata, ""); replicate {
 			scheduleReplication(ctx, objInfo.Clone(), objectAPI, sync, replication.ObjectReplicationType)
 		}
-
 	}
 
 	untar(hreader, putObjectTar)
 
-	w.Header()[xhttp.ETag] = []string{`"` + hex.EncodeToString(hreader.MD5Current()) + `"`}
+	checksums, err := hreader.Checksums()
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
+	md5, ok := checksums[hash.AlgorithmMD5]
+	if !ok {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, errMissingComputedMD5), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
+	w.Header()[xhttp.ETag] = []string{`"` + hex.EncodeToString(md5) + `"`}
 	writeSuccessResponseHeadersOnly(w)
 }
 
@@ -2398,7 +2392,7 @@ func (api ObjectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 		}
 	}
 
-	hashReader, err := hash.NewReader(reader, size, md5hex, sha256hex, actualSize)
+	hashReader, err := hash.NewDefaultReader(reader, size, md5hex, sha256hex, actualSize)
 	if err != nil {
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return

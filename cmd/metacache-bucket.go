@@ -177,7 +177,7 @@ func (b *bucketMetacache) save(ctx context.Context) error {
 	b.updated = false
 	b.mu.Unlock()
 
-	hr, err := hash.NewReader(tmp, int64(tmp.Len()), "", "", int64(tmp.Len()))
+	hr, err := hash.NewDefaultReader(tmp, int64(tmp.Len()), "", "", int64(tmp.Len()))
 	if err != nil {
 		return err
 	}

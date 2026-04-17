@@ -711,7 +711,7 @@ func (c *cacheObjects) uploadObject(ctx context.Context, oi ObjectInfo) {
 	if st == CommitComplete || st.String() == "" {
 		return
 	}
-	hashReader, err := hash.NewReader(cReader, oi.Size, "", "", oi.Size)
+	hashReader, err := hash.NewDefaultReader(cReader, oi.Size, "", "", oi.Size)
 	if err != nil {
 		return
 	}

@@ -784,15 +784,12 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	hashReader, err := hash.NewReader(fileBody, -1, "", "", -1)
+	hashReader, err := hash.NewDefaultReader(fileBody, -1, "", "", -1)
 	if err != nil {
 		logger.LogIf(ctx, err)
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
-	rawReader := hashReader
-	pReader := NewPutObjReader(rawReader)
-	var objectEncryptionKey crypto.ObjectKey
 
 	// Check if bucket encryption is enabled
 	if _, err = globalBucketSSEConfigSys.Get(bucket); err == nil || globalAutoEncryption {
@@ -811,6 +808,7 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 	}
 	opts.PostPolicy = postPolicyForm
 
+	var pReader *PutObjReader
 	if objectAPI.IsEncryptionSupported() {
 		if _, ok := crypto.IsRequested(formValues); ok && !HasSuffix(object, SlashSeparator) { // handle SSE requests
 			if crypto.SSECopy.IsRequested(r.Header) {
@@ -826,23 +824,20 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 					return
 				}
 			}
+
+			var objectEncryptionKey crypto.ObjectKey
 			reader, objectEncryptionKey, err = newEncryptReader(hashReader, key, bucket, object, metadata, crypto.S3.IsRequested(formValues))
 			if err != nil {
 				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 				return
 			}
 			// do not try to verify encrypted content
-			hashReader, err = hash.NewReader(reader, -1, "", "", -1)
-			if err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return
-			}
-			pReader, err = pReader.WithEncryption(hashReader, &objectEncryptionKey)
-			if err != nil {
-				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-				return
-			}
+			hashReader = hash.Wrap(reader, hashReader, -1, -1)
+			pReader = NewPutObjReaderWithEncryption(hashReader, objectEncryptionKey)
 		}
+	}
+	if pReader == nil {
+		pReader = NewPutObjReader(hashReader)
 	}
 
 	objInfo, err := objectAPI.PutObject(ctx, bucket, object, pReader, opts)

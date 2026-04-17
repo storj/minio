@@ -1207,7 +1207,12 @@ func (fs *FSObjects) putObject(ctx context.Context, bucket string, object string
 	if err != nil {
 		return ObjectInfo{}, toObjectErr(err, bucket, object)
 	}
-	fsMeta.Meta["etag"] = r.MD5CurrentHexString()
+
+	eTag, err := r.MD5HexString()
+	if err != nil {
+		return ObjectInfo{}, fmt.Errorf("error retrieving ETag: %w", err)
+	}
+	fsMeta.Meta["etag"] = eTag
 
 	// Should return IncompleteBody{} error when reader has fewer
 	// bytes than specified in request header.

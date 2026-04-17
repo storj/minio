@@ -767,7 +767,11 @@ func (er erasureObjects) putObject(ctx context.Context, bucket string, object st
 		})
 	}
 	if opts.UserDefined["etag"] == "" {
-		opts.UserDefined["etag"] = r.MD5CurrentHexString()
+		eTag, err := r.MD5HexString()
+		if err != nil {
+			return ObjectInfo{}, fmt.Errorf("error retrieving ETag: %w", err)
+		}
+		opts.UserDefined["etag"] = eTag
 	}
 
 	// Guess content-type from the extension if possible.

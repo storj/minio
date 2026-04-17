@@ -546,10 +546,13 @@ func (er erasureObjects) PutObjectPart(ctx context.Context, bucket, object, uplo
 	// Once part is successfully committed, proceed with updating erasure metadata.
 	fi.ModTime = UTCNow()
 
-	md5hex := r.MD5CurrentHexString()
+	eTag, err := r.MD5HexString()
+	if err != nil {
+		return pi, fmt.Errorf("error retrieving ETag: %w", err)
+	}
 
 	// Add the current part.
-	fi.AddObjectPart(partID, md5hex, n, data.ActualSize())
+	fi.AddObjectPart(partID, eTag, n, data.ActualSize())
 
 	for i, disk := range onlineDisks {
 		if disk == OfflineDisk {
@@ -575,7 +578,7 @@ func (er erasureObjects) PutObjectPart(ctx context.Context, bucket, object, uplo
 	// Return success.
 	return PartInfo{
 		PartNumber:   partID,
-		ETag:         md5hex,
+		ETag:         eTag,
 		LastModified: fi.ModTime,
 		Size:         fi.Size,
 		ActualSize:   data.ActualSize(),

@@ -148,7 +148,7 @@ func runDataScanner(ctx context.Context, objAPI ObjectLayer) {
 				nextBloomCycle++
 				var tmp [8]byte
 				binary.LittleEndian.PutUint64(tmp[:], nextBloomCycle)
-				r, err := hash.NewReader(bytes.NewReader(tmp[:]), int64(len(tmp)), "", "", int64(len(tmp)))
+				r, err := hash.NewDefaultReader(bytes.NewReader(tmp[:]), int64(len(tmp)), "", "", int64(len(tmp)))
 				if err != nil {
 					logger.LogIf(ctx, err)
 					continue

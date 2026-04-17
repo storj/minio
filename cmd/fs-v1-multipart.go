@@ -332,13 +332,16 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 		return pi, IncompleteBody{Bucket: bucket, Object: object}
 	}
 
-	etag := r.MD5CurrentHexString()
-
-	if etag == "" {
-		etag = GenETag()
+	eTag, err := r.MD5HexString()
+	if err != nil {
+		return pi, fmt.Errorf("error retrieving ETag: %w", err)
 	}
 
-	partPath := pathJoin(uploadIDDir, fs.encodePartFile(partID, etag, data.ActualSize()))
+	if eTag == "" {
+		eTag = GenETag()
+	}
+
+	partPath := pathJoin(uploadIDDir, fs.encodePartFile(partID, eTag, data.ActualSize()))
 
 	// Make sure not to create parent directories if they don't exist - the upload might have been aborted.
 	if err = fsSimpleRenameFile(ctx, tmpPartPath, partPath); err != nil {
@@ -357,7 +360,7 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 	return PartInfo{
 		PartNumber:   partID,
 		LastModified: fi.ModTime(),
-		ETag:         etag,
+		ETag:         eTag,
 		Size:         fi.Size(),
 		ActualSize:   data.ActualSize(),
 	}, nil

@@ -417,11 +417,11 @@ func isReqAuthenticated(ctx context.Context, r *http.Request, region string, sty
 	if s3Error != ErrNone {
 		return s3Error
 	}
-	r.Body = reader
+	r.Body = io.NopCloser(reader)
 	return ErrNone
 }
 
-func newChecksumReader(ctx context.Context, r *http.Request) (reader *hash.Reader, s3Error APIErrorCode) {
+func newChecksumReader(ctx context.Context, r *http.Request) (reader hash.Reader, s3Error APIErrorCode) {
 	clientETag, err := etag.FromContentMD5(r.Header)
 	if err != nil {
 		return nil, ErrInvalidDigest
@@ -444,7 +444,7 @@ func newChecksumReader(ctx context.Context, r *http.Request) (reader *hash.Reade
 		}
 	}
 
-	reader, err = hash.NewReader(r.Body, -1, clientETag.String(), hex.EncodeToString(contentSHA256), -1)
+	reader, err = hash.NewDefaultReader(r.Body, -1, clientETag.String(), hex.EncodeToString(contentSHA256), -1)
 	if err != nil {
 		return nil, toAPIErrorCode(ctx, err)
 	}
@@ -532,7 +532,7 @@ func (api ObjectAPIHandlers) validateSignature(ctx context.Context, r *http.Requ
 				if s3Error != ErrNone {
 					return cred, owner, nil, s3Error
 				}
-				r.Body = reader
+				r.Body = io.NopCloser(reader)
 			}
 			return cred, owner, nil, s3Error
 		}
