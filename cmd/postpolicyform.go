@@ -95,24 +95,31 @@ func isString(val interface{}) bool {
 	return ok
 }
 
-// ContentLengthRange - policy content-length-range field.
-type contentLengthRange struct {
-	Min   int64
-	Max   int64
-	Valid bool // If content-length-range was part of policy
-}
-
 // PostPolicyForm provides strict static type conversion and validation for Amazon S3's POST policy JSON string.
 type PostPolicyForm struct {
 	Expiration time.Time // Expiration date and time of the POST policy.
-	Conditions struct {  // Conditional policy structure.
-		Policies []struct {
-			Operator string
-			Key      string
-			Value    string
-		}
-		ContentLengthRange contentLengthRange
-	}
+	Conditions PostPolicyConditions
+}
+
+// PostPolicyConditions contains the conditions of a POST policy.
+type PostPolicyConditions struct {
+	Items              []PostPolicyCondition
+	ContentLengthRange ContentLengthRange
+}
+
+// PostPolicyCondition is a condition of a POST policy.
+type PostPolicyCondition struct {
+	Operator string
+	Key      string
+	Value    string
+}
+
+// ContentLengthRange is a constraint on the size of a request body.
+type ContentLengthRange struct {
+	Min int64
+	Max int64
+	// Valid indicates whether the "content-length-range" key was found in the policy.
+	Valid bool
 }
 
 // implemented to ensure that duplicate keys in JSON
@@ -185,12 +192,10 @@ func parsePostPolicyForm(r io.Reader) (PostPolicyForm, error) {
 				}
 				// {"acl": "public-read" } is an alternate way to indicate - [ "eq", "$acl", "public-read" ]
 				// In this case we will just collapse this into "eq" for all use cases.
-				parsedPolicy.Conditions.Policies = append(parsedPolicy.Conditions.Policies, struct {
-					Operator string
-					Key      string
-					Value    string
-				}{
-					policyCondEqual, "$" + strings.ToLower(k), toString(v),
+				parsedPolicy.Conditions.Items = append(parsedPolicy.Conditions.Items, PostPolicyCondition{
+					Operator: policyCondEqual,
+					Key:      "$" + strings.ToLower(k),
+					Value:    toString(v),
 				})
 			}
 		case []interface{}: // Handle array types.
@@ -209,12 +214,10 @@ func parsePostPolicyForm(r io.Reader) (PostPolicyForm, error) {
 				if !strings.HasPrefix(matchType, "$") {
 					return parsedPolicy, fmt.Errorf("Invalid according to Policy: Policy Condition failed: [%s, %s, %s]", operator, matchType, value)
 				}
-				parsedPolicy.Conditions.Policies = append(parsedPolicy.Conditions.Policies, struct {
-					Operator string
-					Key      string
-					Value    string
-				}{
-					operator, matchType, value,
+				parsedPolicy.Conditions.Items = append(parsedPolicy.Conditions.Items, PostPolicyCondition{
+					Operator: operator,
+					Key:      matchType,
+					Value:    value,
 				})
 			case policyCondContentLength:
 				min, err := toInteger(condt[1])
@@ -227,7 +230,7 @@ func parsePostPolicyForm(r io.Reader) (PostPolicyForm, error) {
 					return parsedPolicy, err
 				}
 
-				parsedPolicy.Conditions.ContentLengthRange = contentLengthRange{
+				parsedPolicy.Conditions.ContentLengthRange = ContentLengthRange{
 					Min:   min,
 					Max:   max,
 					Valid: true,
@@ -266,7 +269,7 @@ func checkPostPolicy(formValues http.Header, postPolicyForm PostPolicyForm) erro
 	}
 	// map to store the metadata
 	metaMap := make(map[string]string)
-	for _, policy := range postPolicyForm.Conditions.Policies {
+	for _, policy := range postPolicyForm.Conditions.Items {
 		if strings.HasPrefix(policy.Key, "$x-amz-meta-") {
 			formCanonicalName := http.CanonicalHeaderKey(strings.TrimPrefix(policy.Key, "$"))
 			metaMap[formCanonicalName] = policy.Value
@@ -285,7 +288,7 @@ func checkPostPolicy(formValues http.Header, postPolicyForm PostPolicyForm) erro
 	var condPassed bool
 
 	// Iterate over policy conditions and check them against received form fields
-	for _, policy := range postPolicyForm.Conditions.Policies {
+	for _, policy := range postPolicyForm.Conditions.Items {
 		// Form fields names are in canonical format, convert conditions names
 		// to canonical for simplification purpose, so `$key` will become `Key`
 		formCanonicalName := http.CanonicalHeaderKey(strings.TrimPrefix(policy.Key, "$"))
