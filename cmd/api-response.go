@@ -247,12 +247,12 @@ type ObjectVersion struct {
 	IsLatest  bool
 	VersionID string `xml:"VersionId"`
 
-	isDeleteMarker bool
+	IsDeleteMarker bool
 }
 
 // MarshalXML - marshal ObjectVersion
 func (o ObjectVersion) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	if o.isDeleteMarker {
+	if o.IsDeleteMarker {
 		start.Name.Local = "DeleteMarker"
 	} else {
 		start.Name.Local = "Version"
@@ -483,7 +483,7 @@ func generateListVersionsResponse(bucket, prefix, marker, versionIDMarker, delim
 			content.VersionID = nullVersionID
 		}
 		content.IsLatest = object.IsLatest
-		content.isDeleteMarker = object.DeleteMarker
+		content.IsDeleteMarker = object.DeleteMarker
 		versions = append(versions, content)
 	}
 
