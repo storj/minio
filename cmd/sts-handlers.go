@@ -254,9 +254,14 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 			Credentials: cred,
 		},
 	}
-
 	assumeRoleResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-	WriteSuccessResponseXML(w, EncodeResponse(assumeRoleResponse))
+
+	encodedResponse, err := EncodeResponse(assumeRoleResponse)
+	if err != nil {
+		writeSTSErrorResponse(ctx, w, true, ErrSTSInternalError, err)
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }
 
 func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Request) {
@@ -400,7 +405,12 @@ func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Requ
 			},
 		}
 		clientGrantsResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-		encodedSuccessResponse = EncodeResponse(clientGrantsResponse)
+
+		encodedSuccessResponse, err = EncodeResponse(clientGrantsResponse)
+		if err != nil {
+			writeSTSErrorResponse(ctx, w, true, ErrSTSInternalError, err)
+			return
+		}
 	case webIdentity:
 		webIdentityResponse := &AssumeRoleWithWebIdentityResponse{
 			Result: WebIdentityResult{
@@ -409,7 +419,12 @@ func (sts *stsAPIHandlers) AssumeRoleWithSSO(w http.ResponseWriter, r *http.Requ
 			},
 		}
 		webIdentityResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-		encodedSuccessResponse = EncodeResponse(webIdentityResponse)
+
+		encodedSuccessResponse, err = EncodeResponse(webIdentityResponse)
+		if err != nil {
+			writeSTSErrorResponse(ctx, w, true, ErrSTSInternalError, err)
+			return
+		}
 	}
 
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -554,7 +569,12 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 		},
 	}
 	ldapIdentityResponse.ResponseMetadata.RequestID = w.Header().Get(xhttp.AmzRequestID)
-	encodedSuccessResponse := EncodeResponse(ldapIdentityResponse)
+
+	encodedSuccessResponse, err := EncodeResponse(ldapIdentityResponse)
+	if err != nil {
+		writeSTSErrorResponse(ctx, w, true, ErrSTSInternalError, err)
+		return
+	}
 
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }

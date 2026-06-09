@@ -122,7 +122,12 @@ func (api ObjectAPIHandlers) ListObjectVersionsHandler(w http.ResponseWriter, r 
 	response := generateListVersionsResponse(bucket, prefix, marker, versionIDMarker, delimiter, encodingType, maxkeys, listObjectVersionsInfo)
 
 	// Write success response.
-	WriteSuccessResponseXML(w, EncodeResponse(response))
+	encodedResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }
 
 // ListObjectsV2MHandler - GET Bucket (List Objects) Version 2 with metadata.
@@ -189,7 +194,12 @@ func (api ObjectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *htt
 		maxKeys, listObjectsV2Info.Objects, listObjectsV2Info.Prefixes, true)
 
 	// Write success response.
-	WriteSuccessResponseXML(w, EncodeResponse(response))
+	encodedResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }
 
 // ListObjectsV2Handler - GET Bucket (List Objects) Version 2.
@@ -253,7 +263,12 @@ func (api ObjectAPIHandlers) ListObjectsV2Handler(w http.ResponseWriter, r *http
 		maxKeys, listObjectsV2Info.Objects, listObjectsV2Info.Prefixes, false)
 
 	// Write success response.
-	WriteSuccessResponseXML(w, EncodeResponse(response))
+	encodedResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }
 
 func parseRequestToken(token string) (subToken string, nodeIndex int) {
@@ -348,5 +363,10 @@ func (api ObjectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 	response := generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingType, maxKeys, listObjectsInfo)
 
 	// Write success response.
-	WriteSuccessResponseXML(w, EncodeResponse(response))
+	encodedResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }

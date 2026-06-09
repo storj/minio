@@ -62,12 +62,12 @@ func setCommonHeaders(w http.ResponseWriter) {
 }
 
 // Encodes the response headers into XML format.
-func EncodeResponse(response interface{}) []byte {
-	var bytesBuffer bytes.Buffer
-	bytesBuffer.WriteString(xml.Header)
-	e := xml.NewEncoder(&bytesBuffer)
-	e.Encode(response)
-	return bytesBuffer.Bytes()
+func EncodeResponse(response interface{}) ([]byte, error) {
+	bytesBuffer := bytes.NewBufferString(xml.Header)
+	if err := xml.NewEncoder(bytesBuffer).Encode(response); err != nil {
+		return nil, err
+	}
+	return bytesBuffer.Bytes(), nil
 }
 
 // Encodes the response headers into JSON format.

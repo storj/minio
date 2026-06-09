@@ -2426,3 +2426,12 @@ func uploadTestObject(t *testing.T, apiRouter http.Handler, creds auth.Credentia
 		checkRespErr(rec, http.StatusOK)
 	}
 }
+
+func mustEncodeResponse(t *testing.T, response any) []byte {
+	encoded, err := EncodeResponse(response)
+	if err != nil {
+		t.Fatalf("Error encoding response: %v", err)
+		return nil
+	}
+	return encoded
+}

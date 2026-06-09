@@ -233,7 +233,7 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 	s3Select, err := s3select.NewS3Select(r.Body)
 	if err != nil {
 		if serr, ok := err.(s3select.SelectError); ok {
-			encodedErrorResponse := EncodeResponse(APIErrorResponse{
+			encodedErrorResponse, err := EncodeResponse(APIErrorResponse{
 				Code:       serr.ErrorCode(),
 				Message:    serr.ErrorMessage(),
 				BucketName: bucket,
@@ -242,6 +242,10 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 				RequestID:  w.Header().Get(xhttp.AmzRequestID),
 				HostID:     globalDeploymentID,
 			})
+			if err != nil {
+				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+				return
+			}
 			writeResponse(w, serr.HTTPStatusCode(), encodedErrorResponse, mimeXML)
 		} else {
 			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
@@ -252,7 +256,7 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 
 	if err = s3Select.Open(getObject); err != nil {
 		if serr, ok := err.(s3select.SelectError); ok {
-			encodedErrorResponse := EncodeResponse(APIErrorResponse{
+			encodedErrorResponse, err := EncodeResponse(APIErrorResponse{
 				Code:       serr.ErrorCode(),
 				Message:    serr.ErrorMessage(),
 				BucketName: bucket,
@@ -261,6 +265,10 @@ func (api ObjectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 				RequestID:  w.Header().Get(xhttp.AmzRequestID),
 				HostID:     globalDeploymentID,
 			})
+			if err != nil {
+				WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+				return
+			}
 			writeResponse(w, serr.HTTPStatusCode(), encodedErrorResponse, mimeXML)
 		} else {
 			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
@@ -564,7 +572,12 @@ func (api ObjectAPIHandlers) GetObjectAttributesHandler(w http.ResponseWriter, r
 			ArgumentValue:    argumentValue,
 			APIErrorResponse: getAPIErrorResponse(ctx, apiErr, r.URL.Path, w.Header().Get(xhttp.AmzRequestID), globalDeploymentID),
 		}
-		writeResponse(w, apiErr.HTTPStatusCode, EncodeResponse(response), mimeXML)
+		encodedResponse, err := EncodeResponse(response)
+		if err != nil {
+			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			return
+		}
+		writeResponse(w, apiErr.HTTPStatusCode, encodedResponse, mimeXML)
 	}
 
 	opts, err := getOpts(ctx, r, bucket, object)
@@ -617,7 +630,12 @@ func (api ObjectAPIHandlers) GetObjectAttributesHandler(w http.ResponseWriter, r
 	}
 	w.Header().Set(xhttp.LastModified, objInfo.ModTime.UTC().Format(http.TimeFormat))
 
-	WriteSuccessResponseXML(w, EncodeResponse(response))
+	encodedResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }
 
 // HeadObjectHandler - HEAD Object
@@ -1345,8 +1363,14 @@ func (api ObjectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 	objInfo.ETag = getDecryptedETag(r.Header, objInfo, false)
+
 	response := generateCopyObjectResponse(objInfo.ETag, objInfo.ModTime)
-	encodedSuccessResponse := EncodeResponse(response)
+	encodedSuccessResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
 	if replicate, sync := mustReplicate(ctx, r, dstBucket, dstObject, objInfo.UserDefined, objInfo.ReplicationStatus.String()); replicate {
 		scheduleReplication(ctx, objInfo.Clone(), objectAPI, sync, replication.ObjectReplicationType)
 	}
@@ -2098,7 +2122,11 @@ func (api ObjectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r 
 	}
 
 	response := generateInitiateMultipartUploadResponse(bucket, object, uploadID)
-	encodedSuccessResponse := EncodeResponse(response)
+	encodedSuccessResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
 
 	// Write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -2248,7 +2276,11 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 	}
 
 	response := generateCopyObjectPartResponse(partInfo.ETag, partInfo.LastModified)
-	encodedSuccessResponse := EncodeResponse(response)
+	encodedSuccessResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
 
 	if vid != "" {
 		w.Header().Set(xhttp.AmzCopySourceVersionID, vid)
@@ -2537,7 +2569,11 @@ func (api ObjectAPIHandlers) ListObjectPartsHandler(w http.ResponseWriter, r *ht
 	}
 
 	response := generateListPartsResponse(listPartsInfo, encodingType)
-	encodedSuccessResponse := EncodeResponse(response)
+	encodedSuccessResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
 
 	// Write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -2677,8 +2713,8 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 
 	// This code is specifically to handle the requirements for slow
 	// complete multipart upload operations on FS mode.
-	writeErrorResponseWithoutXMLHeader := func(ctx context.Context, w http.ResponseWriter, err APIError, reqURL *url.URL) {
-		switch err.Code {
+	writeErrorResponseWithoutXMLHeader := func(ctx context.Context, w http.ResponseWriter, apiErr APIError, reqURL *url.URL) {
+		switch apiErr.Code {
 		case "SlowDown", "XMinioServerNotInitialized", "XMinioReadQuorum", "XMinioWriteQuorum":
 			// Set retxry-after header to indicate user-agents to retry request after 120secs.
 			// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
@@ -2686,9 +2722,16 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 		}
 
 		// Generate error response.
-		errorResponse := getAPIErrorResponse(ctx, err, reqURL.Path,
+		errorResponse := getAPIErrorResponse(ctx, apiErr, reqURL.Path,
 			w.Header().Get(xhttp.AmzRequestID), globalDeploymentID)
-		encodedErrorResponse, _ := xml.Marshal(errorResponse)
+
+		encodedErrorResponse, err := xml.Marshal(errorResponse)
+		if err != nil {
+			logger.LogIf(ctx, fmt.Errorf("error encoding XML error response: %w", err))
+			writeResponse(w, http.StatusInternalServerError, nil, mimeNone)
+			return
+		}
+
 		setCommonHeaders(w)
 		w.Header().Set(xhttp.ContentType, string(mimeXML))
 		w.Write(encodedErrorResponse)
@@ -2718,7 +2761,11 @@ func (api ObjectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 	response := generateCompleteMultpartUploadResponse(bucket, object, location, objInfo.ETag)
 	var encodedSuccessResponse []byte
 	if !headerWritten {
-		encodedSuccessResponse = EncodeResponse(response)
+		encodedSuccessResponse, err = EncodeResponse(response)
+		if err != nil {
+			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			return
+		}
 	} else {
 		encodedSuccessResponse, err = xml.Marshal(response)
 		if err != nil {
@@ -3009,7 +3056,12 @@ func (api ObjectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	WriteSuccessResponseXML(w, EncodeResponse(legalHold))
+	encodedResponse, err := EncodeResponse(legalHold)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }
 
 // PutObjectRetentionHandler - set object hold configuration to object,
@@ -3113,7 +3165,12 @@ func (api ObjectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	WriteSuccessResponseXML(w, EncodeResponse(objRetention))
+	encodedResponse, err := EncodeResponse(objRetention)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }
 
 // GetObjectTaggingHandler - GET object tagging
@@ -3163,7 +3220,12 @@ func (api ObjectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *h
 		w.Header()[xhttp.AmzVersionID] = []string{opts.VersionID}
 	}
 
-	WriteSuccessResponseXML(w, EncodeResponse(tags))
+	encodedResponse, err := EncodeResponse(tags)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+	WriteSuccessResponseXML(w, encodedResponse)
 }
 
 // PutObjectTaggingHandler - PUT object tagging
@@ -3459,7 +3521,7 @@ func (api ObjectAPIHandlers) PostRestoreObjectHandler(w http.ResponseWriter, r *
 			}
 			if err = rreq.SelectParameters.Open(getObject); err != nil {
 				if serr, ok := err.(s3select.SelectError); ok {
-					encodedErrorResponse := EncodeResponse(APIErrorResponse{
+					encodedErrorResponse, err := EncodeResponse(APIErrorResponse{
 						Code:       serr.ErrorCode(),
 						Message:    serr.ErrorMessage(),
 						BucketName: bucket,
@@ -3468,6 +3530,10 @@ func (api ObjectAPIHandlers) PostRestoreObjectHandler(w http.ResponseWriter, r *
 						RequestID:  w.Header().Get(xhttp.AmzRequestID),
 						HostID:     globalDeploymentID,
 					})
+					if err != nil {
+						WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+						return
+					}
 					writeResponse(w, serr.HTTPStatusCode(), encodedErrorResponse, mimeXML)
 				} else {
 					WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))

@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"encoding/xml"
+	"fmt"
 	"net/http"
 
 	xhttp "storj.io/minio/cmd/http"
@@ -27,23 +28,23 @@ import (
 
 // writeSTSErrorRespone writes error headers
 func writeSTSErrorResponse(ctx context.Context, w http.ResponseWriter, isErrCodeSTS bool, errCode STSErrorCode, errCtxt error) {
-	var err STSError
+	var stsErr STSError
 	if isErrCodeSTS {
-		err = stsErrCodes.ToSTSErr(errCode)
+		stsErr = stsErrCodes.ToSTSErr(errCode)
 	}
-	if err.Code == "InternalError" || !isErrCodeSTS {
+	if stsErr.Code == "InternalError" || !isErrCodeSTS {
 		aerr := GetAPIError(APIErrorCode(errCode))
 		if aerr.Code != "InternalError" {
-			err.Code = aerr.Code
-			err.Description = aerr.Description
-			err.HTTPStatusCode = aerr.HTTPStatusCode
+			stsErr.Code = aerr.Code
+			stsErr.Description = aerr.Description
+			stsErr.HTTPStatusCode = aerr.HTTPStatusCode
 		}
 	}
 	// Generate error response.
 	stsErrorResponse := STSErrorResponse{}
-	stsErrorResponse.Error.Code = err.Code
+	stsErrorResponse.Error.Code = stsErr.Code
 	stsErrorResponse.RequestID = w.Header().Get(xhttp.AmzRequestID)
-	stsErrorResponse.Error.Message = err.Description
+	stsErrorResponse.Error.Message = stsErr.Description
 	if errCtxt != nil {
 		stsErrorResponse.Error.Message = errCtxt.Error()
 	}
@@ -55,8 +56,15 @@ func writeSTSErrorResponse(ctx context.Context, w http.ResponseWriter, isErrCode
 		logKind = logger.All
 	}
 	logger.LogIf(ctx, errCtxt, logKind)
-	encodedErrorResponse := EncodeResponse(stsErrorResponse)
-	writeResponse(w, err.HTTPStatusCode, encodedErrorResponse, mimeXML)
+
+	encodedErrorResponse, err := EncodeResponse(stsErrorResponse)
+	if err != nil {
+		logger.LogIf(ctx, fmt.Errorf("error encoding XML STS error response: %w", err))
+		writeResponse(w, http.StatusInternalServerError, nil, mimeNone)
+		return
+	}
+
+	writeResponse(w, stsErr.HTTPStatusCode, encodedErrorResponse, mimeXML)
 }
 
 // STSError structure

@@ -84,13 +84,22 @@ func (api ObjectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *
 	}
 
 	// Generate response.
-	encodedSuccessResponse := EncodeResponse(LocationResponse{})
+	encodedSuccessResponse, err := EncodeResponse(LocationResponse{})
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
 	// Get current region.
 	region := globalServerRegion
 	if region != globalMinioDefaultRegion {
-		encodedSuccessResponse = EncodeResponse(LocationResponse{
+		encodedSuccessResponse, err = EncodeResponse(LocationResponse{
 			Location: region,
 		})
+		if err != nil {
+			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			return
+		}
 	}
 
 	// Write success response.
@@ -147,9 +156,14 @@ func (api ObjectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, 
 		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
+
 	// generate response
 	response := generateListMultipartUploadsResponse(bucket, listMultipartsInfo, encodingType)
-	encodedSuccessResponse := EncodeResponse(response)
+	encodedSuccessResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
 
 	// write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -223,7 +237,11 @@ func (api ObjectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.R
 
 	// Generate response.
 	response := generateListBucketsResponse(bucketsInfo)
-	encodedSuccessResponse := EncodeResponse(response)
+	encodedSuccessResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
 
 	// Write response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -489,7 +507,11 @@ func (api ObjectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 
 	// Generate response
 	response := generateMultiDeleteResponse(deleteObjects.Quiet, deletedObjectsResult, deleteErrorsResult)
-	encodedSuccessResponse := EncodeResponse(response)
+	encodedSuccessResponse, err := EncodeResponse(response)
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
 
 	// Write success response.
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
@@ -879,13 +901,17 @@ func (api ObjectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 	// Decide what http response to send depending on success_action_status parameter
 	switch successStatus {
 	case "201":
-		resp := EncodeResponse(PostResponse{
+		encodedResponse, err := EncodeResponse(PostResponse{
 			Bucket:   objInfo.Bucket,
 			Key:      objInfo.Name,
 			ETag:     `"` + objInfo.ETag + `"`,
 			Location: w.Header().Get(xhttp.Location),
 		})
-		writeResponse(w, http.StatusCreated, resp, mimeXML)
+		if err != nil {
+			WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			return
+		}
+		writeResponse(w, http.StatusCreated, encodedResponse, mimeXML)
 	case "200":
 		writeSuccessResponseHeadersOnly(w)
 	default:
@@ -936,7 +962,7 @@ func (api ObjectAPIHandlers) GetBucketPolicyStatusHandler(w http.ResponseWriter,
 		IsOwner:         false,
 	})
 
-	encodedSuccessResponse := EncodeResponse(PolicyStatus{
+	encodedSuccessResponse, err := EncodeResponse(PolicyStatus{
 		IsPublic: func() string {
 			// Silly to have special 'boolean' values yes
 			// but complying with silly implementation
@@ -947,6 +973,10 @@ func (api ObjectAPIHandlers) GetBucketPolicyStatusHandler(w http.ResponseWriter,
 			return "FALSE"
 		}(),
 	})
+	if err != nil {
+		WriteErrorResponse(ctx, w, ToAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+		return
+	}
 
 	WriteSuccessResponseXML(w, encodedSuccessResponse)
 }

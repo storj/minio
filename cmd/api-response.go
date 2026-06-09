@@ -791,16 +791,16 @@ func writeSuccessResponseHeadersOnly(w http.ResponseWriter) {
 var storjRetryAfter = env.Get("STORJ_MINIO_RETRY_AFTER", "12")
 
 // writeErrorRespone writes error headers
-func WriteErrorResponse(ctx context.Context, w http.ResponseWriter, err APIError, reqURL *url.URL, browser bool) {
-	switch err.Code {
+func WriteErrorResponse(ctx context.Context, w http.ResponseWriter, apiErr APIError, reqURL *url.URL, browser bool) {
+	switch apiErr.Code {
 	case "SlowDown", "XMinioServerNotInitialized", "XMinioReadQuorum", "XMinioWriteQuorum":
 		// Set retry-after header to indicate user-agents to retry request after 120secs.
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After
 		w.Header().Set(xhttp.RetryAfter, storjRetryAfter)
 	case "InvalidRegion":
-		err.Description = fmt.Sprintf("Region does not match; expecting '%s'.", globalServerRegion)
+		apiErr.Description = fmt.Sprintf("Region does not match; expecting '%s'.", globalServerRegion)
 	case "AuthorizationHeaderMalformed":
-		err.Description = fmt.Sprintf("The authorization header is malformed; the region is wrong; expecting '%s'.", globalServerRegion)
+		apiErr.Description = fmt.Sprintf("The authorization header is malformed; the region is wrong; expecting '%s'.", globalServerRegion)
 	case "AccessDenied":
 		// The request is from browser and also if browser
 		// is enabled we need to redirect.
@@ -812,10 +812,17 @@ func WriteErrorResponse(ctx context.Context, w http.ResponseWriter, err APIError
 	}
 
 	// Generate error response.
-	errorResponse := getAPIErrorResponse(ctx, err, reqURL.Path,
+	errorResponse := getAPIErrorResponse(ctx, apiErr, reqURL.Path,
 		w.Header().Get(xhttp.AmzRequestID), globalDeploymentID)
-	encodedErrorResponse := EncodeResponse(errorResponse)
-	writeResponse(w, err.HTTPStatusCode, encodedErrorResponse, mimeXML)
+
+	encodedErrorResponse, err := EncodeResponse(errorResponse)
+	if err != nil {
+		logger.LogIf(ctx, fmt.Errorf("error encoding XML error response: %w", err))
+		writeResponse(w, http.StatusInternalServerError, nil, mimeNone)
+		return
+	}
+
+	writeResponse(w, apiErr.HTTPStatusCode, encodedErrorResponse, mimeXML)
 }
 
 func writeErrorResponseHeadersOnly(w http.ResponseWriter, err APIError) {
