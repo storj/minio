@@ -1249,11 +1249,11 @@ func (fs *FSObjects) DeleteObjects(ctx context.Context, bucket string, objects [
 	errs := make([]DeleteObjectsError, 0, len(objects))
 	dobjects := make([]DeletedObject, 0, len(objects))
 
-	for idx, object := range objects {
+	for _, object := range objects {
 		if object.VersionID != "" {
 			errs = append(errs, DeleteObjectsError{
-				ObjectName:    object.ObjectName,
-				VersionID: object.VersionID,
+				ObjectName: object.ObjectName,
+				VersionID:  object.VersionID,
 				Error: VersionNotFound{
 					Bucket:    bucket,
 					Object:    object.ObjectName,
@@ -1265,10 +1265,15 @@ func (fs *FSObjects) DeleteObjects(ctx context.Context, bucket string, objects [
 
 		_, err := fs.DeleteObject(ctx, bucket, object.ObjectName, opts)
 		if err == nil || isErrObjectNotFound(err) {
-			dobjects[idx] = DeletedObject{
+			dobjects = append(dobjects, DeletedObject{
 				ObjectName: object.ObjectName,
-			}
+			})
+			continue
 		}
+		errs = append(errs, DeleteObjectsError{
+			ObjectName: object.ObjectName,
+			Error:      err,
+		})
 	}
 
 	return dobjects, errs, nil
