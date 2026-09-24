@@ -31,6 +31,9 @@ func TestServerConfig(t *testing.T) {
 	}
 	defer os.RemoveAll(fsDir)
 
+	// loadConfig below changes the global region, restore it for other tests.
+	defer func(region string) { globalServerRegion = region }(globalServerRegion)
+
 	if err = newTestConfig(globalMinioDefaultRegion, objLayer); err != nil {
 		t.Fatalf("Init Test config failed")
 	}
