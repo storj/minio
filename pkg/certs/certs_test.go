@@ -84,13 +84,18 @@ func TestValidPairAfterWrite(t *testing.T) {
 	updateCerts("new-public.crt", "new-private.key")
 	defer updateCerts("original-public.crt", "original-private.key")
 
-	// Wait for the write event..
-	time.Sleep(200 * time.Millisecond)
-
+	// Wait for the write event to be processed.
 	hello := &tls.ClientHelloInfo{}
-	gcert, err := c.GetCertificate(hello)
-	if err != nil {
-		t.Fatal(err)
+	var gcert *tls.Certificate
+	for deadline := time.Now().Add(5 * time.Second); ; {
+		gcert, err = c.GetCertificate(hello)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if reflect.DeepEqual(gcert.Certificate, expectedCert.Certificate) || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	if !reflect.DeepEqual(gcert.Certificate, expectedCert.Certificate) {
