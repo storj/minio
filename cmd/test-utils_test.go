@@ -317,6 +317,7 @@ func UnstartedTestServer(t TestErrHandler, instanceType string) TestServer {
 	if err = newTestConfig(globalMinioDefaultRegion, objLayer); err != nil {
 		t.Fatalf("%s", err)
 	}
+	lookupConfigs(globalServerConfig, objLayer.SetDriveCounts())
 
 	// Test Server needs to start before formatting of disks.
 	// Get credential.
