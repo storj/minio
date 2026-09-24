@@ -272,7 +272,7 @@ func getSource(n int) string {
 	if ok {
 		filename = pathutil.Base(filename)
 		funcName = strings.TrimPrefix(runtime.FuncForPC(pc).Name(),
-			"github.com/minio/minio/cmd.")
+			"storj.io/minio/cmd.")
 	} else {
 		filename = "<unknown>"
 		lineNum = 0
