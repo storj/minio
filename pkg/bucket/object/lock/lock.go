@@ -571,6 +571,7 @@ func FilterObjectLockMetadata(metadata map[string]string, filterRetention, filte
 	legalHold := GetObjectLegalHoldMeta(metadata)
 	if !legalHold.Status.Valid() || filterLegalHold {
 		delKey(AmzObjectLockLegalHold)
+		delKey(strings.ToLower(AmzObjectLockLegalHold))
 	}
 
 	// remove keys in either case to be sure.

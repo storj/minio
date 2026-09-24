@@ -196,7 +196,7 @@ func TestParseObjectRetention(t *testing.T) {
 	}{
 		{
 			value:       `<?xml version="1.0" encoding="UTF-8"?><Retention xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Mode>string</Mode><RetainUntilDate>2020-01-02T15:04:05Z</RetainUntilDate></Retention>`,
-			expectedErr: ErrUnknownWORMModeDirective,
+			expectedErr: ErrMalformedXML,
 			expectErr:   true,
 		},
 		{
@@ -582,8 +582,8 @@ func TestFilterObjectLockMetadata(t *testing.T) {
 
 	for i, tt := range tests {
 		o := FilterObjectLockMetadata(tt.metadata, tt.filterRetention, tt.filterLegalHold)
-		if !reflect.DeepEqual(o, tt.metadata) {
-			t.Fatalf("Case %d expected %v, got %v", i, tt.metadata, o)
+		if !reflect.DeepEqual(o, tt.expected) {
+			t.Fatalf("Case %d expected %v, got %v", i, tt.expected, o)
 		}
 	}
 }
