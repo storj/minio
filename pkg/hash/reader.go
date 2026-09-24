@@ -218,6 +218,13 @@ func (r *defaultReader) ActualSize() int64 { return r.actualSize }
 // Checksums returns the checksums of the content. It must not be called until
 // all data has been read (indicated by Read returning io.EOF).
 func (r *defaultReader) Checksums() (map[Algorithm][]byte, error) {
+	// Consumers that stop after exactly Size bytes (e.g. a wrapping reader
+	// limited to 0 bytes) never observe io.EOF, so finish the read here.
+	if !r.eof && r.size >= 0 && r.bytesRead == r.size {
+		if _, err := r.Read(nil); err != nil && !errors.Is(err, io.EOF) {
+			return nil, err
+		}
+	}
 	if !r.eof {
 		return nil, errNoEarlyChecksums
 	}

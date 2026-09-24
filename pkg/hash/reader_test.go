@@ -292,3 +292,23 @@ func TestHashReaderInvalidArguments(t *testing.T) {
 		})
 	}
 }
+
+// Checksums must be available once exactly Size bytes were consumed, even if
+// the consumer never observed io.EOF (e.g. a 0-byte wrapped reader).
+func TestHashReaderChecksumsWithoutEOF(t *testing.T) {
+	const emptySHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	r := mustReader(t, bytes.NewReader(nil), 0, "", emptySHA256, 0)
+	sums, err := Wrap(bytes.NewReader(nil), r, 0, 0).Checksums()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := hex.EncodeToString(sums[AlgorithmMD5]); got != "d41d8cd98f00b204e9800998ecf8427e" {
+		t.Errorf("unexpected MD5 %s", got)
+	}
+
+	// Verification still happens when finishing the read.
+	r = mustReader(t, bytes.NewReader(nil), 0, "", "88d4266fd4e6338d13b845fcf289579d209c897823b9217da3e161936f031589", 0)
+	if _, err := r.Checksums(); err == nil {
+		t.Fatal("expected SHA256 mismatch")
+	}
+}
