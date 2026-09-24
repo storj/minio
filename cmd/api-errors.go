@@ -2137,6 +2137,11 @@ func ToAPIError(ctx context.Context, err error) APIError {
 	}
 
 	if apiErr.Code == "InternalError" {
+		// Errors from reading an awsig-verified request body.
+		if code, ok := awsigToAPIErrorCode(err); ok {
+			return errorCodes.ToAPIErr(code)
+		}
+
 		// If we see an internal error try to interpret
 		// any underlying errors if possible depending on
 		// their internal error types. This code is only
@@ -2227,16 +2232,24 @@ func ToAPIError(ctx context.Context, err error) APIError {
 var awsigAPIErrorCodes = map[error]APIErrorCode {
 	awsig.ErrAccessDenied:                      ErrAccessDenied,
 	awsig.ErrAuthorizationHeaderMalformed:      ErrAuthorizationHeaderMalformed,
+	awsig.ErrBadDigest:                         ErrBadDigest,
 	awsig.ErrContentLengthWithTransferEncoding: ErrContentLengthWithTransferEncoding,
+	awsig.ErrEntityTooLarge:                    ErrEntityTooLarge,
+	awsig.ErrEntityTooSmall:                    ErrEntityTooSmall,
+	awsig.ErrInvalidArgument:                   ErrInvalidArgument,
 	awsig.ErrInvalidAccessKeyID:                ErrInvalidAccessKeyID,
 	awsig.ErrInvalidDateHeader:                 ErrMalformedDate,
+	awsig.ErrInvalidDigest:                     ErrInvalidDigest,
 	awsig.ErrInvalidPOSTDate:                   ErrMalformedPOSTDate,
 	awsig.ErrInvalidPresignedDate:              ErrMalformedPresignedDate,
 	awsig.ErrInvalidPresignedExpiration:        ErrMalformedExpires,
+	awsig.ErrInvalidPresignedXAmzContentSHA256: ErrInvalidContentSHA256,
+	awsig.ErrInvalidRequest:                    ErrInvalidRequest,
 	awsig.ErrInvalidSignature:                  ErrSignatureDoesNotMatch,
 	awsig.ErrInvalidXAmzContentSHA256:          ErrInvalidContentSHA256,
 	awsig.ErrInvalidXAmzDecodedContentLength:   ErrMissingContentLength,
 	awsig.ErrMalformedPOSTRequest:              ErrMalformedPOSTRequest,
+	awsig.ErrMissingPOSTFile:                   ErrPOSTFileRequired,
 	awsig.ErrMissingContentLength: 	            ErrMissingContentLength,
 	awsig.ErrMissingPOSTPolicy:                 ErrMissingPOSTPolicy,
 	awsig.ErrMissingSecurityHeader:             ErrMissingSecurityHeader,
@@ -2251,10 +2264,16 @@ var awsigAPIErrorCodes = map[error]APIErrorCode {
 }
 
 // awsigToAPIErrorCode converts an awsig error to an APIErrorCode.
+//
+// awsig errors may wrap other awsig errors (e.g. ErrMalformedPOSTRequest
+// wrapping ErrMissingPOSTFile), so the outermost match is used.
 func awsigToAPIErrorCode(err error) (apiErrCode APIErrorCode, found bool) {
-	for awsigErr, code := range awsigAPIErrorCodes {
-		if errors.Is(err, awsigErr) {
-			return code, true
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		inner := errors.Unwrap(e)
+		for awsigErr, code := range awsigAPIErrorCodes {
+			if errors.Is(e, awsigErr) && (inner == nil || !errors.Is(inner, awsigErr)) {
+				return code, true
+			}
 		}
 	}
 	return ErrNone, false
