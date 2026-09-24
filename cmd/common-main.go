@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	dns2 "github.com/miekg/dns"
 	"github.com/minio/cli"
 	"github.com/minio/minio-go/v7/pkg/set"
 
@@ -254,7 +253,7 @@ func HandleCommonEnvVars() {
 	domains := env.Get(config.EnvDomain, "")
 	if len(domains) != 0 {
 		for _, domainName := range strings.Split(domains, config.ValueSeparator) {
-			if _, ok := dns2.IsDomainName(domainName); !ok {
+			if !isDomainName(domainName) {
 				logger.Fatal(config.ErrInvalidDomainValue(nil).Msgf("Unknown value `%s`", domainName),
 					"Invalid MINIO_DOMAIN value in environment variable")
 			}
@@ -467,4 +466,25 @@ func contextCanceled(ctx context.Context) bool {
 	default:
 		return false
 	}
+}
+
+// isDomainName reports whether s is a syntactically valid domain name:
+// non-empty labels of at most 63 octets, and at most 255 octets in wire format.
+//
+// ponytail: escaped labels (\. and \DDD) aren't supported, they don't appear in MINIO_DOMAIN.
+func isDomainName(s string) bool {
+	if s == "" {
+		return false
+	}
+	if s == "." {
+		return true
+	}
+	wireLen := 1 // root label
+	for _, label := range strings.Split(strings.TrimSuffix(s, "."), ".") {
+		if label == "" || len(label) > 63 {
+			return false
+		}
+		wireLen += 1 + len(label)
+	}
+	return wireLen <= 255
 }

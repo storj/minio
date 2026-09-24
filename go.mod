@@ -34,7 +34,6 @@ require (
 	github.com/lib/pq v1.9.0
 	github.com/mattn/go-colorable v0.1.8
 	github.com/mattn/go-isatty v0.0.12
-	github.com/miekg/dns v1.1.35
 	github.com/minio/cli v1.22.0
 	github.com/minio/highwayhash v1.0.2
 	github.com/minio/minio-go/v7 v7.0.11-0.20210302210017-6ae69c73ce78
