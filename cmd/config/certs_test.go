@@ -17,6 +17,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -42,6 +43,8 @@ func createTempFile(prefix, content string) (tempFile string, err error) {
 	tempFile = tmpfile.Name()
 	return tempFile, err
 }
+
+var errAnyParseError = errors.New("any parse error")
 
 func TestParsePublicCertFile(t *testing.T) {
 	tempFile1, err := createTempFile("public-cert-file", "")
@@ -169,7 +172,8 @@ M9ofSEt/bdRD
 		{"nonexistent-file", 0, nonexistentErr},
 		{tempFile1, 0, fmt.Errorf("Empty public certificate file %s", tempFile1)},
 		{tempFile2, 0, fmt.Errorf("Could not read PEM block from file %s", tempFile2)},
-		{tempFile3, 0, fmt.Errorf("asn1: structure error: sequence tag mismatch")},
+		// The exact parse error text varies between Go versions.
+		{tempFile3, 0, errAnyParseError},
 		{tempFile4, 1, nil},
 		{tempFile5, 2, nil},
 	}
@@ -183,7 +187,7 @@ M9ofSEt/bdRD
 			}
 		} else if err == nil {
 			t.Fatalf("error: expected = %v, got = <nil>", testCase.expectedErr)
-		} else if testCase.expectedErr.Error() != err.Error() {
+		} else if testCase.expectedErr != errAnyParseError && testCase.expectedErr.Error() != err.Error() {
 			t.Fatalf("error: expected = %v, got = %v", testCase.expectedErr, err)
 		}
 
