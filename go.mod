@@ -7,7 +7,7 @@ require (
 	github.com/Shopify/sarama v1.27.2
 	github.com/VividCortex/ewma v1.1.1
 	github.com/alecthomas/participle v0.2.1
-	github.com/amwolff/awsig v0.0.0-20260414063042-162ff7da805a
+	github.com/amwolff/awsig v0.0.0-20260427205242-5ad7e9e1912b
 	github.com/bcicen/jstream v1.0.1
 	github.com/beevik/ntp v0.3.0
 	github.com/cespare/xxhash/v2 v2.1.1
@@ -17,7 +17,7 @@ require (
 	github.com/djherbis/atime v1.0.0
 	github.com/dswarbrick/smart v0.0.0-20190505152634-909a45200d6d
 	github.com/dustin/go-humanize v1.0.0
-	github.com/eclipse/paho.mqtt.golang v1.3.0
+	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/fatih/color v1.10.0
 	github.com/go-ldap/ldap/v3 v3.2.4
 	github.com/go-sql-driver/mysql v1.5.0
@@ -53,7 +53,7 @@ require (
 	github.com/philhofer/fwd v1.1.1
 	github.com/pierrec/lz4 v2.5.2+incompatible
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.8.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/procfs v0.6.0
 	github.com/rjeczalik/notify v0.9.3
@@ -85,9 +85,9 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/protobuf v1.4.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
@@ -105,7 +105,7 @@ require (
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
-	github.com/prometheus/common v0.14.0 // indirect
+	github.com/prometheus/common v0.26.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
 	github.com/rs/xid v1.2.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
@@ -116,9 +116,10 @@ require (
 	github.com/willf/bitset v1.1.11 // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
-	google.golang.org/protobuf v1.23.0 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
 	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
