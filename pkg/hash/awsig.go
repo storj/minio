@@ -30,7 +30,8 @@ type awsigReader struct {
 	actualSize int64
 	getMD5     func() ([]byte, error)
 
-	eof bool
+	bytesRead int64
+	eof       bool
 }
 
 // NewAwsigReader returns an implementation of Reader that exposes checksums computed by an awsig.Reader.
@@ -47,6 +48,7 @@ func NewAwsigReader(reader awsig.Reader, size, actualSize int64) Reader {
 // Read implements Reader.
 func (r *awsigReader) Read(p []byte) (n int, err error) {
 	n, err = r.reader.Read(p)
+	r.bytesRead += int64(n)
 	if !r.eof && errors.Is(err, io.EOF) {
 		r.eof = true
 	}
@@ -67,6 +69,18 @@ func (reader *awsigReader) ActualSize() int64 {
 // Checksums returns the checksums of the content. It must not be called until
 // all data has been read (indicated by Read returning io.EOF).
 func (reader *awsigReader) Checksums() (map[Algorithm][]byte, error) {
+	// Consumers that stop after exactly Size bytes (e.g. a wrapping reader
+	// limited to 0 bytes) never observe io.EOF, so finish the read here.
+	// This also runs the verification awsig performs on EOF.
+	if !reader.eof && reader.size >= 0 && reader.bytesRead == reader.size {
+		n, err := io.Copy(io.Discard, reader)
+		if err != nil {
+			return nil, err
+		}
+		if n > 0 {
+			return nil, errors.New("hash: request body is larger than its declared size")
+		}
+	}
 	if !reader.eof {
 		return nil, errNoEarlyChecksums
 	}
