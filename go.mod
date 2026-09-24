@@ -13,7 +13,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1
 	github.com/cheggaaa/pb v1.0.29
 	github.com/dchest/siphash v1.2.1
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/djherbis/atime v1.0.0
 	github.com/dswarbrick/smart v0.0.0-20190505152634-909a45200d6d
 	github.com/dustin/go-humanize v1.0.0
@@ -21,6 +20,7 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/go-ldap/ldap/v3 v3.2.4
 	github.com/go-sql-driver/mysql v1.5.0
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/gomodule/redigo v1.8.3
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/handlers v1.5.1
