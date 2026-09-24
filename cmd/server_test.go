@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -575,6 +576,7 @@ func (s *TestSuiteCommon) TestDeleteMultipleObjects(c *check) {
 	c.Assert(err, nil)
 	err = xml.Unmarshal(delRespBytes, &deleteResp)
 	c.Assert(err, nil)
+	sortDeletedObjects(deleteResp.DeletedObjects)
 	for i := 0; i < 10; i++ {
 		// All the objects should be under deleted list (including non-existent object)
 		c.Assert(deleteResp.DeletedObjects[i], DeletedObject{
@@ -599,6 +601,7 @@ func (s *TestSuiteCommon) TestDeleteMultipleObjects(c *check) {
 	err = xml.Unmarshal(delRespBytes, &deleteResp)
 	c.Assert(err, nil)
 	c.Assert(len(deleteResp.DeletedObjects), len(delObjReq.Objects))
+	sortDeletedObjects(deleteResp.DeletedObjects)
 	for i := 0; i < 10; i++ {
 		c.Assert(deleteResp.DeletedObjects[i], DeletedObject{
 			ObjectName: delObjReq.Objects[i].ObjectName,
@@ -606,6 +609,12 @@ func (s *TestSuiteCommon) TestDeleteMultipleObjects(c *check) {
 		})
 	}
 	c.Assert(len(deleteResp.Errors), 0)
+}
+
+// sortDeletedObjects sorts by object name, since DeleteObjects doesn't
+// guarantee that the response preserves the request order.
+func sortDeletedObjects(objs []DeletedObject) {
+	sort.Slice(objs, func(i, j int) bool { return objs[i].ObjectName < objs[j].ObjectName })
 }
 
 // Tests delete object responses and success.
