@@ -553,6 +553,7 @@ func resetCompressEncryption() {
 func execExtended(t *testing.T, fn func(t *testing.T)) {
 	// Exec with default settings...
 	resetCompressEncryption()
+	defer resetCompressEncryption()
 	t.Run("default", func(t *testing.T) {
 		fn(t)
 	})
