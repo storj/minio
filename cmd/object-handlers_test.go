@@ -38,8 +38,10 @@ import (
 
 	humanize "github.com/dustin/go-humanize"
 
+	"storj.io/minio/cmd/crypto"
 	xhttp "storj.io/minio/cmd/http"
 	"storj.io/minio/pkg/auth"
+	"storj.io/minio/pkg/hash"
 	ioutilx "storj.io/minio/pkg/ioutil"
 )
 
@@ -261,14 +263,13 @@ func testAPIHeadObjectHandlerWithEncryption(obj ObjectLayer, instanceType, bucke
 		// Encrypted object
 		{"enc-nothing", []int64{0}, mapCopy(metaWithSSEC)},
 		{"enc-small-1", []int64{509}, mapCopy(metaWithSSEC)},
-
 		{"enc-mp-1", []int64{5 * oneMiB, 1}, mapCopy(metaWithSSEC)},
 		{"enc-mp-2", []int64{5487701, 5487799, 3}, mapCopy(metaWithSSEC)},
 	}
 
 	// iterate through the above set of inputs and upload the object.
 	for _, input := range objectInputs {
-		uploadTestObject(t, apiRouter, credentials, bucketName, input.objectName, input.partLengths, input.metaData, false)
+		uploadTestObjectForRead(t, obj, apiRouter, credentials, bucketName, input.objectName, input.partLengths, input.metaData)
 	}
 
 	for i, input := range objectInputs {
@@ -712,7 +713,6 @@ func testAPIGetObjectWithMPHandler(obj ObjectLayer, instanceType, bucketName str
 		{"enc-small-0", []int64{11}, mapCopy(metaWithSSEC)},
 		{"enc-small-1", []int64{509}, mapCopy(metaWithSSEC)},
 		{"enc-small-2", []int64{5 * oneMiB}, mapCopy(metaWithSSEC)},
-		// cases 12-15: multipart part objects with encryption
 		{"enc-mp-0", []int64{5 * oneMiB, 1}, mapCopy(metaWithSSEC)},
 		{"enc-mp-1", []int64{5*oneMiB + 1, 1}, mapCopy(metaWithSSEC)},
 		{"enc-mp-2", []int64{5487701, 5487799, 3}, mapCopy(metaWithSSEC)},
@@ -721,7 +721,7 @@ func testAPIGetObjectWithMPHandler(obj ObjectLayer, instanceType, bucketName str
 
 	// iterate through the above set of inputs and upload the object.
 	for _, input := range objectInputs {
-		uploadTestObject(t, apiRouter, credentials, bucketName, input.objectName, input.partLengths, input.metaData, false)
+		uploadTestObjectForRead(t, obj, apiRouter, credentials, bucketName, input.objectName, input.partLengths, input.metaData)
 	}
 
 	// function type for creating signed requests - used to repeat
@@ -904,7 +904,6 @@ func testAPIGetObjectWithPartNumberHandler(obj ObjectLayer, instanceType, bucket
 		{"enc-small-0", []int64{11}, mapCopy(metaWithSSEC)},
 		{"enc-small-1", []int64{509}, mapCopy(metaWithSSEC)},
 		{"enc-small-2", []int64{5 * oneMiB}, mapCopy(metaWithSSEC)},
-		// cases 13-16: multipart part objects with encryption
 		{"enc-mp-0", []int64{5 * oneMiB, 1}, mapCopy(metaWithSSEC)},
 		{"enc-mp-1", []int64{5*oneMiB + 1, 1}, mapCopy(metaWithSSEC)},
 		{"enc-mp-2", []int64{5487701, 5487799, 3}, mapCopy(metaWithSSEC)},
@@ -913,7 +912,7 @@ func testAPIGetObjectWithPartNumberHandler(obj ObjectLayer, instanceType, bucket
 
 	// iterate through the above set of inputs and upload the object.
 	for _, input := range objectInputs {
-		uploadTestObject(t, apiRouter, credentials, bucketName, input.objectName, input.partLengths, input.metaData, false)
+		uploadTestObjectForRead(t, obj, apiRouter, credentials, bucketName, input.objectName, input.partLengths, input.metaData)
 	}
 
 	mkGetReqWithPartNumber := func(oindex int, oi ObjectInput, partNumber int) {
@@ -4072,4 +4071,75 @@ func testAPIListObjectPartsHandler(obj ObjectLayer, instanceType, bucketName str
 	// execute the object layer set to `nil` test.
 	// `ExecObjectLayerAPINilTest` sets the Object Layer to `nil` and calls the handler.
 	ExecObjectLayerAPINilTest(t, nilBucket, nilObject, instanceType, apiRouter, nilReq)
+}
+
+// uploadTestObjectForRead seeds valid encoded multipart data directly in the
+// object layer. PutObjectPartHandler no longer encodes parts (c67d6dac9),
+// and the FS test backend only stores the supplied bytes.
+// Single-part and unencoded multipart uploads still exercise the HTTP handlers.
+func uploadTestObjectForRead(t *testing.T, obj ObjectLayer, apiRouter http.Handler, creds auth.Credentials,
+	bucket, object string, partSizes []int64, headers map[string]string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPut, "/", nil)
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	if globalAutoEncryption && !crypto.SSEC.IsRequested(req.Header) {
+		req.Header.Set(xhttp.AmzServerSideEncryption, xhttp.AmzEncryptionAES)
+	}
+	_, encrypted := crypto.IsRequested(req.Header)
+	compressed := isCompressible(req.Header, object)
+	if len(partSizes) < 2 || (!encrypted && !compressed) {
+		uploadTestObject(t, apiRouter, creds, bucket, object, partSizes, headers, false)
+		return
+	}
+	metadata := make(map[string]string)
+	var key crypto.ObjectKey
+	if encrypted {
+		var err error
+		_, key, err = EncryptRequest(bytes.NewReader(nil), req, bucket, object, metadata)
+		if err != nil {
+			t.Fatal(err)
+		}
+		metadata[crypto.MetaMultipart] = ""
+	}
+	if compressed {
+		metadata[ReservedMetadataPrefix+"compression"] = compressionAlgorithmV2
+	}
+	ctx := context.Background()
+	opts := ObjectOptions{UserDefined: metadata}
+	uploadID, err := obj.NewMultipartUpload(ctx, bucket, object, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parts []CompletePart
+	var offset int64
+	for i, size := range partSizes {
+		var reader io.Reader = NewDummyDataGen(size, offset)
+		offset += size
+		if compressed {
+			compressedReader := newS2CompressReader(reader, size)
+			defer compressedReader.Close()
+			reader = compressedReader
+		}
+		if encrypted {
+			reader = crypto.EncryptMultiPart(reader, i+1, key)
+		}
+		encoded, err := io.ReadAll(reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		hashReader, err := hash.NewDefaultReader(bytes.NewReader(encoded), int64(len(encoded)), "", "", size)
+		if err != nil {
+			t.Fatal(err)
+		}
+		part, err := obj.PutObjectPart(ctx, bucket, object, uploadID, i+1, NewPutObjReader(hashReader), ObjectOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		parts = append(parts, CompletePart{PartNumber: i + 1, ETag: part.ETag})
+	}
+	if _, err := obj.CompleteMultipartUpload(ctx, bucket, object, uploadID, parts, opts); err != nil {
+		t.Fatal(err)
+	}
 }
