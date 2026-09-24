@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
@@ -28,8 +29,6 @@ import (
 	"net/url"
 	"testing"
 	"time"
-
-	humanize "github.com/dustin/go-humanize"
 )
 
 const (
@@ -372,26 +371,8 @@ func testPostPolicyBucketHandler(obj ObjectLayer, instanceType string, t TestErr
 			malformedBody:       false,
 			ignoreContentLength: true,
 		},
-		// Failed with entity too small.
-		{
-			objectName:          "test",
-			data:                bytes.Repeat([]byte("a"), 1023),
-			expectedRespStatus:  http.StatusBadRequest,
-			accessKey:           credentials.AccessKey,
-			secretKey:           credentials.SecretKey,
-			malformedBody:       false,
-			ignoreContentLength: false,
-		},
-		// Failed with entity too large.
-		{
-			objectName:          "test",
-			data:                bytes.Repeat([]byte("a"), (1*humanize.MiByte)+1),
-			expectedRespStatus:  http.StatusBadRequest,
-			accessKey:           credentials.AccessKey,
-			secretKey:           credentials.SecretKey,
-			malformedBody:       false,
-			ignoreContentLength: false,
-		},
+		// Size-limit propagation and backend rejection are covered by
+		// TestPostPolicyBucketHandlerContentLengthRange.
 	}
 
 	for i, testCase := range testCases2 {
@@ -415,6 +396,91 @@ func testPostPolicyBucketHandler(obj ObjectLayer, instanceType string, t TestErr
 		}
 	}
 
+}
+
+type postPolicyObjectLayer struct {
+	ObjectLayer
+	putObject func(context.Context, string, string, *PutObjReader, ObjectOptions) (ObjectInfo, error)
+}
+
+func (obj postPolicyObjectLayer) PutObject(ctx context.Context, bucket, object string, data *PutObjReader, opts ObjectOptions) (ObjectInfo, error) {
+	return obj.putObject(ctx, bucket, object, data, opts)
+}
+
+// Gateway backends enforce the range after reading the streamed object. Check
+// that the handler forwards the signed limits and preserves backend size errors.
+func TestPostPolicyBucketHandlerContentLengthRange(t *testing.T) {
+	ExecObjectLayerTest(t, func(obj ObjectLayer, instanceType string, _ TestErrHandler) {
+		bucketName := getRandomBucketName()
+		if err := obj.MakeBucketWithLocation(context.Background(), bucketName, BucketOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		credentials := globalActiveCred
+		for _, test := range []struct {
+			name string
+			size int
+			err  error
+			code string
+		}{
+			{"too-small", 1023, ObjectTooSmall{}, "EntityTooSmall"},
+			{"minimum", 1024, nil, ""},
+			{"maximum", 1048576, nil, ""},
+			{"too-large", 1048577, ObjectTooLarge{}, "EntityTooLarge"},
+		} {
+			t.Run(instanceType+"/"+test.name, func(t *testing.T) {
+				data := bytes.Repeat([]byte("a"), test.size)
+				calls := 0
+				backend := postPolicyObjectLayer{ObjectLayer: obj}
+				backend.putObject = func(ctx context.Context, bucket, object string, reader *PutObjReader, opts ObjectOptions) (ObjectInfo, error) {
+					calls++
+					if bucket != bucketName || object != "test/upload.txt" {
+						t.Errorf("unexpected upload target: %s/%s", bucket, object)
+					}
+					wantRange := ContentLengthRange{Min: 1024, Max: 1048576, Valid: true}
+					if got := opts.PostPolicy.Conditions.ContentLengthRange; got != wantRange {
+						t.Errorf("content-length-range = %+v, want %+v", got, wantRange)
+					}
+					body, err := ioutil.ReadAll(reader)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !bytes.Equal(body, data) {
+						t.Errorf("backend did not receive the complete object payload (got %d bytes, want %d)", len(body), len(data))
+					}
+					return ObjectInfo{Bucket: bucket, Name: object, Size: int64(len(body))}, test.err
+				}
+				router, err := initTestAPIEndPoints(backend, []string{"PostPolicy"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				req, err := newPostRequestV4WithContentLength("", bucketName, "test", data, credentials.AccessKey, credentials.SecretKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rec := httptest.NewRecorder()
+				router.ServeHTTP(rec, req)
+				if calls != 1 {
+					t.Fatalf("PutObject called %d times, want 1; response: %s", calls, rec.Body.String())
+				}
+				wantStatus := http.StatusNoContent
+				if test.err != nil {
+					wantStatus = http.StatusBadRequest
+				}
+				if rec.Code != wantStatus {
+					t.Fatalf("status = %d, want %d; response: %s", rec.Code, wantStatus, rec.Body.String())
+				}
+				if test.err != nil {
+					var response APIErrorResponse
+					if err := xml.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+						t.Fatal(err)
+					}
+					if response.Code != test.code {
+						t.Errorf("error code = %q, want %q", response.Code, test.code)
+					}
+				}
+			})
+		}
+	})
 }
 
 // Wrapper for calling TestPostPolicyBucketHandlerRedirect tests for both Erasure multiple disks and single node setup.
