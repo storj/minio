@@ -1631,6 +1631,11 @@ func initAPIHandlerTest(obj ObjectLayer, endpoints []string) (string, http.Handl
 	}
 	f := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.RequestURI = r.URL.RequestURI()
+		// net/http servers keep the Content-Length header on incoming
+		// requests, but client requests only carry it in r.ContentLength.
+		if r.ContentLength >= 0 && len(r.TransferEncoding) == 0 && r.Header.Get(xhttp.ContentLength) == "" {
+			r.Header.Set(xhttp.ContentLength, strconv.FormatInt(r.ContentLength, 10))
+		}
 		apiRouter.ServeHTTP(w, r)
 	})
 	return bucketName, f, nil
