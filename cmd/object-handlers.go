@@ -2138,6 +2138,12 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 
 	defer logger.AuditLog(ctx, w, r, mustGetClaimsFromToken(r))
 
+	objectAPI := api.objectAPI()
+	if objectAPI == nil {
+		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
+		return
+	}
+
 	if _, ok := r.Header[http.CanonicalHeaderKey(xhttp.AmzCopySourceIfModifiedSince)]; ok {
 		WriteErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
 		return
@@ -2262,7 +2268,7 @@ func (api ObjectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	partInfo, err := api.objectAPI().CopyObjectPart(
+	partInfo, err := objectAPI.CopyObjectPart(
 		ctx,
 		srcBucket, srcObject, dstBucket, dstObject, uploadID,
 		partID,

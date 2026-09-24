@@ -1019,9 +1019,7 @@ func (s *erasureSets) NewMultipartUpload(ctx context.Context, bucket, object str
 // Copies a part of an object from source hashedSet to destination hashedSet.
 func (s *erasureSets) CopyObjectPart(ctx context.Context, srcBucket, srcObject, destBucket, destObject string, uploadID string, partID int,
 	startOffset int64, length int64, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (partInfo PartInfo, err error) {
-	destSet := s.getHashedSet(destObject)
-	auditObjectErasureSet(ctx, destObject, destSet)
-	return destSet.PutObjectPart(ctx, destBucket, destObject, uploadID, partID, NewPutObjReader(srcInfo.Reader), dstOpts)
+	return copyObjectPart(ctx, s, srcBucket, srcObject, destBucket, destObject, uploadID, partID, startOffset, length, srcOpts, dstOpts)
 }
 
 // PutObjectPart - writes part of an object to hashedSet based on the object name.

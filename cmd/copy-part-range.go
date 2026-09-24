@@ -18,8 +18,11 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
+
+	"storj.io/minio/pkg/hash"
 )
 
 // Writes S3 compatible copy part range error.
@@ -68,4 +71,60 @@ func checkCopyPartRangeWithSize(rs *HTTPRangeSpec, resourceSize int64) (err erro
 		return errInvalidRangeSource
 	}
 	return nil
+}
+
+// copyObjectPart implements CopyObjectPart for object layers that hold the
+// source object themselves: it reads length bytes (-1 for the whole object)
+// of the source starting at startOffset and uploads them as a part.
+func copyObjectPart(ctx context.Context, layer interface {
+	GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (*GetObjectReader, error)
+	PutObjectPart(ctx context.Context, bucket, object, uploadID string, partID int, data *PutObjReader, opts ObjectOptions) (PartInfo, error)
+}, srcBucket, srcObject, dstBucket, dstObject, uploadID string, partID int, startOffset, length int64, srcOpts, dstOpts ObjectOptions) (PartInfo, error) {
+	var rs *HTTPRangeSpec
+	if length >= 0 {
+		rs = &HTTPRangeSpec{Start: startOffset, End: startOffset + length - 1}
+	}
+
+	var rangeErr error
+	srcOpts.CheckPrecondFn = func(oi ObjectInfo) bool {
+		size, err := oi.GetActualSize()
+		if err != nil {
+			rangeErr = err
+		} else {
+			rangeErr = checkCopyPartRangeWithSize(rs, size)
+		}
+		return rangeErr != nil
+	}
+
+	gr, err := layer.GetObjectNInfo(ctx, srcBucket, srcObject, rs, nil, readLock, srcOpts)
+	if rangeErr != nil {
+		return PartInfo{}, rangeErr
+	}
+	if err != nil {
+		// Ranges starting at or beyond the end of the source are rejected
+		// before the precondition function runs.
+		if rs != nil && errors.Is(err, errInvalidRange) {
+			return PartInfo{}, errInvalidRangeSource
+		}
+		return PartInfo{}, err
+	}
+	defer gr.Close()
+
+	size, err := gr.ObjInfo.GetActualSize()
+	if err != nil {
+		return PartInfo{}, err
+	}
+	if rs != nil {
+		size = length
+	}
+	if isMaxAllowedPartSize(size) {
+		return PartInfo{}, errDataTooLarge
+	}
+
+	reader, err := hash.NewDefaultReader(gr, size, "", "", size)
+	if err != nil {
+		return PartInfo{}, err
+	}
+
+	return layer.PutObjectPart(ctx, dstBucket, dstObject, uploadID, partID, NewPutObjReader(reader), dstOpts)
 }

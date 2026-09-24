@@ -1874,6 +1874,8 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 		apiErr = ErrSignatureDoesNotMatch
 	case errInvalidRange:
 		apiErr = ErrInvalidRange
+	case errInvalidRangeSource:
+		apiErr = ErrInvalidCopyPartRangeSource
 	case errDataTooLarge:
 		apiErr = ErrEntityTooLarge
 	case errDataTooSmall:

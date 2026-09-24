@@ -1813,6 +1813,18 @@ func testAPICopyObjectPartHandler(obj ObjectLayer, instanceType, bucketName stri
 			expectedRespStatus: http.StatusBadRequest,
 		},
 
+		// Test case with byte range starting at the end of the source.
+		{
+			bucketName:       bucketName,
+			uploadID:         uploadID,
+			copySourceHeader: url.QueryEscape(SlashSeparator + bucketName + SlashSeparator + objectName),
+			copySourceRange:  "bytes=6144-6145",
+			accessKey:        credentials.AccessKey,
+			secretKey:        credentials.SecretKey,
+
+			expectedRespStatus: http.StatusBadRequest,
+		},
+
 		// Test case - 7.
 		// Test case with object name missing from source.
 		// fail with BadRequest.
