@@ -266,6 +266,10 @@ func putTransitionOpts(objInfo ObjectInfo) (putOpts miniogo.PutObjectOptions, er
 		tag, _ := tags.ParseObjectTags(objInfo.UserTags)
 		if tag != nil {
 			putOpts.UserTags = tag.ToMap()
+			// minio-go silently omits tags it cannot encode. Fail before uploading.
+			if putOpts.Header().Get(xhttp.AmzObjectTagging) == "" {
+				return putOpts, fmt.Errorf("cannot transition object: minio-go cannot encode its tags")
+			}
 		}
 	}
 

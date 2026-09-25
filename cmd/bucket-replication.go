@@ -436,6 +436,10 @@ func putReplicationOpts(ctx context.Context, dest replication.Destination, objIn
 		tag, _ := tags.ParseObjectTags(objInfo.UserTags)
 		if tag != nil {
 			putOpts.UserTags = tag.ToMap()
+			// Check without UserMetadata, which may contain an unrelated tagging header.
+			if (miniogo.PutObjectOptions{UserTags: putOpts.UserTags}).Header().Get(xhttp.AmzObjectTagging) == "" {
+				return putOpts, fmt.Errorf("cannot replicate object: minio-go cannot encode its tags")
+			}
 		}
 	}
 
