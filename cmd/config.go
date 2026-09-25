@@ -24,8 +24,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	jsoniter "github.com/json-iterator/go"
-
 	"storj.io/minio/cmd/config"
 	"storj.io/minio/pkg/kms"
 	"storj.io/minio/pkg/madmin"
@@ -170,7 +168,6 @@ func readServerConfig(ctx context.Context, objAPI ObjectLayer) (config.Config, e
 	}
 
 	var srvCfg = config.New()
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err = json.Unmarshal(data, &srvCfg); err != nil {
 		return nil, err
 	}

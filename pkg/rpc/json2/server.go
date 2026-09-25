@@ -11,14 +11,13 @@
 package json2
 
 import (
+	"encoding/json"
 	"net/http"
-
-	jsoniter "github.com/json-iterator/go"
 
 	"storj.io/minio/pkg/rpc"
 )
 
-var null = jsoniter.RawMessage([]byte("null"))
+var null = json.RawMessage([]byte("null"))
 var Version = "2.0"
 
 // ----------------------------------------------------------------------------
@@ -34,12 +33,12 @@ type serverRequest struct {
 	Method string `json:"method"`
 
 	// A Structured value to pass as arguments to the method.
-	Params *jsoniter.RawMessage `json:"params"`
+	Params *json.RawMessage `json:"params"`
 
 	// The request id. MUST be a string, number or null.
 	// Our implementation will not do type checking for id.
 	// It will be copied as it is.
-	ID *jsoniter.RawMessage `json:"id"`
+	ID *json.RawMessage `json:"id"`
 }
 
 // serverResponse represents a JSON-RPC response returned by the server.
@@ -58,7 +57,7 @@ type serverResponse struct {
 	Error *Error `json:"error,omitempty"`
 
 	// This must be the same id as the request it is responding to.
-	ID *jsoniter.RawMessage `json:"id"`
+	ID *json.RawMessage `json:"id"`
 }
 
 // ----------------------------------------------------------------------------
@@ -107,7 +106,6 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 func newCodecRequest(r *http.Request, encoder rpc.Encoder, errorMapper func(error) error) rpc.CodecRequest {
 	// Decode the request body and check if RPC method is valid.
 	req := new(serverRequest)
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	err := json.NewDecoder(r.Body).Decode(req)
 
 	if err != nil {
@@ -163,7 +161,6 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 	if c.err == nil && c.request.Params != nil {
 		// Note: if c.request.Params is nil it's not an error, it's an optional member.
 		// JSON params structured object. Unmarshal to the args object.
-		var json = jsoniter.ConfigCompatibleWithStandardLibrary
 		if err := json.Unmarshal(*c.request.Params, args); err != nil {
 			// Clearly JSON params is not a structured object,
 			// fallback and attempt an unmarshal with JSON params as
@@ -221,7 +218,6 @@ func (c *CodecRequest) writeServerResponse(w http.ResponseWriter, res *serverRes
 	// case we can't know whether it was intended to be a notification
 	if c.request.ID != nil || isParseErrorResponse(res) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		var json = jsoniter.ConfigCompatibleWithStandardLibrary
 		encoder := json.NewEncoder(c.encoder.Encode(w))
 		err := encoder.Encode(res)
 

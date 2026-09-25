@@ -19,6 +19,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,7 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/minio-go/v7/pkg/s3utils"
 	"github.com/minio/minio-go/v7/pkg/tags"
 
@@ -343,7 +343,6 @@ func (fs *FSObjects) scanBucket(ctx context.Context, bucket string, cache dataUs
 		fsMeta := newFSMetaV1()
 		metaOk := false
 		if len(fsMetaBytes) > 0 {
-			var json = jsoniter.ConfigCompatibleWithStandardLibrary
 			if err = json.Unmarshal(fsMetaBytes, &fsMeta); err == nil {
 				metaOk = true
 			}
@@ -453,7 +452,6 @@ func (fs *FSObjects) SetBucketPolicy(ctx context.Context, bucket string, p *poli
 		return err
 	}
 
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	configData, err := json.Marshal(p)
 	if err != nil {
 		return err
@@ -924,7 +922,6 @@ func (fs *FSObjects) getObjectInfoNoFSLock(ctx context.Context, bucket, object s
 		fsMetaBuf, rerr := ioutil.ReadAll(rc)
 		rc.Close()
 		if rerr == nil {
-			var json = jsoniter.ConfigCompatibleWithStandardLibrary
 			if rerr = json.Unmarshal(fsMetaBuf, &fsMeta); rerr != nil {
 				// For any error to read fsMeta, set default ETag and proceed.
 				fsMeta = fs.defaultFsJSON(object)
@@ -1447,7 +1444,6 @@ func (fs *FSObjects) getObjectETag(ctx context.Context, bucket, entry string, lo
 	}
 
 	var fsMeta fsMetaV1
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err = json.Unmarshal(fsMetaBuf, &fsMeta); err != nil {
 		return "", err
 	}

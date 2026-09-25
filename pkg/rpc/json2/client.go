@@ -11,10 +11,9 @@
 package json2
 
 import (
+	"encoding/json"
 	"io"
 	"math/rand"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
 // ----------------------------------------------------------------------------
@@ -39,9 +38,9 @@ type clientRequest struct {
 
 // clientResponse represents a JSON-RPC response returned to a client.
 type clientResponse struct {
-	Version string               `json:"jsonrpc"`
-	Result  *jsoniter.RawMessage `json:"result"`
-	Error   *jsoniter.RawMessage `json:"error"`
+	Version string           `json:"jsonrpc"`
+	Result  *json.RawMessage `json:"result"`
+	Error   *json.RawMessage `json:"error"`
 }
 
 // EncodeClientRequest encodes parameters for a JSON-RPC client request.
@@ -52,7 +51,6 @@ func EncodeClientRequest(method string, args interface{}) ([]byte, error) {
 		Params:  args,
 		Id:      uint64(rand.Int63()),
 	}
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	return json.Marshal(c)
 }
 
@@ -60,7 +58,6 @@ func EncodeClientRequest(method string, args interface{}) ([]byte, error) {
 // the interface reply.
 func DecodeClientResponse(r io.Reader, reply interface{}) error {
 	var c clientResponse
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err := json.NewDecoder(r).Decode(&c); err != nil {
 		return err
 	}

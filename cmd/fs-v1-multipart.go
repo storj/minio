@@ -29,8 +29,6 @@ import (
 	"strings"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
-
 	"storj.io/minio/cmd/logger"
 	xioutil "storj.io/minio/pkg/ioutil"
 	"storj.io/minio/pkg/trie"
@@ -401,7 +399,6 @@ func (fs *FSObjects) GetMultipartInfo(ctx context.Context, bucket, object, uploa
 	}
 
 	var fsMeta fsMetaV1
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err = json.Unmarshal(fsMetaBytes, &fsMeta); err != nil {
 		return minfo, toObjectErr(err, bucket, object)
 	}
@@ -530,7 +527,6 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 	}
 
 	var fsMeta fsMetaV1
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err = json.Unmarshal(fsMetaBytes, &fsMeta); err != nil {
 		return result, err
 	}

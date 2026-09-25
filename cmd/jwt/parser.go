@@ -32,7 +32,6 @@ import (
 	"time"
 
 	jwtgo "github.com/golang-jwt/jwt/v4"
-	jsoniter "github.com/json-iterator/go"
 )
 
 // SigningMethodHMAC - Implements the HMAC-SHA family of signing methods signing methods
@@ -258,7 +257,6 @@ func ParseUnverifiedStandardClaims(tokenString string, claims *StandardClaims, b
 	}
 
 	var header = jwtHeader{}
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err = json.Unmarshal(buf[:n], &header); err != nil {
 		return nil, &jwtgo.ValidationError{Inner: err, Errors: jwtgo.ValidationErrorMalformed}
 	}
@@ -361,7 +359,6 @@ func ParseUnverifiedMapClaims(tokenString string, claims *MapClaims, buf []byte)
 	}
 
 	var header = jwtHeader{}
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err = json.Unmarshal(buf[:n], &header); err != nil {
 		return nil, &jwtgo.ValidationError{Inner: err, Errors: jwtgo.ValidationErrorMalformed}
 	}

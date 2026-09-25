@@ -22,6 +22,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -37,7 +38,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/klauspost/readahead"
 
 	"storj.io/minio/cmd/config"
@@ -581,7 +581,6 @@ func (s *xlStorage) GetDiskID() (string, error) {
 	}
 
 	format := &formatErasureV3{}
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err = json.Unmarshal(b, &format); err != nil {
 		logger.LogIf(GlobalContext, err) // log unexpected errors
 		return "", errCorruptedFormat
@@ -1944,7 +1943,6 @@ func (s *xlStorage) RenameData(ctx context.Context, srcVolume, srcPath string, f
 		} else {
 			// This code-path is to preserve the legacy data.
 			xlMetaLegacy := &xlMetaV1Object{}
-			var json = jsoniter.ConfigCompatibleWithStandardLibrary
 			if err := json.Unmarshal(dstBuf, xlMetaLegacy); err != nil {
 				logger.LogIf(s.ctx, err)
 				return errFileCorrupt
