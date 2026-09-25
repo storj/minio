@@ -36,7 +36,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/sio"
 
 	"storj.io/minio/cmd/config/storageclass"
@@ -55,6 +54,7 @@ import (
 	"storj.io/minio/pkg/ioutil"
 	xnet "storj.io/minio/pkg/net"
 	"storj.io/minio/pkg/s3select"
+	"storj.io/minio/pkg/tags"
 )
 
 // supportedHeadGetReqParams - supported request parameters for GET and HEAD presigned request.

@@ -27,7 +27,6 @@ import (
 
 	"github.com/amwolff/awsig"
 	minio "github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/tags"
 
 	"storj.io/minio/cmd/crypto"
 	"storj.io/minio/cmd/logger"
@@ -39,6 +38,7 @@ import (
 	"storj.io/minio/pkg/bucket/versioning"
 	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/hash"
+	"storj.io/minio/pkg/tags"
 )
 
 // APIError structure

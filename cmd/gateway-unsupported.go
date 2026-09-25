@@ -20,8 +20,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/minio/minio-go/v7/pkg/tags"
-
 	"storj.io/minio/cmd/logger"
 	bucketsse "storj.io/minio/pkg/bucket/encryption"
 	"storj.io/minio/pkg/bucket/lifecycle"
@@ -30,6 +28,7 @@ import (
 	"storj.io/minio/pkg/bucket/versioning"
 	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/madmin"
+	"storj.io/minio/pkg/tags"
 )
 
 // GatewayUnsupported list of unsupported call stubs for gateway.

@@ -23,13 +23,13 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/tags"
 
 	objectlock "storj.io/minio/pkg/bucket/object/lock"
 	"storj.io/minio/pkg/bucket/policy"
 	"storj.io/minio/pkg/bucket/versioning"
 	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/madmin"
+	"storj.io/minio/pkg/tags"
 )
 
 // CheckPreconditionFn returns true if precondition check failed.

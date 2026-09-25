@@ -33,7 +33,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/minio/minio-go/v7/pkg/tags"
 
 	"storj.io/minio/cmd/crypto"
 	xhttp "storj.io/minio/cmd/http"
@@ -46,6 +45,7 @@ import (
 	"storj.io/minio/pkg/handlers"
 	"storj.io/minio/pkg/hash"
 	iampolicy "storj.io/minio/pkg/iam/policy"
+	"storj.io/minio/pkg/tags"
 )
 
 const (

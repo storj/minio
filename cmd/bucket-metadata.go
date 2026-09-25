@@ -28,7 +28,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/tags"
 	"github.com/minio/sio"
 
 	"storj.io/minio/cmd/crypto"
@@ -43,6 +42,7 @@ import (
 	"storj.io/minio/pkg/fips"
 	"storj.io/minio/pkg/kms"
 	"storj.io/minio/pkg/madmin"
+	"storj.io/minio/pkg/tags"
 )
 
 const (

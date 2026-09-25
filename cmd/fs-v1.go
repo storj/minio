@@ -34,7 +34,6 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/s3utils"
-	"github.com/minio/minio-go/v7/pkg/tags"
 
 	"storj.io/minio/cmd/config"
 	xhttp "storj.io/minio/cmd/http"
@@ -48,6 +47,7 @@ import (
 	"storj.io/minio/pkg/madmin"
 	"storj.io/minio/pkg/mimedb"
 	"storj.io/minio/pkg/mountinfo"
+	"storj.io/minio/pkg/tags"
 )
 
 // Default etag is used for pre-existing objects.

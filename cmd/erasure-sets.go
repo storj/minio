@@ -33,7 +33,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio-go/v7/pkg/tags"
+
+	"storj.io/minio/pkg/tags"
 
 	"storj.io/minio/cmd/logger"
 	"storj.io/minio/pkg/bpool"
@@ -942,8 +943,8 @@ func (s *erasureSets) DeleteObjects(ctx context.Context, bucket string, objects 
 			for _, obj := range objsGroup {
 				delErrs = append(delErrs, DeleteObjectsError{
 					ObjectName: obj.object.ObjectName,
-					VersionID: obj.object.VersionID,
-					Error: err,
+					VersionID:  obj.object.VersionID,
+					Error:      err,
 				})
 			}
 			continue

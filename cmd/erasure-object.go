@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/minio/minio-go/v7/pkg/tags"
+	"storj.io/minio/pkg/tags"
 
 	xhttp "storj.io/minio/cmd/http"
 	"storj.io/minio/cmd/logger"
@@ -997,8 +997,8 @@ func (er erasureObjects) DeleteObjects(ctx context.Context, bucket string, objec
 		if objErr != nil {
 			errs = append(errs, DeleteObjectsError{
 				ObjectName: objects[objIndex].ObjectName,
-				VersionID: objects[objIndex].VersionID,
-				Error: objErr,
+				VersionID:  objects[objIndex].VersionID,
+				Error:      objErr,
 			})
 			continue
 		}

@@ -30,7 +30,8 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7/pkg/set"
-	"github.com/minio/minio-go/v7/pkg/tags"
+
+	"storj.io/minio/pkg/tags"
 
 	"storj.io/minio/cmd/config/storageclass"
 	"storj.io/minio/cmd/logger"
@@ -780,8 +781,8 @@ func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, o
 		if err := checkDelObjArgs(ctx, bucket, objects[i].ObjectName); err != nil {
 			derrs[i] = DeleteObjectsError{
 				ObjectName: objects[i].ObjectName,
-				VersionID: objects[i].VersionID,
-				Error: err,
+				VersionID:  objects[i].VersionID,
+				Error:      err,
 			}
 		}
 		objSets.Add(objects[i].ObjectName)
@@ -795,8 +796,8 @@ func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, o
 			if isErrObjectNotFound(err) {
 				derrs[j] = DeleteObjectsError{
 					ObjectName: obj.ObjectName,
-					VersionID: obj.VersionID,
-					Error: err,
+					VersionID:  obj.VersionID,
+					Error:      err,
 				}
 				continue
 			}
@@ -805,8 +806,8 @@ func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, o
 				for i := range derrs {
 					derrs[i] = DeleteObjectsError{
 						ObjectName: objects[i].ObjectName,
-						VersionID: objects[i].VersionID,
-						Error: err,
+						VersionID:  objects[i].VersionID,
+						Error:      err,
 					}
 				}
 				return dobjects, derrs, nil
@@ -824,8 +825,8 @@ func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, o
 		for i := range derrs {
 			derrs[i] = DeleteObjectsError{
 				ObjectName: objects[i].ObjectName,
-				VersionID: objects[i].VersionID,
-				Error: err,
+				VersionID:  objects[i].VersionID,
+				Error:      err,
 			}
 		}
 		return dobjects, derrs, nil
@@ -845,8 +846,8 @@ func (z *erasureServerPools) DeleteObjects(ctx context.Context, bucket string, o
 			for _, orgIndex := range orgIndexes {
 				derrs[orgIndex] = DeleteObjectsError{
 					ObjectName: objects[orgIndex].ObjectName,
-					VersionID: objects[orgIndex].VersionID,
-					Error: err,
+					VersionID:  objects[orgIndex].VersionID,
+					Error:      err,
 				}
 			}
 			continue

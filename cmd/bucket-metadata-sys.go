@@ -25,8 +25,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/minio/minio-go/v7/pkg/tags"
-
 	"storj.io/minio/cmd/crypto"
 	"storj.io/minio/cmd/logger"
 	bucketsse "storj.io/minio/pkg/bucket/encryption"
@@ -38,6 +36,7 @@ import (
 	"storj.io/minio/pkg/event"
 	"storj.io/minio/pkg/madmin"
 	"storj.io/minio/pkg/sync/errgroup"
+	"storj.io/minio/pkg/tags"
 )
 
 // BucketMetadataSys captures all bucket metadata for a given cluster.

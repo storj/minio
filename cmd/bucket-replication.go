@@ -28,7 +28,8 @@ import (
 	minio "github.com/minio/minio-go/v7"
 	miniogo "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/encrypt"
-	"github.com/minio/minio-go/v7/pkg/tags"
+
+	"storj.io/minio/pkg/tags"
 
 	"storj.io/minio/cmd/crypto"
 	xhttp "storj.io/minio/cmd/http"
@@ -890,7 +891,7 @@ func (p *ReplicationPool) AddWorker() {
 
 }
 
-//Resize replication pool to new size
+// Resize replication pool to new size
 func (p *ReplicationPool) Resize(n int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
