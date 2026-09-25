@@ -17,10 +17,10 @@
 package cmd
 
 import (
+	"errors"
 	"os"
+	"os/user"
 	"path/filepath"
-
-	homedir "github.com/mitchellh/go-homedir"
 )
 
 const (
@@ -45,8 +45,24 @@ type ConfigDir struct {
 	path string
 }
 
+// userHomeDir returns the home directory of the current user. It falls back
+// to the user database when $HOME isn't set, e.g. in systemd services.
+func userHomeDir() (string, error) {
+	if dir, err := os.UserHomeDir(); err == nil {
+		return dir, nil
+	}
+	u, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	if u.HomeDir == "" {
+		return "", errors.New("home directory of the current user is empty")
+	}
+	return u.HomeDir, nil
+}
+
 func getDefaultConfigDir() string {
-	homeDir, err := homedir.Dir()
+	homeDir, err := userHomeDir()
 	if err != nil {
 		return ""
 	}
