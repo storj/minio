@@ -1618,15 +1618,15 @@ func testAPICopyObjectPartHandlerSanity(obj ObjectLayer, instanceType, bucketNam
 		cpPartURL := getCopyObjectPartURL("", bucketName, testObject, uploadID, fmt.Sprintf("%d", partNumber))
 
 		// construct HTTP request for copy object.
+		// "X-Amz-Copy-Source" header contains the information about the source bucket and the object to copied.
 		var req *http.Request
-		req, err = newTestSignedRequestV4(http.MethodPut, cpPartURL, 0, nil, credentials.AccessKey, credentials.SecretKey, nil)
+		req, err = newTestSignedRequestV4(http.MethodPut, cpPartURL, 0, nil, credentials.AccessKey, credentials.SecretKey, map[string]string{
+			"X-Amz-Copy-Source":       url.QueryEscape(pathJoin(bucketName, objectName)),
+			"X-Amz-Copy-Source-Range": fmt.Sprintf("bytes=%d-%d", a, b),
+		})
 		if err != nil {
 			t.Fatalf("Test failed to create HTTP request for copy object part: <ERROR> %v", err)
 		}
-
-		// "X-Amz-Copy-Source" header contains the information about the source bucket and the object to copied.
-		req.Header.Set("X-Amz-Copy-Source", url.QueryEscape(pathJoin(bucketName, objectName)))
-		req.Header.Set("X-Amz-Copy-Source-Range", fmt.Sprintf("bytes=%d-%d", a, b))
 
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
 		// Call the ServeHTTP to execute the handler, `func (api ObjectAPIHandlers) CopyObjectHandler` handles the request.
@@ -1934,24 +1934,31 @@ func testAPICopyObjectPartHandler(obj ObjectLayer, instanceType, bucketName stri
 		var req *http.Request
 		// initialize HTTP NewRecorder, this records any mutations to response writer inside the handler.
 		rec := httptest.NewRecorder()
+
+		// "X-Amz-Copy-Source" header contains the information about the source bucket and the object to copied.
+		// The copy source headers have to be signed.
+		headers := map[string]string{}
+		if testCase.copySourceHeader != "" {
+			headers["X-Amz-Copy-Source"] = testCase.copySourceHeader
+		}
+		if testCase.copySourceRange != "" {
+			headers["X-Amz-Copy-Source-Range"] = testCase.copySourceRange
+		}
+
 		if !testCase.invalidPartNumber || !testCase.maximumPartNumber {
 			// construct HTTP request for copy object.
-			req, err = newTestSignedRequestV4(http.MethodPut, getCopyObjectPartURL("", testCase.bucketName, testObject, testCase.uploadID, "1"), 0, nil, testCase.accessKey, testCase.secretKey, nil)
+			req, err = newTestSignedRequestV4(http.MethodPut, getCopyObjectPartURL("", testCase.bucketName, testObject, testCase.uploadID, "1"), 0, nil, testCase.accessKey, testCase.secretKey, headers)
 		} else if testCase.invalidPartNumber {
-			req, err = newTestSignedRequestV4(http.MethodPut, getCopyObjectPartURL("", testCase.bucketName, testObject, testCase.uploadID, "abc"), 0, nil, testCase.accessKey, testCase.secretKey, nil)
+			req, err = newTestSignedRequestV4(http.MethodPut, getCopyObjectPartURL("", testCase.bucketName, testObject, testCase.uploadID, "abc"), 0, nil, testCase.accessKey, testCase.secretKey, headers)
 		} else if testCase.maximumPartNumber {
-			req, err = newTestSignedRequestV4(http.MethodPut, getCopyObjectPartURL("", testCase.bucketName, testObject, testCase.uploadID, "99999"), 0, nil, testCase.accessKey, testCase.secretKey, nil)
+			req, err = newTestSignedRequestV4(http.MethodPut, getCopyObjectPartURL("", testCase.bucketName, testObject, testCase.uploadID, "99999"), 0, nil, testCase.accessKey, testCase.secretKey, headers)
 		}
 		if err != nil {
 			t.Fatalf("Test %d: Failed to create HTTP request for copy Object: <ERROR> %v", i+1, err)
 		}
-
-		// "X-Amz-Copy-Source" header contains the information about the source bucket and the object to copied.
-		if testCase.copySourceHeader != "" {
-			req.Header.Set("X-Amz-Copy-Source", testCase.copySourceHeader)
-		}
-		if testCase.copySourceRange != "" {
-			req.Header.Set("X-Amz-Copy-Source-Range", testCase.copySourceRange)
+		// Anonymous requests are not signed, set the headers explicitly.
+		for k, v := range headers {
+			req.Header.Set(k, v)
 		}
 
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
@@ -2312,35 +2319,43 @@ func testAPICopyObjectHandler(obj ObjectLayer, instanceType, bucketName string, 
 		var reqV2 *http.Request
 		// initialize HTTP NewRecorder, this records any mutations to response writer inside the handler.
 		rec := httptest.NewRecorder()
+
+		// "X-Amz-Copy-Source" header contains the information about the source bucket and the object to copied.
+		// The copy source headers have to be signed.
+		headers := map[string]string{}
+		if testCase.copySourceHeader != "" {
+			headers["X-Amz-Copy-Source"] = testCase.copySourceHeader
+		}
+		if testCase.copyModifiedHeader != "" {
+			headers["X-Amz-Copy-Source-If-Modified-Since"] = testCase.copyModifiedHeader
+		}
+		if testCase.copyUnmodifiedHeader != "" {
+			headers["X-Amz-Copy-Source-If-Unmodified-Since"] = testCase.copyUnmodifiedHeader
+		}
+		// Add custom metadata.
+		for k, v := range testCase.metadata {
+			headers[k] = v
+		}
+		if testCase.metadataReplace {
+			headers["X-Amz-Metadata-Directive"] = "REPLACE"
+		}
+		if testCase.metadataCopy {
+			headers["X-Amz-Metadata-Directive"] = "COPY"
+		}
+		if testCase.metadataGarbage {
+			headers["X-Amz-Metadata-Directive"] = "Unknown"
+		}
+
 		// construct HTTP request for copy object.
 		req, err = newTestSignedRequestV4(http.MethodPut, getCopyObjectURL("", testCase.bucketName, testCase.newObjectName),
-			0, nil, testCase.accessKey, testCase.secretKey, nil)
+			0, nil, testCase.accessKey, testCase.secretKey, headers)
 
 		if err != nil {
 			t.Fatalf("Test %d: Failed to create HTTP request for copy Object: <ERROR> %v", i, err)
 		}
-		// "X-Amz-Copy-Source" header contains the information about the source bucket and the object to copied.
-		if testCase.copySourceHeader != "" {
-			req.Header.Set("X-Amz-Copy-Source", testCase.copySourceHeader)
-		}
-		if testCase.copyModifiedHeader != "" {
-			req.Header.Set("X-Amz-Copy-Source-If-Modified-Since", testCase.copyModifiedHeader)
-		}
-		if testCase.copyUnmodifiedHeader != "" {
-			req.Header.Set("X-Amz-Copy-Source-If-Unmodified-Since", testCase.copyUnmodifiedHeader)
-		}
-		// Add custom metadata.
-		for k, v := range testCase.metadata {
+		// Anonymous requests are not signed, set the headers explicitly.
+		for k, v := range headers {
 			req.Header.Set(k, v)
-		}
-		if testCase.metadataReplace {
-			req.Header.Set("X-Amz-Metadata-Directive", "REPLACE")
-		}
-		if testCase.metadataCopy {
-			req.Header.Set("X-Amz-Metadata-Directive", "COPY")
-		}
-		if testCase.metadataGarbage {
-			req.Header.Set("X-Amz-Metadata-Directive", "Unknown")
 		}
 		// Since `apiRouter` satisfies `http.Handler` it has a ServeHTTP to execute the logic of the handler.
 		// Call the ServeHTTP to execute the handler, `func (api ObjectAPIHandlers) CopyObjectHandler` handles the request.

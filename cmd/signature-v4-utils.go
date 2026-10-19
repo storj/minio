@@ -150,6 +150,16 @@ func extractSignedHeaders(signedHeaders []string, r *http.Request) (http.Header,
 	if !contains(signedHeaders, "host") {
 		return nil, ErrUnsignedHeaders
 	}
+	// x-amz-copy-source* headers turn a PutObject/PutObjectPart into a
+	// server-side copy that reads with the signer's permissions, so they
+	// must be signed. Otherwise e.g. a presigned upload URL could be used
+	// to read any object the signer has access to.
+	for header := range reqHeaders {
+		header = strings.ToLower(header)
+		if strings.HasPrefix(header, strings.ToLower(xhttp.AmzCopySource)) && !contains(signedHeaders, header) {
+			return nil, ErrUnsignedHeaders
+		}
+	}
 	extractedSignedHeaders := make(http.Header)
 	for _, header := range signedHeaders {
 		// `host` will not be found in the headers, can be found in r.Host.
