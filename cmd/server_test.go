@@ -1592,14 +1592,14 @@ func (s *TestSuiteCommon) TestListObjectsHandler(c *check) {
 			[]string{
 				"<Key>foo bar 1</Key>",
 				"<Key>foo bar 2</Key>",
-				fmt.Sprintf("<Owner><ID>%s</ID><DisplayName>%s</DisplayName></Owner>", GlobalMinioDefaultOwnerID, GlobalMinioDefaultOwnerDisplayName),
+				fmt.Sprintf("<Owner><ID>%s</ID></Owner>", GlobalMinioDefaultOwnerID),
 			},
 		},
 		{getListObjectsV2URL(s.endPoint, bucketName, "", "1000", "true", ""),
 			[]string{
 				"<Key>foo bar 1</Key>",
 				"<Key>foo bar 2</Key>",
-				fmt.Sprintf("<Owner><ID>%s</ID><DisplayName>%s</DisplayName></Owner>", GlobalMinioDefaultOwnerID, GlobalMinioDefaultOwnerDisplayName),
+				fmt.Sprintf("<Owner><ID>%s</ID></Owner>", GlobalMinioDefaultOwnerID),
 			},
 		},
 		{getListObjectsV2URL(s.endPoint, bucketName, "", "1000", "", "url"), []string{"<Key>foo+bar+1</Key>", "<Key>foo+bar+2</Key>"}},

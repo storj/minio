@@ -56,17 +56,16 @@ const (
 	//    It is 64-character obfuscated version of the account ID.
 	// ```
 	// http://docs.aws.amazon.com/AmazonS3/latest/dev/example-walkthroughs-managing-access-example4.html
-	GlobalMinioDefaultOwnerID          = "7b25a206cc747e61355f1af9395c2e1dc93664b7b64838ca859b245e20dead3c"
-	GlobalMinioDefaultOwnerDisplayName = "storj"
-	globalMinioDefaultStorageClass     = "STANDARD"
-	globalWindowsOSName                = "windows"
-	globalMacOSName                    = "darwin"
-	globalMinioModeFS                  = "mode-server-fs"
-	globalMinioModeErasure             = "mode-server-xl"
-	globalMinioModeDistErasure         = "mode-server-distributed-xl"
-	globalMinioModeGatewayPrefix       = "mode-gateway-"
-	globalDirSuffix                    = "__XLDIR__"
-	globalDirSuffixWithSlash           = globalDirSuffix + slashSeparator
+	GlobalMinioDefaultOwnerID      = "7b25a206cc747e61355f1af9395c2e1dc93664b7b64838ca859b245e20dead3c"
+	globalMinioDefaultStorageClass = "STANDARD"
+	globalWindowsOSName            = "windows"
+	globalMacOSName                = "darwin"
+	globalMinioModeFS              = "mode-server-fs"
+	globalMinioModeErasure         = "mode-server-xl"
+	globalMinioModeDistErasure     = "mode-server-distributed-xl"
+	globalMinioModeGatewayPrefix   = "mode-gateway-"
+	globalDirSuffix                = "__XLDIR__"
+	globalDirSuffixWithSlash       = globalDirSuffix + slashSeparator
 
 	// Add new global values here.
 )

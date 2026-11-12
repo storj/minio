@@ -346,8 +346,9 @@ type Initiator Owner
 
 // Owner - bucket owner/principal
 type Owner struct {
-	ID          string
-	DisplayName string
+	ID string
+	// DisplayName is left empty and omitted, like AWS S3 does.
+	DisplayName string `xml:",omitempty"`
 }
 
 // InitiateMultipartUploadResponse container for InitiateMultiPartUpload response, provides uploadID to start MultiPart upload
@@ -435,8 +436,7 @@ func generateListBucketsResponse(buckets []BucketInfo) ListBucketsResponse {
 	listbuckets := make([]Bucket, 0, len(buckets))
 	var data = ListBucketsResponse{}
 	var owner = Owner{
-		ID:          GlobalMinioDefaultOwnerID,
-		DisplayName: GlobalMinioDefaultOwnerDisplayName,
+		ID: GlobalMinioDefaultOwnerID,
 	}
 
 	for _, bucket := range buckets {
@@ -456,8 +456,7 @@ func generateListBucketsResponse(buckets []BucketInfo) ListBucketsResponse {
 func generateListVersionsResponse(bucket, prefix, marker, versionIDMarker, delimiter, encodingType string, maxKeys int, resp ListObjectVersionsInfo) ListVersionsResponse {
 	versions := make([]ObjectVersion, 0, len(resp.Objects))
 	var owner = Owner{
-		ID:          GlobalMinioDefaultOwnerID,
-		DisplayName: GlobalMinioDefaultOwnerDisplayName,
+		ID: GlobalMinioDefaultOwnerID,
 	}
 	var data = ListVersionsResponse{}
 
@@ -514,8 +513,7 @@ func generateListVersionsResponse(bucket, prefix, marker, versionIDMarker, delim
 func generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingType string, maxKeys int, resp ListObjectsInfo) ListObjectsResponse {
 	contents := make([]Object, 0, len(resp.Objects))
 	var owner = Owner{
-		ID:          GlobalMinioDefaultOwnerID,
-		DisplayName: GlobalMinioDefaultOwnerDisplayName,
+		ID: GlobalMinioDefaultOwnerID,
 	}
 	var data = ListObjectsResponse{}
 
@@ -563,8 +561,7 @@ func generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingTy
 func generateListObjectsV2Response(bucket, prefix, token, nextToken, startAfter, delimiter, encodingType string, fetchOwner, isTruncated bool, maxKeys int, objects []ObjectInfo, prefixes []string, metadata bool) ListObjectsV2Response {
 	contents := make([]Object, 0, len(objects))
 	var owner = Owner{
-		ID:          GlobalMinioDefaultOwnerID,
-		DisplayName: GlobalMinioDefaultOwnerDisplayName,
+		ID: GlobalMinioDefaultOwnerID,
 	}
 	var data = ListObjectsV2Response{}
 
