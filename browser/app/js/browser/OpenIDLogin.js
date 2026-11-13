@@ -22,7 +22,6 @@ import * as actionsAlert from "../alert/actions"
 import InputGroup from "./InputGroup"
 import web from "../web"
 import { Redirect } from "react-router-dom"
-import qs from "query-string"
 import { getRandomString } from "../utils"
 import storage from "local-storage-fallback"
 import jwtDecode from "jwt-decode"
@@ -89,21 +88,24 @@ export class OpenIDLogin extends React.Component {
   }
 
   componentDidMount() {
-    const values = qs.parse(this.props.location.hash)
-    if (values.error) {
-      this.props.showAlert("danger", values.error_description)
+    const values = new URLSearchParams(
+      (this.props.location.hash || "").replace(/^#/, "")
+    )
+    if (values.get("error")) {
+      this.props.showAlert("danger", values.get("error_description"))
       return
     }
 
-    if (values.id_token) {
+    const idToken = values.get("id_token")
+    if (idToken) {
       // Check nonce on the token to prevent replay attacks
-      const tokenJSON = jwtDecode(values.id_token)
+      const tokenJSON = jwtDecode(idToken)
       if (storage.getItem(OPEN_ID_NONCE_KEY) !== tokenJSON.nonce) {
         this.props.showAlert("danger", "Invalid auth token")
         return
       }
 
-      web.LoginSTS({ token: values.id_token }).then(() => {
+      web.LoginSTS({ token: idToken }).then(() => {
         storage.removeItem(OPEN_ID_NONCE_KEY)
         this.forceUpdate()
         return

@@ -16,6 +16,7 @@
 
 import React from "react"
 import { shallow, mount } from "enzyme"
+import { MemoryRouter } from "react-router-dom"
 import { Login } from "../Login"
 import web from "../../web"
 
@@ -63,7 +64,8 @@ describe("Login", () => {
         alert={{ show: false, type: "danger"}}
         showAlert={showAlertMock}
         clearAlert={clearAlertMock}
-      />
+      />,
+      { wrappingComponent: MemoryRouter }
     )
     // case where both keys are empty - displays the second warning
     wrapper.find("form").simulate("submit")
@@ -93,7 +95,8 @@ describe("Login", () => {
         alert={{ show: false, type: "danger"}}
         showAlert={showAlertMock}
         clearAlert={clearAlertMock}
-      />
+      />,
+      { wrappingComponent: MemoryRouter }
     )
     wrapper.setState({
       accessKey: "accessKey",

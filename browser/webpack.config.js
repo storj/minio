@@ -18,7 +18,7 @@ var webpack = require('webpack')
 var path = require('path')
 var glob = require('glob-all')
 var CopyWebpackPlugin = require('copy-webpack-plugin')
-var PurgecssPlugin = require('purgecss-webpack-plugin')
+var { PurgeCSSPlugin } = require('purgecss-webpack-plugin')
 
 var exports = {
   context: __dirname,
@@ -38,7 +38,7 @@ var exports = {
         use: [{
           loader: 'babel-loader',
           options: {
-            presets: ['react', 'es2015']
+            presets: ['@babel/preset-react', '@babel/preset-env']
           }
         }]
       }, {
@@ -59,37 +59,29 @@ var exports = {
         }]
       }, {
         test: /\.(eot|woff|woff2|ttf|svg|png)/,
-        use: [{
-          loader: 'url-loader'
-        }]
+        type: 'asset/inline'
       }]
   },
-  node:{
-    fs:'empty'
+  resolve: {
+    fallback: {
+      fs: false,
+      path: require.resolve('path-browserify')
+    }
   },
   devServer: {
     historyApiFallback: {
       index: '/minio/'
     },
-    proxy: {
-      '/minio/webrpc': {
-        target: 'http://localhost:9000',
-        secure: false,
-        headers: {'Host': "localhost:9000"}
-      },
-      '/minio/upload/*': {
-        target: 'http://localhost:9000',
-        secure: false
-      },
-      '/minio/download/*': {
-        target: 'http://localhost:9000',
-        secure: false
-      },
-      '/minio/zip': {
-        target: 'http://localhost:9000',
-        secure: false
-      }
-    }
+    proxy: [{
+      context: ['/minio/webrpc'],
+      target: 'http://localhost:9000',
+      secure: false,
+      headers: {'Host': "localhost:9000"}
+    }, {
+      context: ['/minio/upload', '/minio/download', '/minio/zip'],
+      target: 'http://localhost:9000',
+      secure: false
+    }]
   },
   plugins: [
     new CopyWebpackPlugin({patterns: [
@@ -101,22 +93,15 @@ var exports = {
       {from: 'app/img/favicon/favicon-16x16.png'},
       {from: 'app/img/favicon/favicon-32x32.png'},
       {from: 'app/img/favicon/favicon-96x96.png'},
-      {from: 'app/index.html'}
+      {from: 'app/index.html', info: {minimized: true}}
     ]}),
     new webpack.ContextReplacementPlugin(/moment[\\\/]locale$/, /^\.\/(en)$/),
-    new PurgecssPlugin({
+    new PurgeCSSPlugin({
       paths: glob.sync([
         path.join(__dirname, 'app/index.html'),
         path.join(__dirname, 'app/js/*.js')
       ])
     })
-  ]
-}
-
-if (process.env.NODE_ENV === 'dev') {
-  exports.entry = [
-    'webpack-dev-server/client?http://localhost:8080',
-    path.resolve(__dirname, 'app/index.js')
   ]
 }
 

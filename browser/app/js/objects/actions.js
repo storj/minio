@@ -20,6 +20,7 @@ import {
   sortObjectsByName,
   sortObjectsBySize,
   sortObjectsByDate,
+  redirectTo,
 } from "../utils"
 import { getCurrentBucket } from "../buckets/selectors"
 import { getCurrentPrefix, getCheckedList } from "./selectors"
@@ -351,7 +352,7 @@ export const downloadObject = (object) => {
         .CreateURLToken()
         .then((res) => {
           const url = `${window.location.origin}${minioBrowserPrefix}/download/${currentBucket}/${encObjectName}?token=${res.token}`
-          window.location = url
+          redirectTo(url)
         })
         .catch((err) => {
           dispatch(
@@ -363,7 +364,7 @@ export const downloadObject = (object) => {
         })
     } else {
       const url = `${window.location.origin}${minioBrowserPrefix}/download/${currentBucket}/${encObjectName}?token=`
-      window.location = url
+      redirectTo(url)
     }
   }
 }

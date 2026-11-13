@@ -117,3 +117,9 @@ export const getRandomString = length => {
   }
   return text
 }
+
+// redirectTo navigates the browser to url. It is a separate function so that
+// tests can mock it, since jsdom does not allow redefining window.location.
+export const redirectTo = url => {
+  window.location = url
+}

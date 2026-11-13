@@ -18,7 +18,7 @@ var webpack = require('webpack')
 var path = require('path')
 var glob = require('glob-all')
 var CopyWebpackPlugin = require('copy-webpack-plugin')
-var PurgecssPlugin = require('purgecss-webpack-plugin')
+var { PurgeCSSPlugin } = require('purgecss-webpack-plugin')
 
 var exports = {
   context: __dirname,
@@ -28,7 +28,8 @@ var exports = {
   ],
   output: {
     path: path.resolve(__dirname, 'production'),
-    filename: 'index_bundle.js'
+    filename: 'index_bundle.js',
+    publicPath: ''
   },
   module: {
     rules: [{
@@ -37,7 +38,7 @@ var exports = {
         use: [{
           loader: 'babel-loader',
           options: {
-            presets: ['react', 'es2015']
+            presets: ['@babel/preset-react', '@babel/preset-env']
           }
         }]
       }, {
@@ -58,13 +59,14 @@ var exports = {
         }]
       }, {
         test: /\.(eot|woff|woff2|ttf|svg|png)/,
-        use: [{
-          loader: 'url-loader'
-        }]
+        type: 'asset/inline'
       }]
   },
-  node:{
-    fs:'empty'
+  resolve: {
+    fallback: {
+      fs: false,
+      path: require.resolve('path-browserify')
+    }
   },
   plugins: [
     new CopyWebpackPlugin({patterns: [
@@ -76,22 +78,15 @@ var exports = {
       {from: 'app/img/favicon/favicon-16x16.png'},
       {from: 'app/img/favicon/favicon-32x32.png'},
       {from: 'app/img/favicon/favicon-96x96.png'},
-      {from: 'app/index.html'}
+      {from: 'app/index.html', info: {minimized: true}}
     ]}),
     new webpack.ContextReplacementPlugin(/moment[\\\/]locale$/, /^\.\/(en)$/),
-    new PurgecssPlugin({
+    new PurgeCSSPlugin({
       paths: glob.sync([
         path.join(__dirname, 'app/index.html'),
         path.join(__dirname, 'app/js/*.js')
       ])
     })
-  ]
-}
-
-if (process.env.NODE_ENV === 'dev') {
-  exports.entry = [
-    'webpack-dev-server/client?http://localhost:8080',
-    path.resolve(__dirname, 'app/index.js')
   ]
 }
 

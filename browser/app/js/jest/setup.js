@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-import "jest-enzyme"
+import { TextEncoder, TextDecoder } from "util"
+import { setImmediate } from "timers"
 import { configure } from "enzyme"
 import Adapter from "enzyme-adapter-react-16"
+
+// jest-environment-jsdom does not expose these Node globals, but superagent
+// and some tests rely on them.
+Object.assign(global, { TextEncoder, TextDecoder, setImmediate })
 
 configure({ adapter: new Adapter() })

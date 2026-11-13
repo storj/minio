@@ -26,6 +26,7 @@ import {
   SORT_ORDER_DESC
 } from "../../constants"
 import history from "../../history"
+import * as utils from "../../utils"
 
 jest.mock("../../web", () => ({
   LoggedIn: jest
@@ -418,17 +419,9 @@ describe("Objects actions", () => {
 
   describe("Download object", () => {
     it("should download the object non-LoggedIn users", () => {
-      const setLocation = jest.fn()
-      Object.defineProperty(window, "location", {
-        set(url) {
-          setLocation(url)
-        },
-        get() {
-          return {
-            origin: "http://localhost:8080"
-          }
-        }
-      })
+      const setLocation = jest
+        .spyOn(utils, "redirectTo")
+        .mockImplementation(() => {})
       const store = mockStore({
         buckets: { currentBucket: "bk1" },
         objects: { currentPrefix: "pre1/" }
@@ -441,17 +434,9 @@ describe("Objects actions", () => {
     })
 
     it("should download the object for LoggedIn users", () => {
-      const setLocation = jest.fn()
-      Object.defineProperty(window, "location", {
-        set(url) {
-          setLocation(url)
-        },
-        get() {
-          return {
-            origin: "http://localhost:8080"
-          }
-        }
-      })
+      const setLocation = jest
+        .spyOn(utils, "redirectTo")
+        .mockImplementation(() => {})
       const store = mockStore({
         buckets: { currentBucket: "bk1" },
         objects: { currentPrefix: "pre1/" }
